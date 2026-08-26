@@ -3288,21 +3288,6 @@ body.cineflix-db-error .cineflix-db-message{
     pointer-events:none;
     background:linear-gradient(to bottom,rgba(0,0,0,.42),transparent 24%,transparent 70%,rgba(0,0,0,.28));
 }
-.vast-ad-label{
-    position:absolute;
-    top:10px;
-    left:10px;
-    z-index:5;
-    padding:5px 8px;
-    border-radius:5px;
-    background:rgba(0,0,0,.72);
-    color:#fff;
-    font:800 10px/1 Inter,Arial,sans-serif;
-    letter-spacing:.2px;
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
-    pointer-events:none;
-}
 .vast-ad-countdown{
     position:absolute;
     top:10px;
@@ -3482,7 +3467,6 @@ body.cineflix-db-error .cineflix-db-message{
     <div class="vast-ad-overlay" id="vastAdOverlay" aria-hidden="true">
         <video class="vast-ad-video" id="vastAdVideo" playsinline preload="auto"></video>
         <div class="vast-ad-scrim" aria-hidden="true"></div>
-        <div class="vast-ad-label" id="vastAdLabel" aria-hidden="true">Ad</div>
         <div class="vast-ad-countdown" id="vastAdCountdown">Advertisement</div>
         <button class="vast-ad-skip" id="vastAdSkip" type="button" disabled>Skip</button>
         <div class="vast-ad-click" id="vastAdClick" aria-hidden="true"></div>
@@ -6013,7 +5997,7 @@ function setPlayerMode(mode,autoPlay=true){
    - Keeps the existing CINEFLIX movie/HLS player untouched underneath.
    - A 3-minute cooldown prevents an ad on every quick pause/resume.
 ========================================================= */
-const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dLmAFkz.ddG/NQvyZrGoUb/_ebmn9du-ZcUVl/ktPlTscWzmNyTzQJz/MVjmkjtkNNzmMT1WNsD/MWz/MQwZ";
+const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dRmnFzz.dzGrNcvxZhGKUC/_ejmd9EuQZMU-lkkkPATvc/zYN/TTUVwuOpT/crtSNQzyMx1/NJTSEgwVMFQG";
 const VAST_AD_COOLDOWN_MS = 3 * 60 * 1000;
 
 const vastAdOverlay = document.getElementById("vastAdOverlay");
