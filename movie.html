@@ -6214,26 +6214,9 @@ function finishVastAd(reason="complete"){
         try{video.currentTime=0;}catch(e){}
         initialPoster.classList.add("hidden");
 
-        // If the background buffer is ready, start immediately. Otherwise the
-        // existing player loader remains visible until playback is ready.
-        if(getBufferedAheadSeconds()>0.15) hidePlayerLoading();
-        else showPlayerLoading();
-
-        const startMovie=()=>{
-            if(currentMode!=="movie") return;
-            try{video.currentTime=0;}catch(e){}
-            video.play().catch(()=>{});
-            showPlayerControls(true);
-            updateCenterPlayPause();
-        };
-
-        if(video.readyState>=2 || hlsReady){
-            startMovie();
-        }else{
-            video.addEventListener("canplay",startMovie,{once:true});
-            video.addEventListener("loadeddata",startMovie,{once:true});
-            setTimeout(startMovie,2500);
-        }
+        // Keep the existing main movie/ad logic intact, but insert the
+        // preloaded intro between the ad and the main movie.
+        void playCineflixIntroThenMovie();
     }
 }
 
@@ -6404,6 +6387,162 @@ vastAdSkip?.addEventListener("click",e=>{
     e.stopPropagation();
     if(!vastAdSkip.disabled && vastAdActive) finishVastAd("skip");
 });
+
+/* =========================================================
+   CINEFLIX INTRO — ADDITIVE ONLY
+   Preload intro in the background while the ad is running.
+   The main movie source and VAST ad logic remain unchanged.
+========================================================= */
+const CINEFLIX_INTRO_URL = "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
+let cineflixIntroVideo = null;
+let cineflixIntroReady = false;
+let cineflixIntroStarted = false;
+
+function preloadCineflixIntro(){
+    if(cineflixIntroVideo) return;
+    try{
+        const v = document.createElement("video");
+        v.preload = "auto";
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute("playsinline","");
+        v.setAttribute("webkit-playsinline","");
+        v.src = CINEFLIX_INTRO_URL;
+        v.load();
+
+        v.addEventListener("canplay",()=>{
+            cineflixIntroReady = true;
+        },{once:true});
+
+        v.addEventListener("error",()=>{
+            cineflixIntroReady = false;
+        });
+
+        cineflixIntroVideo = v;
+    }catch(e){
+        cineflixIntroVideo = null;
+        cineflixIntroReady = false;
+    }
+}
+
+async function playCineflixIntroThenMovie(){
+    if(cineflixIntroStarted) return;
+    cineflixIntroStarted = true;
+
+    const intro = cineflixIntroVideo;
+    if(!intro) {
+        finishCineflixIntroFallback();
+        return;
+    }
+
+    try{
+        intro.currentTime = 0;
+        intro.muted = false;
+        intro.volume = 1;
+
+        /* Reuse the already downloaded intro instead of touching the
+           existing movie/ad video elements. */
+        if(intro.readyState < 2){
+            await new Promise(resolve=>{
+                let done=false;
+                const finish=()=>{
+                    if(done) return;
+                    done=true;
+                    intro.removeEventListener("canplay",finish);
+                    intro.removeEventListener("loadeddata",finish);
+                    intro.removeEventListener("error",finish);
+                    resolve();
+                };
+                intro.addEventListener("canplay",finish,{once:true});
+                intro.addEventListener("loadeddata",finish,{once:true});
+                intro.addEventListener("error",finish,{once:true});
+                setTimeout(finish,4000);
+            });
+        }
+
+        /* Show intro in the existing player only after the ad is gone. */
+        initialPoster.classList.add("hidden");
+        playerSurface.classList.remove("trailer-mode");
+        showPlayerLoading();
+
+        const mainVideo = video;
+        try{ mainVideo.pause(); }catch(e){}
+        mainVideo.style.visibility = "hidden";
+
+        /* Put the preloaded intro over the existing movie video. */
+        intro.style.position = "absolute";
+        intro.style.inset = "0";
+        intro.style.zIndex = "25";
+        intro.style.width = "100%";
+        intro.style.height = "100%";
+        intro.style.objectFit = "contain";
+        intro.style.background = "#000";
+        intro.style.display = "block";
+        intro.style.visibility = "visible";
+        playerSurface.appendChild(intro);
+
+        const playPromise = intro.play();
+        if(playPromise && playPromise.catch){
+            await playPromise.catch(()=>{
+                /* If browser autoplay policy blocks unmuted intro,
+                   retry muted so the transition still works. */
+                intro.muted = true;
+                return intro.play();
+            });
+        }
+
+        intro.addEventListener("ended",finishCineflixIntroFallback,{once:true});
+        intro.addEventListener("error",finishCineflixIntroFallback,{once:true});
+    }catch(e){
+        finishCineflixIntroFallback();
+    }
+}
+
+function finishCineflixIntroFallback(){
+    const intro = cineflixIntroVideo;
+    if(intro){
+        try{intro.pause();}catch(e){}
+        intro.style.display = "none";
+        intro.style.visibility = "hidden";
+    }
+
+    try{
+        video.style.visibility = "visible";
+        video.currentTime = 0;
+    }catch(e){}
+
+    cineflixIntroStarted = false;
+
+    /* Start the original movie from the beginning immediately. */
+    const startMovie=()=>{
+        if(currentMode!=="movie") return;
+        try{video.currentTime=0;}catch(e){}
+        video.play().catch(()=>{});
+        showPlayerControls(true);
+        updateCenterPlayPause();
+    };
+
+    if(video.readyState>=2 || hlsReady){
+        hidePlayerLoading();
+        startMovie();
+    }else{
+        video.addEventListener("canplay",()=>{
+            hidePlayerLoading();
+            startMovie();
+        },{once:true});
+        video.addEventListener("loadeddata",()=>{
+            hidePlayerLoading();
+            startMovie();
+        },{once:true});
+    }
+}
+
+/* Start downloading the intro as soon as the page is ready. */
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",preloadCineflixIntro,{once:true});
+}else{
+    preloadCineflixIntro();
+}
 
 /* Begin VAST + media preload quietly after the page has loaded. No loader,
    overlay, or player state is changed here. */
