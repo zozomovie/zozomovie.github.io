@@ -3333,6 +3333,8 @@ body.cineflix-db-error .cineflix-db-message{
 
     <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
 
+    <!-- CINEFLIX: allow IMA/VAST, HLS, Supabase, YouTube and remote media -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' data: blob: https:; frame-src 'self' data: blob: https:; font-src 'self' data: https:; worker-src 'self' blob:; child-src 'self' blob: https:; object-src 'none'; base-uri 'self';">
 </head>
 
 
@@ -6019,6 +6021,12 @@ let vastImaReady = false;
 let vastAdStarted = false;
 let vastAdFinished = false;
 let vastAdFallbackTimer = null;
+
+/* CSP/SDK safety: if Google IMA is blocked by the hosting response,
+   never leave the movie behind a permanent ad overlay. */
+function vastImaAvailable(){
+    return typeof google !== "undefined" && !!google.ima && !!vastAdIma;
+}
 
 function vastShowOverlay(){
     if(!vastAdOverlay) return;
