@@ -6082,7 +6082,9 @@ async function fetchVastDocument(url,depth=0){
     let requestUrl=url;
     try{
         const u=new URL(url,window.location.href);
-        u.searchParams.set("cb",Date.now().toString()+"_"+Math.random().toString(36).slice(2));
+        const freshToken=Date.now().toString()+"_"+Math.random().toString(36).slice(2);
+        u.searchParams.set("cb",freshToken);
+        u.searchParams.set("rnd",Math.random().toString(36).slice(2));
         requestUrl=u.toString();
     }catch(e){}
 
@@ -6092,8 +6094,11 @@ async function fetchVastDocument(url,depth=0){
     const xml=new DOMParser().parseFromString(text,"text/xml");
     if(xml.querySelector("parsererror")) throw new Error("Invalid VAST XML");
 
-    const ad=vastNodes(xml,"Ad")[0];
-    if(!ad) throw new Error("No VAST Ad");
+    /* If the VAST response contains multiple Ad entries, do not always
+       pick the first one. Pick a fresh candidate for this page load. */
+    const ads=vastNodes(xml,"Ad").filter(Boolean);
+    if(!ads.length) throw new Error("No VAST Ad");
+    const ad=ads[Math.floor(Math.random()*ads.length)];
 
     const inline=ad.querySelector("InLine");
     const wrapper=ad.querySelector("Wrapper");
@@ -6219,31 +6224,13 @@ function finishVastAd(reason="complete"){
     /* Re-prime the next ad in the background while the movie plays. */
     void preloadVastForInstantPlay();
 
-    // Always start the main movie from the beginning after the ad.
+    // Existing ad cleanup is unchanged. The intro is inserted only between
+    // the ad and the main movie. If no playable ad was available, the same
+    // intro flow is used by togglePlay below.
     if(currentMode==="movie"){
         try{video.currentTime=0;}catch(e){}
         initialPoster.classList.add("hidden");
-
-        // If the background buffer is ready, start immediately. Otherwise the
-        // existing player loader remains visible until playback is ready.
-        if(getBufferedAheadSeconds()>0.15) hidePlayerLoading();
-        else showPlayerLoading();
-
-        const startMovie=()=>{
-            if(currentMode!=="movie") return;
-            try{video.currentTime=0;}catch(e){}
-            video.play().catch(()=>{});
-            showPlayerControls(true);
-            updateCenterPlayPause();
-        };
-
-        if(video.readyState>=2 || hlsReady){
-            startMovie();
-        }else{
-            video.addEventListener("canplay",startMovie,{once:true});
-            video.addEventListener("loadeddata",startMovie,{once:true});
-            setTimeout(startMovie,2500);
-        }
+        void playCineflixIntro();
     }
 }
 
@@ -6501,24 +6488,6 @@ if(document.readyState==="loading"){
     preloadCineflixIntro();
 }
 
-/* Intercept only the existing Main Movie play call.
-   Existing Ad code itself is not modified. */
-(function(){
-    const originalPlay=HTMLMediaElement.prototype.play;
-    let introOnce=false;
-
-    HTMLMediaElement.prototype.play=function(){
-        if(this===video && !introOnce && currentMode==="movie" && !vastAdActive && !vastAdLoading){
-            introOnce=true;
-            const p=playCineflixIntro();
-            if(p!==undefined || cineflixIntroVideo){
-                return Promise.resolve();
-            }
-        }
-        return originalPlay.call(this);
-    };
-})();
-
 vastAdSkip?.addEventListener("click",e=>{
     e.stopPropagation();
     if(!vastAdSkip.disabled && vastAdActive) finishVastAd("skip");
@@ -6550,6 +6519,7 @@ async function togglePlay(){
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
         loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,true,video.currentTime||0);
+        void playCineflixIntro();
         return;
     }
 
@@ -6557,8 +6527,7 @@ async function togglePlay(){
         initialPoster.classList.add("hidden");
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
-        playWithoutLoaderIfBuffered();
-        video.play().catch(()=>{});
+        void playCineflixIntro();
     }else{
         video.pause();
     }
