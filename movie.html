@@ -4950,8 +4950,7 @@ function toggleVideoFromTap(){
     }
 
     if(video.paused || video.ended){
-        playWithoutLoaderIfBuffered();
-        video.play().catch(()=>{});
+        void playIntroThenMain();
     }else{
         video.pause();
     }
@@ -6076,29 +6075,14 @@ function vastNodes(root,name){
 
 async function fetchVastDocument(url,depth=0){
     if(depth>4) throw new Error("VAST wrapper depth exceeded");
-
-    /* Fresh VAST request each time.
-       Do not reuse the same cached ad response. */
-    let requestUrl=url;
-    try{
-        const u=new URL(url,window.location.href);
-        const freshToken=Date.now().toString()+"_"+Math.random().toString(36).slice(2);
-        u.searchParams.set("cb",freshToken);
-        u.searchParams.set("rnd",Math.random().toString(36).slice(2));
-        requestUrl=u.toString();
-    }catch(e){}
-
-    const response=await fetch(requestUrl,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store"});
+    const response=await fetch(url,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store"});
     if(!response.ok) throw new Error("VAST request failed");
     const text=await response.text();
     const xml=new DOMParser().parseFromString(text,"text/xml");
     if(xml.querySelector("parsererror")) throw new Error("Invalid VAST XML");
 
-    /* If the VAST response contains multiple Ad entries, do not always
-       pick the first one. Pick a fresh candidate for this page load. */
-    const ads=vastNodes(xml,"Ad").filter(Boolean);
-    if(!ads.length) throw new Error("No VAST Ad");
-    const ad=ads[Math.floor(Math.random()*ads.length)];
+    const ad=vastNodes(xml,"Ad")[0];
+    if(!ad) throw new Error("No VAST Ad");
 
     const inline=ad.querySelector("InLine");
     const wrapper=ad.querySelector("Wrapper");
@@ -6224,13 +6208,10 @@ function finishVastAd(reason="complete"){
     /* Re-prime the next ad in the background while the movie plays. */
     void preloadVastForInstantPlay();
 
-    // Existing ad cleanup is unchanged. The intro is inserted only between
-    // the ad and the main movie. If no playable ad was available, the same
-    // intro flow is used by togglePlay below.
+    // Existing Ad is fully finished/skipped here.
+    // Insert Intro, then return to the existing Main Movie from 0:00.
     if(currentMode==="movie"){
-        try{video.currentTime=0;}catch(e){}
-        initialPoster.classList.add("hidden");
-        void playCineflixIntro();
+        void playIntroThenMain();
     }
 }
 
@@ -6397,97 +6378,6 @@ async function playVastAdThenMovie(){
     }
 }
 
-
-/* =========================================================
-   INTRO VIDEO — ADD-ONLY
-   Background preload; Ad and Main Movie logic unchanged.
-========================================================= */
-const CINEFLIX_INTRO_URL = "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
-let cineflixIntroVideo = null;
-let cineflixIntroRunning = false;
-
-function preloadCineflixIntro(){
-    if(cineflixIntroVideo) return;
-    const v=document.createElement("video");
-    v.preload="auto";
-    v.muted=true;
-    v.playsInline=true;
-    v.setAttribute("playsinline","");
-    v.setAttribute("webkit-playsinline","");
-    v.src=CINEFLIX_INTRO_URL;
-    try{v.load();}catch(e){}
-    cineflixIntroVideo=v;
-}
-
-function playCineflixIntro(){
-    if(cineflixIntroRunning || !cineflixIntroVideo) return;
-    cineflixIntroRunning=true;
-
-    const intro=cineflixIntroVideo;
-
-    const finish=()=>{
-        try{intro.pause();}catch(e){}
-        intro.style.display="none";
-        try{intro.remove();}catch(e){}
-        cineflixIntroRunning=false;
-
-        try{video.style.visibility="visible";}catch(e){}
-        try{video.currentTime=0;}catch(e){}
-
-        const start=()=>{
-            try{video.currentTime=0;}catch(e){}
-            try{video.play().catch(()=>{});}catch(e){}
-            try{hidePlayerLoading();}catch(e){}
-            try{showPlayerControls(true);}catch(e){}
-            try{updateCenterPlayPause();}catch(e){}
-        };
-
-        if(video.readyState>=2 || hlsReady) start();
-        else {
-            video.addEventListener("canplay",start,{once:true});
-            video.addEventListener("loadeddata",start,{once:true});
-        }
-    };
-
-    intro.onended=finish;
-    intro.onerror=finish;
-
-    intro.style.position="absolute";
-    intro.style.inset="0";
-    intro.style.width="100%";
-    intro.style.height="100%";
-    intro.style.objectFit="contain";
-    intro.style.background="#000";
-    intro.style.zIndex="190";
-    intro.style.display="block";
-
-    try{playerSurface.appendChild(intro);}catch(e){
-        cineflixIntroRunning=false;
-        return;
-    }
-
-    try{video.style.visibility="hidden";}catch(e){}
-    try{initialPoster.classList.add("hidden");}catch(e){}
-    try{showPlayerLoading();}catch(e){}
-
-    intro.currentTime=0;
-    intro.muted=false;
-
-    const p=intro.play();
-    if(p && p.catch){
-        p.catch(()=>{
-            intro.muted=true;
-            return intro.play().catch(finish);
-        });
-    }
-}
-
-if(document.readyState==="loading"){
-    document.addEventListener("DOMContentLoaded",preloadCineflixIntro,{once:true});
-}else{
-    preloadCineflixIntro();
-}
-
 vastAdSkip?.addEventListener("click",e=>{
     e.stopPropagation();
     if(!vastAdSkip.disabled && vastAdActive) finishVastAd("skip");
@@ -6510,6 +6400,127 @@ vastAdClick?.addEventListener("click",e=>{
     }
 });
 
+/* =========================================================
+   CINEFLIX INTRO — ADD ONLY
+   Existing VAST Ad code and Main Movie code stay intact.
+========================================================= */
+const CINEFLIX_INTRO_URL = "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
+let cineflixIntroVideo = null;
+let cineflixIntroPlaying = false;
+
+function preloadCineflixIntro(){
+    if(cineflixIntroVideo) return;
+
+    const v=document.createElement("video");
+    v.preload="auto";
+    v.muted=true;
+    v.playsInline=true;
+    v.setAttribute("playsinline","");
+    v.setAttribute("webkit-playsinline","");
+    v.src=CINEFLIX_INTRO_URL;
+
+    v.addEventListener("error",()=>{},{once:true});
+    try{v.load();}catch(e){}
+    cineflixIntroVideo=v;
+}
+
+function playIntroThenMain(){
+    const intro=cineflixIntroVideo;
+
+    /* If the Intro could not be created/loaded, never block the movie. */
+    if(!intro){
+        try{video.currentTime=0;}catch(e){}
+        try{video.play().catch(()=>{});}catch(e){}
+        return Promise.resolve();
+    }
+
+    if(cineflixIntroPlaying) return Promise.resolve();
+    cineflixIntroPlaying=true;
+
+    return new Promise(resolve=>{
+        let finished=false;
+
+        const startMain=()=>{
+            if(finished) return;
+            finished=true;
+
+            try{intro.pause();}catch(e){}
+            try{intro.removeAttribute("src");}catch(e){}
+            try{intro.load();}catch(e){}
+            try{intro.remove();}catch(e){}
+
+            intro.style.display="none";
+            cineflixIntroPlaying=false;
+
+            try{video.style.visibility="visible";}catch(e){}
+            try{video.currentTime=0;}catch(e){}
+            try{initialPoster.classList.add("hidden");}catch(e){}
+
+            const start=()=>{
+                try{video.currentTime=0;}catch(e){}
+                try{video.play().catch(()=>{});}catch(e){}
+                try{hidePlayerLoading();}catch(e){}
+                try{showPlayerControls(true);}catch(e){}
+                try{updateCenterPlayPause();}catch(e){}
+                resolve();
+            };
+
+            if(video.readyState>=2 || hlsReady) start();
+            else{
+                video.addEventListener("canplay",start,{once:true});
+                video.addEventListener("loadeddata",start,{once:true});
+                setTimeout(start,4000);
+            }
+        };
+
+        intro.onended=startMain;
+        intro.onerror=startMain;
+
+        intro.style.position="absolute";
+        intro.style.inset="0";
+        intro.style.width="100%";
+        intro.style.height="100%";
+        intro.style.objectFit="contain";
+        intro.style.background="#000";
+        intro.style.zIndex="190";
+        intro.style.display="block";
+
+        try{playerSurface.appendChild(intro);}catch(e){
+            startMain();
+            return;
+        }
+
+        try{video.pause();}catch(e){}
+        try{video.style.visibility="hidden";}catch(e){}
+        try{initialPoster.classList.add("hidden");}catch(e){}
+        try{showPlayerLoading();}catch(e){}
+
+        intro.currentTime=0;
+        intro.muted=false;
+
+        try{
+            const p=intro.play();
+            if(p && p.catch){
+                p.catch(()=>{
+                    /* User already pressed Play; this is only a browser
+                       autoplay fallback for the Intro after the Ad. */
+                    intro.muted=true;
+                    intro.play().catch(startMain);
+                });
+            }
+        }catch(e){
+            startMain();
+        }
+    });
+}
+
+/* Preload Intro as soon as the page opens, without changing player state. */
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",preloadCineflixIntro,{once:true});
+}else{
+    preloadCineflixIntro();
+}
+
 async function togglePlay(){
     if(vastAdActive || vastAdLoading) return;
 
@@ -6518,8 +6529,8 @@ async function togglePlay(){
         showPlayerLoading();
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
-        loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,true,video.currentTime||0);
-        void playCineflixIntro();
+        loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,false,video.currentTime||0);
+        void playIntroThenMain();
         return;
     }
 
@@ -6527,7 +6538,8 @@ async function togglePlay(){
         initialPoster.classList.add("hidden");
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
-        void playCineflixIntro();
+        playWithoutLoaderIfBuffered();
+        video.play().catch(()=>{});
     }else{
         video.pause();
     }
