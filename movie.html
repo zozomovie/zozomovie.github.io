@@ -3302,6 +3302,7 @@ body.cineflix-db-error .cineflix-db-message{
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
     display:none !important;
+    visibility:hidden !important;
 }
 .vast-ad-skip{
     position:absolute;
@@ -6016,6 +6017,9 @@ let vastAdQuartiles = {25:false,50:false,75:false};
 let vastAdLastShownAt = 0;
 let vastAdTracking = {};
 let vastAdClickUrl = "";
+let vastMoviePrebufferActive = false;
+let vastMoviePrebufferTimer = null;
+let vastMovieWasMuted = false;
 
 function vastText(node){
     return node ? (node.textContent || "").trim() : "";
@@ -6141,7 +6145,8 @@ function vastResetUI(){
         vastAdSkip.classList.remove("ready");
         vastAdSkip.textContent="Skip";
     }
-    vastSetCountdown("Advertisement");
+    vastSetCountdown("");
+    if(vastAdCountdown) vastAdCountdown.textContent="";
 }
 function vastShowOverlay(){
     vastAdOverlay.classList.add("show");
@@ -6164,6 +6169,52 @@ function vastFireQuartiles(){
     });
 }
 
+function startVastMoviePrebuffer(){
+    if(currentMode!=="movie") return;
+    clearInterval(vastMoviePrebufferTimer);
+    vastMoviePrebufferActive=true;
+    vastMovieWasMuted=!!video.muted;
+
+    const source=QUALITY_SOURCES.movie?.[currentQuality] || MOVIE_DEMO_URL || "";
+    if(!source){
+        vastMoviePrebufferActive=false;
+        return;
+    }
+
+    /* Start the real movie underneath the ad, muted, so the first ~10s can
+       buffer while the VAST ad is playing. The ad overlay hides this layer. */
+    try{ video.muted=true; }catch(e){}
+
+    if(!video.src && !hlsReady){
+        loadHlsSource(source,true,0);
+    }else{
+        try{
+            video.currentTime=0;
+            const p=video.play();
+            if(p && p.catch) p.catch(()=>{});
+        }catch(e){}
+    }
+
+    const check=()=>{
+        if(!vastMoviePrebufferActive){ clearInterval(vastMoviePrebufferTimer); return; }
+        const ahead=getBufferedAheadSeconds();
+        if(ahead>=10){
+            /* Keep the first 10s ready, then pause so playback resumes from 0. */
+            try{ video.pause(); }catch(e){}
+            clearInterval(vastMoviePrebufferTimer);
+            vastMoviePrebufferTimer=null;
+        }
+    };
+    vastMoviePrebufferTimer=setInterval(check,200);
+    check();
+}
+
+function stopVastMoviePrebuffer(){
+    vastMoviePrebufferActive=false;
+    clearInterval(vastMoviePrebufferTimer);
+    vastMoviePrebufferTimer=null;
+}
+
 function finishVastAd(reason="complete"){
     if(!vastAdActive && !vastAdLoading) return;
     const wasActive=vastAdActive;
@@ -6184,13 +6235,19 @@ function finishVastAd(reason="complete"){
     vastAdClickUrl="";
     vastResetUI();
 
-    // Resume the exact movie position immediately after the ad.
+    /* The movie has been pre-buffering underneath the ad. Always restart it
+       from the beginning after the ad, using the buffered data immediately. */
     if(currentMode==="movie"){
-        try{video.currentTime=vastAdSavedTime||0;}catch(e){}
+        stopVastMoviePrebuffer();
+        try{ video.muted=vastMovieWasMuted; }catch(e){}
+        try{video.currentTime=0;}catch(e){}
         initialPoster.classList.add("hidden");
         hidePlayerLoading();
         playWithoutLoaderIfBuffered();
-        video.play().catch(()=>{});
+        const p=video.play();
+        if(p && p.catch){
+            p.catch(()=>{});
+        }
         showPlayerControls(true);
         updateCenterPlayPause();
     }
@@ -6203,15 +6260,15 @@ function startVastCountdown(){
         const now=vastAdVideo.currentTime||0;
         const duration=vastAdVideo.duration||0;
         if(vastAdSkipAt===null){
-            vastSetCountdown("Advertisement");
+            if(vastAdCountdown) vastAdCountdown.textContent="";
             if(vastAdSkip) vastAdSkip.style.display="none";
         }else{
             const remain=Math.max(0,vastAdSkipAt-now);
             if(remain>0){
-                vastSetCountdown(`Ad • Skip in ${Math.ceil(remain)}s`);
+                if(vastAdCountdown) vastAdCountdown.textContent="";
                 if(vastAdSkip){vastAdSkip.textContent=`Skip in ${Math.ceil(remain)}s`;vastAdSkip.style.display="block";vastAdSkip.disabled=true;vastAdSkip.classList.remove("ready");}
             }else{
-                vastSetCountdown("Skip");
+                if(vastAdCountdown) vastAdCountdown.textContent="";
                 if(vastAdSkip){vastAdSkip.textContent="Skip";vastAdSkip.style.display="block";vastAdSkip.disabled=false;vastAdSkip.classList.add("ready");}
             }
         }
@@ -6229,9 +6286,12 @@ async function playVastAdThenMovie(){
     if(!HILLTOP_VAST_TAG) return false;
 
     vastAdLoading=true;
-    vastAdSavedTime=Number.isFinite(video.currentTime)?video.currentTime:0;
+    /* Always restart the main movie from 0 after this ad. Begin buffering it
+       immediately in the background while the VAST request/ad is running. */
+    vastAdSavedTime=0;
     try{video.pause();}catch(e){}
     showPlayerLoading();
+    startVastMoviePrebuffer();
 
     try{
         const data=await fetchVastDocument(HILLTOP_VAST_TAG);
@@ -6285,6 +6345,8 @@ async function playVastAdThenMovie(){
         console.warn("CINEFLIX VAST ad unavailable:",err);
         vastAdLoading=false;
         vastAdActive=false;
+        stopVastMoviePrebuffer();
+        try{ video.muted=vastMovieWasMuted; }catch(e){}
         vastHideOverlay();
         vastResetUI();
         hidePlayerLoading();
