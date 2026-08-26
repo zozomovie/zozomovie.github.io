@@ -6347,6 +6347,22 @@ async function playVastAdThenMovie(){
         vastAdVideo.onended=()=>finishVastAd("complete");
         vastAdVideo.onerror=()=>finishVastAd("error");
 
+        /*
+           The VAST media is preloaded before Play is clicked. In that case
+           loadedmetadata may have already fired before the handlers above
+           were attached, which could leave the Skip badge stuck on plain
+           "Skip" with no 15s countdown. Start/sync the countdown immediately
+           when metadata is already available, while still respecting the
+           VAST ad's own skipOffset/skippability.
+        */
+        if(vastAdVideo.readyState >= 1){
+            if(data.skipOffset){
+                const parsedSkip=parseVastTime(data.skipOffset,vastAdVideo.duration||0);
+                if(parsedSkip!==null) vastAdSkipAt=parsedSkip;
+            }
+            startVastCountdown();
+        }
+
         vastAdVideo.muted=false;
         const p=vastAdVideo.play();
         if(p && p.catch){
