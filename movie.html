@@ -3264,43 +3264,8 @@ body.cineflix-db-error .cineflix-db-message{
 
 </style>
 
-<style id="cineflix-drive-intro-style">
-/* CINEFLIX DRIVE INTRO — additive layer only */
-.cineflix-intro-overlay{
-    position:absolute;
-    inset:0;
-    z-index:210;
-    display:none;
-    overflow:hidden;
-    background:#000;
-    opacity:1;
-    visibility:hidden;
-    pointer-events:none;
-}
-.cineflix-intro-overlay.show{
-    display:block;
-    visibility:visible;
-    opacity:1;
-}
-.cineflix-intro-overlay video{
-    width:100%;
-    height:100%;
-    display:block;
-    object-fit:contain;
-    background:#000;
-}
-.video-player.cineflix-intro-active #movieVideo{
-    opacity:0 !important;
-    visibility:hidden !important;
-}
-.video-player.cineflix-intro-active .player-controls,
-.video-player.cineflix-intro-active .center-play,
-.video-player.cineflix-intro-active .center-play-pause{
-    pointer-events:none !important;
-}
-</style>
 <style id="cineflix-vast-ad-style">
-/* CINEFLIX HILLTOPADS VAST — IMA rendering layer */
+/* CINEFLIX VAST PRE-ROLL — additive only */
 .vast-ad-overlay{
     position:absolute;
     inset:0;
@@ -3310,49 +3275,62 @@ body.cineflix-db-error .cineflix-db-message{
     overflow:hidden;
 }
 .vast-ad-overlay.show{display:block;}
-.vast-ad-ima{
-    position:absolute;
-    inset:0;
-    z-index:1;
-    background:#000;
-}
 .vast-ad-video{
-    display:none !important;
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:contain;
+    background:#000;
 }
 .vast-ad-scrim{
     position:absolute;
     inset:0;
-    z-index:5;
     pointer-events:none;
-    background:linear-gradient(to bottom,rgba(0,0,0,.38),transparent 25%,transparent 72%,rgba(0,0,0,.24));
+    background:linear-gradient(to bottom,rgba(0,0,0,.42),transparent 24%,transparent 70%,rgba(0,0,0,.28));
 }
 .vast-ad-label{
     position:absolute;
     top:10px;
     left:10px;
-    z-index:8;
+    z-index:5;
     padding:5px 8px;
     border-radius:5px;
     background:rgba(0,0,0,.72);
     color:#fff;
-    font:800 11px/1 Inter,Arial,sans-serif;
+    font:800 10px/1 Inter,Arial,sans-serif;
     letter-spacing:.2px;
-    display:none;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
     pointer-events:none;
+}
+.vast-ad-countdown{
+    position:absolute;
+    top:10px;
+    left:10px;
+    z-index:3;
+    padding:5px 8px;
+    border-radius:5px;
+    background:rgba(0,0,0,.72);
+    color:#fff;
+    font:800 10px/1 Inter,Arial,sans-serif;
+    letter-spacing:.2px;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    display:none !important;
 }
 .vast-ad-skip{
     position:absolute;
     right:10px;
     bottom:48px;
-    z-index:10;
+    z-index:4;
     min-width:108px;
     height:36px;
     padding:0 13px;
     border:1px solid rgba(255,255,255,.25);
-    border-radius:6px;
-    background:rgba(0,0,0,.78);
+    border-radius:5px;
+    background:rgba(0,0,0,.76);
     color:#aaa;
-    font:800 11px/1 Inter,Arial,sans-serif;
+    font:800 10px/1 Inter,Arial,sans-serif;
     cursor:not-allowed;
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
@@ -3363,10 +3341,31 @@ body.cineflix-db-error .cineflix-db-message{
     border-color:rgba(255,255,255,.55);
 }
 .vast-ad-skip.ready:hover{background:rgba(35,35,35,.92);}
-.vast-ad-countdown{display:none !important;}
+.vast-ad-click{
+    position:absolute;
+    inset:0;
+    z-index:2;
+    cursor:pointer;
+    background:transparent;
+}
+.vast-ad-overlay.has-controls .vast-ad-click{bottom:42px;}
 </style>
 
-    <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
+<style id="cineflix-intro-style">
+/* CINEFLIX INTRO — additive only */
+.cineflix-intro-overlay{
+    position:absolute;
+    inset:0;
+    z-index:190;
+    display:none;
+    background:#000;
+    overflow:hidden;
+}
+.cineflix-intro-overlay.show{display:block;}
+.cineflix-intro-video{
+    width:100%;height:100%;display:block;object-fit:contain;background:#000;
+}
+</style>
 
 </head>
 
@@ -3495,25 +3494,19 @@ body.cineflix-db-error .cineflix-db-message{
     <div class="player-mode-badge" id="playerModeBadge" aria-hidden="true">MOVIE</div>
 
 
+    <!-- CINEFLIX INTRO VIDEO — additive only; plays after ad and before movie -->
+    <div class="cineflix-intro-overlay" id="cineflixIntroOverlay" aria-hidden="true">
+        <video class="cineflix-intro-video" id="cineflixIntroVideo" playsinline preload="auto"></video>
+    </div>
+
     <!-- CINEFLIX VAST PRE-ROLL OVERLAY — added without removing existing player UI -->
     <div class="vast-ad-overlay" id="vastAdOverlay" aria-hidden="true">
-        <div class="vast-ad-ima" id="vastAdIma"></div>
         <video class="vast-ad-video" id="vastAdVideo" playsinline preload="auto"></video>
         <div class="vast-ad-scrim" aria-hidden="true"></div>
-        <div class="vast-ad-label" id="vastAdLabel">Ad</div>
+        <div class="vast-ad-label" id="vastAdLabel" aria-hidden="true">Ad</div>
         <div class="vast-ad-countdown" id="vastAdCountdown">Advertisement</div>
         <button class="vast-ad-skip" id="vastAdSkip" type="button" disabled>Skip</button>
         <div class="vast-ad-click" id="vastAdClick" aria-hidden="true"></div>
-    </div>
-    <!-- CINEFLIX DRIVE INTRO: preloaded on page open; starts only after the pre-roll ad. -->
-    <div class="cineflix-intro-overlay" id="cineflixIntroOverlay" aria-hidden="true">
-        <video
-            id="cineflixIntroVideo"
-            preload="auto"
-            muted
-            playsinline
-            webkit-playsinline
-        ></video>
     </div>
     <div class="initial-poster" id="initialPoster" aria-hidden="false">
         <img
@@ -4749,11 +4742,6 @@ const initialPoster =
 const initialPosterPlay =
     document.getElementById("initialPosterPlay");
 
-const cineflixIntroOverlay =
-    document.getElementById("cineflixIntroOverlay");
-const cineflixIntroVideo =
-    document.getElementById("cineflixIntroVideo");
-
 const centerPlayPause =
     document.getElementById("centerPlayPause");
 
@@ -4787,6 +4775,89 @@ const playerTop =
 const playerSurface =
     document.querySelector("#videoPlayer");
 
+/* =========================================================
+   CINEFLIX INTRO VIDEO — additive only
+   Supabase direct MP4. Preloads quietly after page load.
+========================================================= */
+const CINEFLIX_INTRO_URL = "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
+const cineflixIntroOverlay = document.getElementById("cineflixIntroOverlay");
+const cineflixIntroVideo = document.getElementById("cineflixIntroVideo");
+let cineflixIntroReady = false;
+let cineflixIntroLoading = false;
+let cineflixIntroPlayAfterAd = false;
+
+function cineflixPreloadIntro(){
+    if(!cineflixIntroVideo || !CINEFLIX_INTRO_URL) return;
+    try{
+        cineflixIntroVideo.preload="auto";
+        if(cineflixIntroVideo.src!==CINEFLIX_INTRO_URL){
+            cineflixIntroVideo.src=CINEFLIX_INTRO_URL;
+            cineflixIntroVideo.load();
+        }
+        // Ask the browser to begin fetching without showing anything.
+        const p=cineflixIntroVideo.play();
+        if(p && p.catch) p.catch(()=>{});
+        cineflixIntroVideo.pause();
+        try{cineflixIntroVideo.currentTime=0;}catch(e){}
+    }catch(e){ console.warn("CINEFLIX intro preload:",e); }
+}
+function cineflixShowIntro(){
+    if(!cineflixIntroVideo || !CINEFLIX_INTRO_URL) return false;
+    cineflixIntroPlayAfterAd=false;
+    cineflixIntroLoading=true;
+    try{video.pause();}catch(e){}
+    initialPoster.classList.add("hidden");
+    hidePlayerLoading();
+    cineflixIntroOverlay.classList.add("show");
+    cineflixIntroOverlay.setAttribute("aria-hidden","false");
+    cineflixIntroVideo.muted=false;
+    try{cineflixIntroVideo.currentTime=0;}catch(e){}
+    const start=()=>{
+        const p=cineflixIntroVideo.play();
+        if(p && p.catch) p.catch(()=>{
+            // Browser autoplay policy: retry muted only if required.
+            cineflixIntroVideo.muted=true;
+            cineflixIntroVideo.play().catch(()=>{});
+        });
+    };
+    if(cineflixIntroVideo.readyState>=2) start();
+    else cineflixIntroVideo.addEventListener("canplay",start,{once:true});
+    return true;
+}
+function cineflixHideIntroAndStartMovie(){
+    cineflixIntroLoading=false;
+    cineflixIntroOverlay.classList.remove("show");
+    cineflixIntroOverlay.setAttribute("aria-hidden","true");
+    try{cineflixIntroVideo.pause();}catch(e){}
+    try{cineflixIntroVideo.currentTime=0;}catch(e){}
+    cineflixIntroVideo.muted=false;
+    if(currentMode!=="movie") return;
+    initialPoster.classList.add("hidden");
+    try{video.currentTime=0;}catch(e){}
+    const startMovie=()=>{
+        if(currentMode!=="movie") return;
+        try{video.currentTime=0;}catch(e){}
+        hidePlayerLoading();
+        video.play().catch(()=>{});
+        showPlayerControls(true);
+        updateCenterPlayPause();
+    };
+    if(video.readyState>=2 || hlsReady) startMovie();
+    else{
+        showPlayerLoading();
+        video.addEventListener("canplay",startMovie,{once:true});
+        video.addEventListener("loadeddata",startMovie,{once:true});
+        setTimeout(startMovie,2500);
+    }
+}
+
+cineflixIntroVideo?.addEventListener("canplay",()=>{cineflixIntroReady=true;});
+cineflixIntroVideo?.addEventListener("loadeddata",()=>{cineflixIntroReady=true;});
+cineflixIntroVideo?.addEventListener("ended",cineflixHideIntroAndStartMovie);
+cineflixIntroVideo?.addEventListener("error",()=>{
+    // If the Intro cannot play, never leave the player black: continue to movie.
+    cineflixHideIntroAndStartMovie();
+});
 
 const gestureOverlay =
     document.getElementById("gestureOverlay");
@@ -6040,433 +6111,318 @@ function setPlayerMode(mode,autoPlay=true){
 }
 
 /* =========================================================
-   CINEFLIX DRIVE INTRO — ADDITIVE HANDOFF
-   - Preloads on page open.
-   - Does not replace/remove the existing ad or main player.
-   - First Play: Hilltop ad -> intro -> main movie from 0:00.
-   - If the ad is skipped/completed, intro starts immediately.
+   HILLTOPADS VAST PRE-ROLL — ADDITIVE PLAYER LAYER
+   - Uses the exact VAST tag supplied for this site.
+   - Respects the VAST ad's own skipOffset/skippability.
+   - Keeps the existing CINEFLIX movie/HLS player untouched underneath.
+   - A 3-minute cooldown prevents an ad on every quick pause/resume.
 ========================================================= */
-const CINEFLIX_INTRO_DRIVE_URL =
-    "https://drive.google.com/uc?export=download&id=1XUp_IlzVrawech90fOFfD90Rt9q2SXh7&confirm=t";
-const CINEFLIX_INTRO_DRIVE_FALLBACK_URL =
-    "https://drive.usercontent.google.com/download?id=1XUp_IlzVrawech90fOFfD90Rt9q2SXh7&export=download&confirm=t";
-let cineflixIntroStarted = false;
-let cineflixIntroDriveFallbackUsed = false;
-let cineflixIntroFinished = false;
-let cineflixIntroConsumed = false;
-let cineflixIntroMainResume = null;
-
-function preloadCineflixDriveIntro(){
-    if(!cineflixIntroVideo) return;
-    if(cineflixIntroVideo.src !== CINEFLIX_INTRO_DRIVE_URL &&
-       cineflixIntroVideo.src !== CINEFLIX_INTRO_DRIVE_FALLBACK_URL){
-        cineflixIntroVideo.src = CINEFLIX_INTRO_DRIVE_URL;
-    }
-    cineflixIntroVideo.preload = "auto";
-    try{ cineflixIntroVideo.load(); }catch(e){}
-}
-
-/* Google Drive can cancel/redirect one of its download URLs differently
-   across browsers. If the primary URL fails, retry once using Drive's
-   user-content download endpoint before giving up on the intro. */
-function retryCineflixDriveIntroSource(){
-    if(!cineflixIntroVideo || cineflixIntroDriveFallbackUsed) return false;
-    cineflixIntroDriveFallbackUsed = true;
-    try{
-        cineflixIntroVideo.pause();
-        cineflixIntroVideo.src = CINEFLIX_INTRO_DRIVE_FALLBACK_URL;
-        cineflixIntroVideo.preload = "auto";
-        cineflixIntroVideo.load();
-        return true;
-    }catch(e){
-        return false;
-    }
-}
-
-/* Browser media cache/preload is used; no page-side fetch is performed. */
-preloadCineflixDriveIntro();
-
-function finishCineflixDriveIntro(){
-    if(cineflixIntroFinished) return;
-    cineflixIntroFinished = true;
-    cineflixIntroConsumed = true;
-
-    try{
-        cineflixIntroOverlay?.classList.remove("show");
-        cineflixIntroOverlay?.setAttribute("aria-hidden","true");
-        playerSurface?.classList.remove("cineflix-intro-active");
-    }catch(e){}
-
-    try{
-        cineflixIntroVideo?.pause();
-        if(cineflixIntroVideo) cineflixIntroVideo.currentTime=0;
-    }catch(e){}
-
-    /* Hand the player back to the existing main-video startup path. */
-    try{
-        if(typeof cineflixIntroMainResume === "function"){
-            const resume = cineflixIntroMainResume;
-            cineflixIntroMainResume = null;
-            resume();
-        }
-    }catch(e){}
-}
-
-function startCineflixDriveIntro(resumeMain){
-    if(cineflixIntroConsumed || cineflixIntroStarted){
-        if(typeof resumeMain === "function") resumeMain();
-        return;
-    }
-
-    cineflixIntroStarted = true;
-    cineflixIntroMainResume = resumeMain;
-
-    try{
-        initialPoster.classList.add("hidden");
-        initialPoster.setAttribute("aria-hidden","true");
-        centerPlay.style.display="none";
-        if(centerPlayPause) centerPlayPause.classList.remove("show");
-        playerSurface?.classList.add("cineflix-intro-active");
-        cineflixIntroOverlay?.classList.add("show");
-        cineflixIntroOverlay?.setAttribute("aria-hidden","false");
-    }catch(e){}
-
-    const playIntro=()=>{
-        try{
-            cineflixIntroVideo.currentTime=0;
-            const p=cineflixIntroVideo.play();
-            if(p && p.catch) p.catch(()=>finishCineflixDriveIntro());
-        }catch(e){
-            finishCineflixDriveIntro();
-        }
-    };
-
-    if(cineflixIntroVideo && cineflixIntroVideo.readyState >= 2){
-        playIntro();
-    }else if(cineflixIntroVideo){
-        cineflixIntroVideo.addEventListener("canplay",playIntro,{once:true});
-        cineflixIntroVideo.addEventListener("error",()=>{
-            if(!retryCineflixDriveIntroSource()) finishCineflixDriveIntro();
-        },{once:true});
-        try{ cineflixIntroVideo.load(); }catch(e){}
-    }else{
-        finishCineflixDriveIntro();
-    }
-}
-
-cineflixIntroVideo?.addEventListener("ended",finishCineflixDriveIntro);
-cineflixIntroVideo?.addEventListener("error",()=>{
-    if(cineflixIntroStarted && !cineflixIntroFinished){
-        if(!retryCineflixDriveIntroSource()) finishCineflixDriveIntro();
-    }
-});
-
-/* =========================================================
-   HILLTOPADS VAST PRE-ROLL — GOOGLE IMA RENDERER
-   - Uses the exact HilltopAds VAST tag supplied for this site.
-   - Does NOT fetch/parse the VAST URL from page JavaScript, avoiding CORS.
-   - IMA handles VAST wrappers, media selection, tracking and skippability.
-   - Existing CINEFLIX movie/HLS player stays underneath untouched.
-   - Movie is preloaded quietly while the ad is playing.
-========================================================= */
-const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/d/mHF.zJd/GYN/vQZdG/Um/ReBm/9UubZnU/lgkpPjTIcRzANZTQUSw-OTTwcdt/NUzYMl1XNOTdEdwrMTSzZIs/aDW/1UpFdTDn0nxK";
+const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dLmAFkz.ddG/NQvyZrGoUb/_ebmn9du-ZcUVl/ktPlTscWzmNyTzQJz/MVjmkjtkNNzmMT1WNsD/MWz/MQwZ";
 const VAST_AD_COOLDOWN_MS = 3 * 60 * 1000;
 
 const vastAdOverlay = document.getElementById("vastAdOverlay");
-const vastAdIma = document.getElementById("vastAdIma");
 const vastAdVideo = document.getElementById("vastAdVideo");
 const vastAdCountdown = document.getElementById("vastAdCountdown");
-const vastAdLabel = document.getElementById("vastAdLabel");
 const vastAdSkip = document.getElementById("vastAdSkip");
 const vastAdClick = document.getElementById("vastAdClick");
 
 let vastAdActive = false;
 let vastAdLoading = false;
+let vastAdSavedTime = 0;
+let vastAdData = null;
+let vastAdSkipAt = null;
+let vastAdStartedAt = 0;
+let vastAdQuartiles = {25:false,50:false,75:false};
 let vastAdLastShownAt = 0;
-let vastAdsLoader = null;
-let vastAdsManager = null;
-let vastAdDisplayContainer = null;
-let vastAdRequest = null;
-let vastImaReady = false;
-let vastAdStarted = false;
-let vastAdFinished = false;
-let vastAdFallbackTimer = null;
+let vastAdTracking = {};
+let vastAdClickUrl = "";
 
-function vastShowOverlay(){
-    if(!vastAdOverlay) return;
-    vastAdOverlay.classList.add("show");
-    vastAdOverlay.setAttribute("aria-hidden","false");
-    vastAdOverlay.style.zIndex="200";
-    if(vastAdLabel) vastAdLabel.style.display="block";
+/* Instant-ad preload: fetch the VAST and begin buffering its media as soon
+   as the page is ready, but do not show the ad or fire impression tracking
+   until the user actually presses Play. */
+let vastPreloadPromise = null;
+let vastPreloadedData = null;
+let vastPreloadedMedia = null;
+
+function vastText(node){
+    return node ? (node.textContent || "").trim() : "";
+}
+function vastAbsUrl(value,base){
+    try{return new URL(String(value||"").trim(),base).href;}catch(e){return String(value||"").trim();}
+}
+function vastTrack(url){
+    if(!url) return;
+    try{
+        const img=new Image();
+        img.referrerPolicy="no-referrer";
+        img.src=url;
+    }catch(e){}
+}
+function vastTrackMany(name){
+    (vastAdTracking[name]||[]).forEach(vastTrack);
+}
+function parseVastTime(value,duration){
+    if(!value) return null;
+    const raw=String(value).trim();
+    if(raw.endsWith("%")){
+        const pct=parseFloat(raw);
+        return Number.isFinite(pct) && Number.isFinite(duration) ? duration*pct/100 : null;
+    }
+    const parts=raw.split(":").map(Number);
+    if(parts.length===3 && parts.every(Number.isFinite)) return parts[0]*3600+parts[1]*60+parts[2];
+    if(parts.length===2 && parts.every(Number.isFinite)) return parts[0]*60+parts[1];
+    const n=parseFloat(raw);
+    return Number.isFinite(n)?n:null;
+}
+function vastNodes(root,name){
+    return Array.from(root.getElementsByTagName(name));
 }
 
-function vastHideOverlay(){
-    if(!vastAdOverlay) return;
-    vastAdOverlay.classList.remove("show");
-    vastAdOverlay.setAttribute("aria-hidden","true");
-    vastAdOverlay.style.zIndex="";
-    if(vastAdLabel) vastAdLabel.style.display="none";
+async function fetchVastDocument(url,depth=0){
+    if(depth>4) throw new Error("VAST wrapper depth exceeded");
+    const response=await fetch(url,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store"});
+    if(!response.ok) throw new Error("VAST request failed");
+    const text=await response.text();
+    const xml=new DOMParser().parseFromString(text,"text/xml");
+    if(xml.querySelector("parsererror")) throw new Error("Invalid VAST XML");
+
+    const ad=vastNodes(xml,"Ad")[0];
+    if(!ad) throw new Error("No VAST Ad");
+
+    const inline=ad.querySelector("InLine");
+    const wrapper=ad.querySelector("Wrapper");
+    if(wrapper){
+        const tag=vastText(wrapper.querySelector("VASTAdTagURI"));
+        if(!tag) throw new Error("VAST wrapper has no tag URI");
+        const child=await fetchVastDocument(vastAbsUrl(tag,url),depth+1);
+        const wrapperTracking={};
+        vastNodes(wrapper,"Tracking").forEach(n=>{
+            const event=n.getAttribute("event")||"";
+            const u=vastText(n);
+            if(u){(wrapperTracking[event]||(wrapperTracking[event]=[])).push(vastAbsUrl(u,url));}
+        });
+        Object.keys(wrapperTracking).forEach(k=>{
+            child.tracking[k]=[...(wrapperTracking[k]||[]),...(child.tracking[k]||[])];
+        });
+        const wc=vastText(wrapper.querySelector("ClickTracking"));
+        if(wc && !child.clickUrl) child.clickUrl=vastAbsUrl(wc,url);
+        return child;
+    }
+
+    if(!inline) throw new Error("No VAST Inline/Wrapper");
+    const linear=inline.querySelector("Linear");
+    if(!linear) throw new Error("No Linear creative");
+    const media=Array.from(linear.querySelectorAll("MediaFiles MediaFile"));
+    const usable=media.map(n=>({
+        url:vastAbsUrl(vastText(n),url),
+        type:(n.getAttribute("type")||"").toLowerCase(),
+        width:Number(n.getAttribute("width")||0),
+        height:Number(n.getAttribute("height")||0),
+        bitrate:Number(n.getAttribute("bitrate")||0)
+    })).filter(x=>x.url && (/video\/(mp4|webm|ogg)/.test(x.type)||/\.mp4(?:$|\?)/i.test(x.url)||/\.webm(?:$|\?)/i.test(x.url)));
+    if(!usable.length) throw new Error("No playable VAST media file");
+
+    const tracking={};
+    vastNodes(linear,"Tracking").forEach(n=>{
+        const event=n.getAttribute("event")||"";
+        const u=vastText(n);
+        if(u){(tracking[event]||(tracking[event]=[])).push(vastAbsUrl(u,url));}
+    });
+    const impression=vastText(inline.querySelector("Impression"));
+    if(impression) (tracking.impression||(tracking.impression=[])).push(vastAbsUrl(impression,url));
+    const clickThrough=vastText(linear.querySelector("VideoClicks ClickThrough"));
+    const clickTracking=vastText(linear.querySelector("VideoClicks ClickTracking"));
+    if(clickTracking) (tracking.clickTracking||(tracking.clickTracking=[])).push(vastAbsUrl(clickTracking,url));
+
+    return {
+        media:usable,
+        skipOffset:linear.getAttribute("skipoffset")||null,
+        tracking,
+        clickUrl:clickThrough ? vastAbsUrl(clickThrough,url) : ""
+    };
 }
 
+function chooseVastMedia(media){
+    const list=[...media];
+    list.sort((a,b)=>{
+        const aMp4=a.type.includes("mp4")?0:1;
+        const bMp4=b.type.includes("mp4")?0:1;
+        if(aMp4!==bMp4) return aMp4-bMp4;
+        const ah=Math.abs((a.height||720)-720), bh=Math.abs((b.height||720)-720);
+        return ah-bh;
+    });
+    return list[0]||null;
+}
+
+function vastSetCountdown(text){
+    // Countdown is shown inside the bottom-right Skip badge.
+    if(vastAdCountdown) vastAdCountdown.textContent=text;
+    if(vastAdSkip && vastAdActive){
+        const m=String(text||"").match(/Skip in\s+(\d+)s/i);
+        vastAdSkip.textContent=m ? `Skip in ${m[1]}s` : (vastAdSkip.disabled ? "Skip" : "Skip");
+    }
+}
 function vastResetUI(){
     if(vastAdSkip){
         vastAdSkip.disabled=true;
         vastAdSkip.classList.remove("ready");
         vastAdSkip.textContent="Skip";
-        vastAdSkip.style.display="block";
     }
-    if(vastAdCountdown) vastAdCountdown.textContent="Advertisement";
-    if(vastAdLabel) vastAdLabel.textContent="Ad";
+    vastSetCountdown("Advertisement");
 }
-
-function vastDestroyManager(){
-    if(vastAdFallbackTimer){
-        clearTimeout(vastAdFallbackTimer);
-        vastAdFallbackTimer=null;
-    }
-    try{vastAdsManager?.destroy();}catch(e){}
-    vastAdsManager=null;
-    vastAdsLoader=null;
-    vastAdDisplayContainer=null;
-    vastAdRequest=null;
-    vastImaReady=false;
+function vastShowOverlay(){
+    vastAdOverlay.classList.add("show");
+    vastAdOverlay.setAttribute("aria-hidden","false");
+    vastAdOverlay.style.zIndex="200";
 }
-
-function vastAdContainerSize(){
-    const r=vastAdIma?.getBoundingClientRect();
-    return {
-        width:Math.max(1,Math.round(r?.width||videoPlayer?.clientWidth||640)),
-        height:Math.max(1,Math.round(r?.height||videoPlayer?.clientHeight||360))
-    };
+function vastHideOverlay(){
+    vastAdOverlay.classList.remove("show");
+    vastAdOverlay.setAttribute("aria-hidden","true");
+    vastAdOverlay.style.zIndex="";
 }
-
-function vastResumeMovieFromStart(){
-    if(currentMode!=="movie") return;
-    initialPoster.classList.add("hidden");
-    try{video.currentTime=0;}catch(e){}
-
-    if(getBufferedAheadSeconds()>0.15) hidePlayerLoading();
-    else showPlayerLoading();
-
-    let started=false;
-    const startMovie=()=>{
-        if(started || currentMode!=="movie") return;
-        started=true;
-        try{video.currentTime=0;}catch(e){}
-        video.play().catch(()=>{});
-        showPlayerControls(true);
-        updateCenterPlayPause();
-    };
-
-    if(video.readyState>=2 || hlsReady) startMovie();
-    video.addEventListener("canplay",startMovie,{once:true});
-    video.addEventListener("loadeddata",startMovie,{once:true});
-    setTimeout(startMovie,2500);
+function vastFireQuartiles(){
+    if(!vastAdVideo.duration || !Number.isFinite(vastAdVideo.duration)) return;
+    const pct=(vastAdVideo.currentTime/vastAdVideo.duration)*100;
+    [25,50,75].forEach(q=>{
+        if(pct>=q && !vastAdQuartiles[q]){
+            vastAdQuartiles[q]=true;
+            vastTrackMany(q===25?"firstQuartile":q===50?"midpoint":"thirdQuartile");
+        }
+    });
 }
 
 function finishVastAd(reason="complete"){
-    if(vastAdFinished && !vastAdActive && !vastAdLoading) return;
-    vastAdFinished=true;
+    if(!vastAdActive && !vastAdLoading) return;
+    const wasActive=vastAdActive;
     vastAdActive=false;
     vastAdLoading=false;
-
-    if(vastAdFallbackTimer){
-        clearTimeout(vastAdFallbackTimer);
-        vastAdFallbackTimer=null;
+    clearInterval(window.__cineflixVastTimer);
+    if(wasActive){
+        if(reason==="skip") vastTrackMany("skip");
+        else if(reason==="complete") vastTrackMany("complete");
+        else vastTrackMany("error");
     }
-
-    try{
-        if(vastAdsManager) vastAdsManager.stop();
-    }catch(e){}
-
-    try{
-        if(vastAdsManager) vastAdsManager.destroy();
-    }catch(e){}
-
-    vastAdsManager=null;
-    vastAdsLoader=null;
-    vastAdDisplayContainer=null;
-    vastAdRequest=null;
-    vastImaReady=false;
-
-    try{
-        vastAdIma.innerHTML="";
-    }catch(e){}
-
+    try{vastAdVideo.pause();}catch(e){}
+    vastAdVideo.removeAttribute("src");
+    vastAdVideo.load();
     vastHideOverlay();
+    vastAdData=null;
+    vastAdSkipAt=null;
+    vastAdClickUrl="";
     vastResetUI();
-    vastResumeMovieFromStart();
-}
+    /* Re-prime the next ad in the background while the movie plays. */
+    void preloadVastForInstantPlay();
 
-function vastHandleError(error){
-    console.warn("CINEFLIX VAST/IMA ad unavailable:",error);
-    // Never leave the player stuck on an ad layer.
-    finishVastAd("error");
-}
+    // Ad complete/Skip -> play the Intro first. The main movie starts only
+    // after the Intro ends. Existing ad behavior above remains untouched.
+    if(currentMode==="movie"){
+        cineflixIntroPlayAfterAd=true;
+        if(cineflixShowIntro()) return;
 
-function vastSetupIma(){
-    if(vastImaReady && vastAdsLoader) return true;
-    if(typeof google==="undefined" || !google.ima || !vastAdIma) return false;
+        // If Intro cannot be initialized, preserve the existing movie fallback.
+        cineflixHideIntroAndStartMovie();
+        return;
 
-    try{
-        vastAdDisplayContainer=new google.ima.AdDisplayContainer(vastAdIma,video);
-        vastAdsLoader=new google.ima.AdsLoader(vastAdDisplayContainer);
+        /* Existing movie-start fallback retained below for safety. */
+        if(false){
+        try{video.currentTime=0;}catch(e){}
+        initialPoster.classList.add("hidden");
 
-        vastAdsLoader.addEventListener(
-            google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
-            vastOnAdsManagerLoaded,
-            false
-        );
-        vastAdsLoader.addEventListener(
-            google.ima.AdErrorEvent.Type.AD_ERROR,
-            vastOnAdError,
-            false
-        );
+        // If the background buffer is ready, start immediately. Otherwise the
+        // existing player loader remains visible until playback is ready.
+        if(getBufferedAheadSeconds()>0.15) hidePlayerLoading();
+        else showPlayerLoading();
 
-        vastImaReady=true;
-        return true;
-    }catch(e){
-        console.warn("IMA setup failed:",e);
-        vastImaReady=false;
-        return false;
+        const startMovie=()=>{
+            if(currentMode!=="movie") return;
+            try{video.currentTime=0;}catch(e){}
+            video.play().catch(()=>{});
+            showPlayerControls(true);
+            updateCenterPlayPause();
+        };
+
+        if(video.readyState>=2 || hlsReady){
+            startMovie();
+        }else{
+            video.addEventListener("canplay",startMovie,{once:true});
+            video.addEventListener("loadeddata",startMovie,{once:true});
+            setTimeout(startMovie,2500);
+        }
+        }
     }
 }
 
-function vastOnAdsManagerLoaded(event){
-    if(!vastAdLoading) return;
-
-    try{
-        const adsRenderingSettings=new google.ima.AdsRenderingSettings();
-        adsRenderingSettings.restoreCustomPlaybackStateOnAdBreakComplete=false;
-        adsRenderingSettings.enablePreloading=true;
-
-        vastAdsManager=event.getAdsManager(video,adsRenderingSettings);
-        vastAdsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR,vastOnAdError);
-        vastAdsManager.addEventListener(google.ima.AdEvent.Type.STARTED,vastOnAdStarted);
-        vastAdsManager.addEventListener(google.ima.AdEvent.Type.COMPLETE,vastOnAdComplete);
-        vastAdsManager.addEventListener(google.ima.AdEvent.Type.SKIPPED,vastOnAdSkipped);
-        vastAdsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED,vastOnContentResume);
-        vastAdsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED,vastOnAllAdsCompleted);
-        vastAdsManager.addEventListener(google.ima.AdEvent.Type.LOADED,vastOnAdLoaded);
-
-        const size=vastAdContainerSize();
-        vastAdsManager.init(size.width,size.height,google.ima.ViewMode.NORMAL);
-        vastAdsManager.start();
-    }catch(e){
-        vastHandleError(e);
-    }
-}
-
-function vastOnAdLoaded(){
-    if(!vastAdActive) return;
-    vastShowOverlay();
-    try{
-        const ad=vastAdsManager?.getCurrentAd?.();
-        if(ad && vastAdSkip){
-            // IMA owns actual skippability. We only mirror it visually.
-            if(ad.isLinear && ad.isLinear() && ad.getSkipTimeOffset){
-                const skip=ad.getSkipTimeOffset();
-                if(skip>=0){
-                    vastAdSkip.disabled=true;
-                    vastAdSkip.textContent=`Skip in ${Math.ceil(skip)}s`;
-                }else{
-                    vastAdSkip.style.display="none";
-                }
-            }
-        }
-    }catch(e){}
-}
-
-function vastOnAdStarted(){
-    if(!vastAdActive) return;
-    vastAdStarted=true;
-    if(vastAdLabel) vastAdLabel.style.display="block";
-    vastStartSkipMirror();
-}
-
-function vastStartSkipMirror(){
-    clearInterval(window.__cineflixImaSkipTimer);
-    window.__cineflixImaSkipTimer=setInterval(()=>{
-        if(!vastAdActive || !vastAdsManager){
-            clearInterval(window.__cineflixImaSkipTimer);
-            return;
-        }
-        try{
-            const ad=vastAdsManager.getCurrentAd?.();
-            if(!ad || !ad.isLinear?.()) return;
-            const skip=ad.getSkipTimeOffset?.();
-            if(skip===undefined || skip===null || skip<0){
-                if(vastAdSkip) vastAdSkip.style.display="none";
-                return;
-            }
-            const remain=Math.max(0,skip-(ad.getDuration?.()-ad.getRemainingTime?.()||0));
+function startVastCountdown(){
+    clearInterval(window.__cineflixVastTimer);
+    const update=()=>{
+        if(!vastAdActive) return;
+        const now=vastAdVideo.currentTime||0;
+        const duration=vastAdVideo.duration||0;
+        if(vastAdSkipAt===null){
+            vastSetCountdown("Advertisement");
+            if(vastAdSkip) vastAdSkip.style.display="none";
+        }else{
+            const remain=Math.max(0,vastAdSkipAt-now);
             if(remain>0){
-                vastAdSkip.style.display="block";
-                vastAdSkip.disabled=true;
-                vastAdSkip.classList.remove("ready");
-                vastAdSkip.textContent=`Skip in ${Math.ceil(remain)}s`;
+                vastSetCountdown(`Ad • Skip in ${Math.ceil(remain)}s`);
+                if(vastAdSkip){vastAdSkip.textContent=`Skip in ${Math.ceil(remain)}s`;vastAdSkip.style.display="block";vastAdSkip.disabled=true;vastAdSkip.classList.remove("ready");}
             }else{
-                vastAdSkip.style.display="block";
-                vastAdSkip.disabled=false;
-                vastAdSkip.classList.add("ready");
-                vastAdSkip.textContent="Skip";
+                vastSetCountdown("Skip");
+                if(vastAdSkip){vastAdSkip.textContent="Skip";vastAdSkip.style.display="block";vastAdSkip.disabled=false;vastAdSkip.classList.add("ready");}
             }
-        }catch(e){}
-    },250);
+        }
+        vastFireQuartiles();
+    };
+    update();
+    window.__cineflixVastTimer=setInterval(update,250);
 }
 
-function vastOnAdComplete(){
-    clearInterval(window.__cineflixImaSkipTimer);
-    if(vastAdActive) finishVastAd("complete");
-}
+async function preloadVastForInstantPlay(){
+    if(vastPreloadedData && vastPreloadedMedia) return {data:vastPreloadedData,media:vastPreloadedMedia};
+    if(vastPreloadPromise) return vastPreloadPromise;
+    if(!HILLTOP_VAST_TAG) return null;
 
-function vastOnAdSkipped(){
-    clearInterval(window.__cineflixImaSkipTimer);
-    if(vastAdActive) finishVastAd("skip");
-}
+    vastPreloadPromise=(async()=>{
+        try{
+            const data=await fetchVastDocument(HILLTOP_VAST_TAG);
+            const media=chooseVastMedia(data.media);
+            if(!media) throw new Error("No playable ad");
 
-function vastOnContentResume(){
-    if(vastAdActive) finishVastAd("complete");
-}
+            vastPreloadedData=data;
+            vastPreloadedMedia=media;
 
-function vastOnAllAdsCompleted(){
-    if(vastAdActive) finishVastAd("complete");
-}
-
-function vastOnAdError(event){
-    const error=event?.getError?.() || event;
-    vastHandleError(error);
+            /* Start downloading the actual ad media immediately. */
+            if(vastAdVideo){
+                vastAdVideo.preload="auto";
+                vastAdVideo.src=media.url;
+                try{vastAdVideo.load();}catch(e){}
+            }
+            return {data,media};
+        }catch(err){
+            console.warn("CINEFLIX VAST preload unavailable:",err);
+            vastPreloadedData=null;
+            vastPreloadedMedia=null;
+            return null;
+        }finally{
+            vastPreloadPromise=null;
+        }
+    })();
+    return vastPreloadPromise;
 }
 
 async function playVastAdThenMovie(){
     if(vastAdActive || vastAdLoading) return true;
     if(currentMode!=="movie") return false;
-
     const now=Date.now();
     if(vastAdLastShownAt && now-vastAdLastShownAt<VAST_AD_COOLDOWN_MS) return false;
     if(!HILLTOP_VAST_TAG) return false;
 
-    // The IMA SDK is loaded from Google's SDK host. No page-side fetch of the
-    // Hilltop VAST URL is performed, so the previous CORS failure is avoided.
-    if(typeof google==="undefined" || !google.ima){
-        console.warn("Google IMA SDK is not ready.");
-        return false;
-    }
-    if(!vastSetupIma()) return false;
-
     vastAdLoading=true;
-    vastAdActive=true;
-    vastAdFinished=false;
-    vastAdStarted=false;
-    vastAdLastShownAt=now;
-    vastResetUI();
-    vastShowOverlay();
-
-    // Start/keep the movie source alive underneath the ad so the first part
-    // is already buffered when the ad ends.
+    // Always restart the main movie from 0 after this ad.
+    // Initialize the movie source quietly while the ad is playing so its
+    // first ~10 seconds can buffer in the background.
+    vastAdSavedTime=0;
     try{video.pause();}catch(e){}
-    try{video.currentTime=0;}catch(e){}
-    initialPoster.classList.add("hidden");
     showPlayerLoading();
 
     try{
@@ -6475,97 +6431,115 @@ async function playVastAdThenMovie(){
         if(movieSource && !hlsReady && !video.src){
             loadHlsSource(movieSource,false,0);
         }
-    }catch(e){}
+        try{video.currentTime=0;}catch(e){}
 
-    try{
-        // IMA's display container must be initialized from the user gesture.
-        vastAdDisplayContainer.initialize();
+        const preloaded=await preloadVastForInstantPlay();
+        if(!preloaded) throw new Error("No playable ad");
+        const data=preloaded.data;
+        const media=preloaded.media;
+        vastPreloadedData=null;
+        vastPreloadedMedia=null;
+        vastAdData=data;
+        vastAdTracking=data.tracking||{};
+        vastAdClickUrl=data.clickUrl||"";
+        vastAdQuartiles={25:false,50:false,75:false};
+        vastAdSkipAt=parseVastTime(data.skipOffset,null);
+        vastAdLastShownAt=Date.now();
+        vastAdLoading=false;
+        vastAdActive=true;
 
-        vastAdRequest=new google.ima.AdsRequest();
-        vastAdRequest.adTagUrl=HILLTOP_VAST_TAG;
-        const size=vastAdContainerSize();
-        vastAdRequest.linearAdSlotWidth=size.width;
-        vastAdRequest.linearAdSlotHeight=size.height;
-        vastAdRequest.nonLinearAdSlotWidth=size.width;
-        vastAdRequest.nonLinearAdSlotHeight=Math.round(size.height*0.25);
-        vastAdRequest.setAdWillAutoPlay(true);
-        vastAdRequest.setAdWillPlayMuted(false);
+        vastResetUI();
+        if(vastAdSkipAt===null) vastAdSkip.style.display="none";
+        else vastAdSkip.style.display="block";
+        /* The media was already requested during page preload. Reusing the
+           same source avoids the 2–3 second blank wait after Play. */
+        if(vastAdVideo.src!==media.url){
+            vastAdVideo.src=media.url;
+            try{vastAdVideo.load();}catch(e){}
+        }
+        vastShowOverlay();
+        vastTrackMany("impression");
+        vastTrackMany("creativeView");
+        vastAdStartedAt=0;
 
-        vastAdsLoader.requestAds(vastAdRequest);
+        vastAdVideo.onloadedmetadata=()=>{
+            if(data.skipOffset){
+                vastAdSkipAt=parseVastTime(data.skipOffset,vastAdVideo.duration||0);
+            }
+            startVastCountdown();
+        };
+        vastAdVideo.onplay=()=>{
+            if(!vastAdStartedAt){
+                vastAdStartedAt=Date.now();
+                vastTrackMany("start");
+            }
+        };
+        vastAdVideo.ontimeupdate=()=>{vastFireQuartiles();};
+        vastAdVideo.onended=()=>finishVastAd("complete");
+        vastAdVideo.onerror=()=>finishVastAd("error");
 
-        // If the network/ad server never responds, don't trap playback.
-        vastAdFallbackTimer=setTimeout(()=>{
-            if(vastAdLoading) vastHandleError(new Error("IMA ad request timeout"));
-        },15000);
+        /*
+           The VAST media is preloaded before Play is clicked. In that case
+           loadedmetadata may have already fired before the handlers above
+           were attached, which could leave the Skip badge stuck on plain
+           "Skip" with no 15s countdown. Start/sync the countdown immediately
+           when metadata is already available, while still respecting the
+           VAST ad's own skipOffset/skippability.
+        */
+        if(vastAdVideo.readyState >= 1){
+            if(data.skipOffset){
+                const parsedSkip=parseVastTime(data.skipOffset,vastAdVideo.duration||0);
+                if(parsedSkip!==null) vastAdSkipAt=parsedSkip;
+            }
+            startVastCountdown();
+        }
 
+        vastAdVideo.muted=false;
+        const p=vastAdVideo.play();
+        if(p && p.catch){
+            await p.catch(()=>{
+                // Mobile autoplay policy: retry muted so the ad can still run.
+                vastAdVideo.muted=true;
+                return vastAdVideo.play();
+            });
+        }
         return true;
-    }catch(e){
-        vastHandleError(e);
+    }catch(err){
+        console.warn("CINEFLIX VAST ad unavailable:",err);
+        vastAdLoading=false;
+        vastAdActive=false;
+        vastHideOverlay();
+        vastResetUI();
+        hidePlayerLoading();
         return false;
     }
 }
 
 vastAdSkip?.addEventListener("click",e=>{
-    e.preventDefault();
     e.stopPropagation();
-    if(vastAdSkip.disabled || !vastAdActive || !vastAdsManager) return;
-    try{
-        vastAdsManager.skip();
-    }catch(err){
-        console.warn("IMA skip failed:",err);
-    }
+    if(!vastAdSkip.disabled && vastAdActive) finishVastAd("skip");
 });
 
-/* Ad overlay itself remains click-through to the IMA ad UI. The old custom
-   click layer is intentionally retained but disabled so it cannot block IMA. */
-if(vastAdClick) vastAdClick.style.display="none";
-
-/* =========================================================
-   FIRST-PLAY HANDOFF WRAPPER
-   Keeps the existing Hilltop ad logic intact and inserts the Drive intro
-   immediately after ad completion/skip, before the existing movie resume.
-========================================================= */
-const cineflixOriginalVastResumeMovieFromStart = vastResumeMovieFromStart;
-
-function cineflixResumeMainAfterDriveIntro(){
-    if(currentMode!=="movie") return;
-
-    /* IMA uses the same <video> element as the movie. After an ad is
-       destroyed, that element can have lost its media source even though
-       the HLS object still exists. Reuse the existing source when possible;
-       otherwise rebuild the exact same movie source and start at 0:00. */
-    const source = QUALITY_SOURCES.movie?.[currentQuality] ||
-        QUALITY_SOURCES.movie?.["480"] || MOVIE_DEMO_URL || "";
-
-    initialPoster.classList.add("hidden");
-    initialPoster.setAttribute("aria-hidden","true");
-    try{ video.currentTime=0; }catch(e){}
-
-    const mediaStillUsable = !!video.currentSrc &&
-        (video.readyState >= 2 || hlsReady);
-
-    if(mediaStillUsable){
-        showPlayerLoading();
-        video.play().then(()=>{
-            hidePlayerLoading();
-            showPlayerControls(true);
-            updateCenterPlayPause();
-        }).catch(()=>{
-            if(source) loadHlsSource(source,true,0);
-        });
-    }else if(source){
-        loadHlsSource(source,true,0);
-    }else{
-        cineflixOriginalVastResumeMovieFromStart();
-    }
+/* Begin VAST + Intro media preload quietly after the page has loaded.
+   No loader, overlay, or player state is changed here. */
+if(document.readyState==="loading") {
+    document.addEventListener("DOMContentLoaded",()=>{
+        void preloadVastForInstantPlay();
+        cineflixPreloadIntro();
+    },{once:true});
+}else{
+    void preloadVastForInstantPlay();
+    cineflixPreloadIntro();
 }
 
-vastResumeMovieFromStart = function(){
-    if(cineflixIntroConsumed){
-        return cineflixResumeMainAfterDriveIntro();
+vastAdClick?.addEventListener("click",e=>{
+    e.stopPropagation();
+    if(!vastAdActive) return;
+    vastTrackMany("clickTracking");
+    if(vastAdClickUrl){
+        try{window.open(vastAdClickUrl,"_blank","noopener,noreferrer");}catch(_){location.href=vastAdClickUrl;}
     }
-    return startCineflixDriveIntro(cineflixResumeMainAfterDriveIntro);
-};
+});
 
 async function togglePlay(){
     if(vastAdActive || vastAdLoading) return;
@@ -6575,11 +6549,6 @@ async function togglePlay(){
         showPlayerLoading();
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
-        if(!cineflixIntroConsumed){
-            const startMain=()=>loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,true,0);
-            startCineflixDriveIntro(startMain);
-            return;
-        }
         loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,true,video.currentTime||0);
         return;
     }
@@ -6588,14 +6557,6 @@ async function togglePlay(){
         initialPoster.classList.add("hidden");
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
-        if(!cineflixIntroConsumed){
-            startCineflixDriveIntro(()=>{
-                try{ video.currentTime=0; }catch(e){}
-                playWithoutLoaderIfBuffered();
-                video.play().catch(()=>{});
-            });
-            return;
-        }
         playWithoutLoaderIfBuffered();
         video.play().catch(()=>{});
     }else{
