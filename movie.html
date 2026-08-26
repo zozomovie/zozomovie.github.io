@@ -6048,6 +6048,8 @@ let vastAdTracking = {};
 let vastAdClickUrl = "";
 let vastAdPreloadedData = null;
 let vastAdPreloadPromise = null;
+let vastAdAttemptId = 0;
+const VAST_AD_RESPONSE_TIMEOUT_MS = 5000;
 
 function vastText(node){
     return node ? (node.textContent || "").trim() : "";
@@ -6215,6 +6217,7 @@ function vastFireQuartiles(){
 
 function finishVastAd(reason="complete"){
     if(!vastAdActive && !vastAdLoading) return;
+    vastAdAttemptId++;
     const wasActive=vastAdActive;
     vastAdActive=false;
     vastAdLoading=false;
@@ -6293,6 +6296,15 @@ async function playVastAdThenMovie(){
     if(vastAdLastShownAt && now-vastAdLastShownAt<VAST_AD_COOLDOWN_MS) return false;
     if(!HILLTOP_VAST_TAG) return false;
 
+    const attemptId=++vastAdAttemptId;
+    let timeoutId=null;
+    const failOpenToMovie=()=>{
+        if(attemptId!==vastAdAttemptId || !vastAdLoading) return;
+        console.warn("CINEFLIX VAST: no ad response/playable ad within 5s; starting movie.");
+        finishVastAd("timeout");
+    };
+    timeoutId=setTimeout(failOpenToMovie,VAST_AD_RESPONSE_TIMEOUT_MS);
+
     vastAdLoading=true;
     // Show the ad layer IMMEDIATELY on Play. If the VAST is not ready yet,
     // the user sees only the compact three-dot loader until the ad is ready.
@@ -6319,6 +6331,7 @@ async function playVastAdThenMovie(){
         if(!data){
             data = await (vastAdPreloadPromise || preloadHilltopVast());
         }
+        if(attemptId!==vastAdAttemptId || !vastAdLoading) return true;
         if(!data) throw new Error("VAST data unavailable");
 
         const media=chooseVastMedia(data.media);
@@ -6354,6 +6367,8 @@ async function playVastAdThenMovie(){
             }
         };
         vastAdVideo.onplaying=()=>{
+            clearTimeout(timeoutId);
+            timeoutId=null;
             vastAdOverlay.classList.remove("loading");
             if(vastAdLoadingUI) vastAdLoadingUI.setAttribute("aria-hidden","true");
         };
@@ -6370,9 +6385,17 @@ async function playVastAdThenMovie(){
                 return vastAdVideo.play();
             });
         }
+        if(attemptId!==vastAdAttemptId || !vastAdLoading) return true;
+        // The 5-second watchdog remains active until the ad actually starts.
+        // Once playback begins, it is safe to let the ad continue normally.
+        clearTimeout(timeoutId);
+        timeoutId=null;
         return true;
     }catch(err){
         console.warn("CINEFLIX VAST ad unavailable:",err);
+        clearTimeout(timeoutId);
+        timeoutId=null;
+        if(attemptId!==vastAdAttemptId || !vastAdLoading) return true;
         vastAdLoading=false;
         vastAdActive=false;
         vastHideOverlay();
