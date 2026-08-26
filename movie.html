@@ -4673,6 +4673,105 @@ body.cineflix-db-error .cineflix-db-message{
 const video =
     document.getElementById("movieVideo");
 
+const CINEFLIX_INTRO_URL =
+    "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
+
+/* INTRO ONLY — additive. Ad video, ad functions, movie source/HLS and
+   existing controls are left unchanged. */
+let __cineflixIntroVideo = null;
+let __cineflixIntroPlayed = false;
+
+function __cineflixPreloadIntro(){
+    if(__cineflixIntroVideo) return;
+
+    const v=document.createElement("video");
+    v.preload="auto";
+    v.muted=true;
+    v.playsInline=true;
+    v.setAttribute("playsinline","");
+    v.setAttribute("webkit-playsinline","");
+    v.src=CINEFLIX_INTRO_URL;
+
+    try{v.load();}catch(e){}
+    __cineflixIntroVideo=v;
+}
+
+function __cineflixPlayIntroThenMain(){
+    const intro=__cineflixIntroVideo;
+
+    if(__cineflixIntroPlayed || !intro){
+        return __cineflixOriginalMoviePlay();
+    }
+
+    __cineflixIntroPlayed=true;
+
+    const player=document.getElementById("videoPlayer") || video.parentElement;
+
+    const finish=()=>{
+        try{intro.pause();}catch(e){}
+        intro.style.display="none";
+        intro.remove();
+
+        try{video.style.visibility="visible";}catch(e){}
+        try{video.currentTime=0;}catch(e){}
+
+        try{__cineflixOriginalMoviePlay();}catch(e){}
+    };
+
+    intro.onended=finish;
+    intro.onerror=finish;
+
+    intro.style.position="absolute";
+    intro.style.inset="0";
+    intro.style.width="100%";
+    intro.style.height="100%";
+    intro.style.objectFit="contain";
+    intro.style.background="#000";
+    intro.style.zIndex="210";
+    intro.style.display="block";
+
+    try{player.appendChild(intro);}catch(e){
+        __cineflixIntroPlayed=false;
+        return __cineflixOriginalMoviePlay();
+    }
+
+    try{video.style.visibility="hidden";}catch(e){}
+
+    intro.currentTime=0;
+    intro.muted=false;
+
+    let p;
+    try{
+        p=intro.play();
+    }catch(e){
+        finish();
+        return Promise.resolve();
+    }
+
+    return Promise.resolve(p).catch(()=>{
+        /* Browser autoplay policy fallback. */
+        intro.muted=true;
+        return intro.play().catch(()=>{
+            finish();
+        });
+    });
+}
+
+/* Keep the original movie play function untouched; only intercept its
+   first call so the separate Intro can play before the movie. */
+const __cineflixOriginalMoviePlay = video.play.bind(video);
+video.play = function(){
+    return __cineflixPlayIntroThenMain();
+};
+
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",__cineflixPreloadIntro,{once:true});
+}else{
+    __cineflixPreloadIntro();
+}
+
+
+
 const centerPlay =
     document.getElementById("centerPlay");
 
@@ -6202,13 +6301,6 @@ function finishVastAd(reason="complete"){
     vastAdVideo.removeAttribute("src");
     vastAdVideo.load();
     vastHideOverlay();
-
-    /* INTRO ONLY — play the preloaded intro after Ad complete/Skip.
-       Existing VAST cleanup/tracking above remains unchanged. */
-    if(currentMode==="movie"){
-        void playCineflixIntro();
-    }
-
     vastAdData=null;
     vastAdSkipAt=null;
     vastAdClickUrl="";
@@ -6405,113 +6497,6 @@ async function playVastAdThenMovie(){
         hidePlayerLoading();
         return false;
     }
-}
-
-
-/* =========================================================
-   INTRO VIDEO — ADDITIVE ONLY
-   Does not change/remove the existing Ad or Main Movie code.
-========================================================= */
-const CINEFLIX_INTRO_URL = "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
-let cineflixIntroVideo = null;
-let cineflixIntroReady = false;
-let cineflixIntroRunning = false;
-
-function preloadCineflixIntro(){
-    if(cineflixIntroVideo) return;
-
-    const v = document.createElement("video");
-    v.preload = "auto";
-    v.muted = true;
-    v.playsInline = true;
-    v.setAttribute("playsinline","");
-    v.setAttribute("webkit-playsinline","");
-    v.src = CINEFLIX_INTRO_URL;
-
-    v.addEventListener("canplay",()=>{ cineflixIntroReady=true; },{once:true});
-    v.addEventListener("error",()=>{ cineflixIntroReady=false; });
-
-    try{ v.load(); }catch(e){}
-    cineflixIntroVideo = v;
-}
-
-function playCineflixIntro(){
-    if(cineflixIntroRunning) return;
-    cineflixIntroRunning = true;
-
-    const intro = cineflixIntroVideo;
-    if(!intro){
-        cineflixIntroRunning = false;
-        return;
-    }
-
-    const cleanup = () => {
-        try{ intro.pause(); }catch(e){}
-        intro.style.display = "none";
-        intro.remove();
-        cineflixIntroRunning = false;
-
-        /* Existing main movie starts from the beginning. */
-        try{ video.style.visibility = "visible"; }catch(e){}
-        try{ video.currentTime = 0; }catch(e){}
-
-        const start = () => {
-            try{ video.currentTime = 0; }catch(e){}
-            try{ video.play().catch(()=>{}); }catch(e){}
-            try{ hidePlayerLoading(); }catch(e){}
-            try{ showPlayerControls(true); }catch(e){}
-            try{ updateCenterPlayPause(); }catch(e){}
-        };
-
-        if(video.readyState >= 2 || hlsReady) start();
-        else {
-            video.addEventListener("canplay",start,{once:true});
-            video.addEventListener("loadeddata",start,{once:true});
-        }
-    };
-
-    intro.onended = cleanup;
-    intro.onerror = cleanup;
-
-    /* Put the preloaded intro over the existing player only after the ad
-       has finished/skipped. The ad element itself is untouched. */
-    intro.style.position = "absolute";
-    intro.style.inset = "0";
-    intro.style.width = "100%";
-    intro.style.height = "100%";
-    intro.style.objectFit = "contain";
-    intro.style.background = "#000";
-    intro.style.zIndex = "190";
-    intro.style.display = "block";
-
-    try{ playerSurface.appendChild(intro); }catch(e){
-        cineflixIntroRunning = false;
-        return;
-    }
-
-    try{ video.style.visibility = "hidden"; }catch(e){}
-    try{ initialPoster.classList.add("hidden"); }catch(e){}
-    try{ showPlayerLoading(); }catch(e){}
-
-    intro.currentTime = 0;
-    intro.muted = false;
-
-    const p = intro.play();
-    if(p && p.catch){
-        p.catch(()=>{
-            /* Browser autoplay policy fallback: play muted rather than
-               blocking the intro-to-movie transition. */
-            intro.muted = true;
-            return intro.play().catch(cleanup);
-        });
-    }
-}
-
-/* Preload as soon as the page is ready. */
-if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded",preloadCineflixIntro,{once:true});
-}else{
-    preloadCineflixIntro();
 }
 
 vastAdSkip?.addEventListener("click",e=>{
