@@ -3352,38 +3352,6 @@ body.cineflix-db-error .cineflix-db-message{
 .vast-ad-overlay.has-controls .vast-ad-click{bottom:42px;}
 </style>
 
-
-<style id="cineflix-scroll-performance-fix">
-/* Additive performance fixes — no player/UI function removed. */
-.movie-section,
-.details-section,
-.cast-section,
-.similar-section,
-.about-section{
-    content-visibility:auto;
-    contain-intrinsic-size:420px;
-}
-
-.cast,
-.similar-card{
-    contain:layout paint;
-}
-
-.player-loading,
-.initial-poster-play,
-.settings-panel,
-.vast-ad-overlay{
-    transform:translateZ(0);
-}
-
-@media (prefers-reduced-motion: reduce){
-    .player-loader-mark::before,
-    .player-loader-mark::after,
-    .player-loader-mark span{
-        animation-duration:1.5s;
-    }
-}
-</style>
 </head>
 
 
@@ -6046,16 +6014,7 @@ function setPlayerMode(mode,autoPlay=true){
    - Keeps the existing CINEFLIX movie/HLS player untouched underneath.
    - A 3-minute cooldown prevents an ad on every quick pause/resume.
 ========================================================= */
-/*
- * IMPORTANT:
- * The previous VAST endpoint was the source of the browser/site warning.
- * The complete VAST player/parser is intentionally kept below.
- * The old endpoint is disabled until a fresh VAST zone URL is supplied.
- *
- * To restore pre-roll ads, replace the empty string with the NEW VAST
- * URL generated from the ad provider's dashboard.
- */
-const HILLTOP_VAST_TAG = "";
+const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dLmAFkz.ddG/NQvyZrGoUb/_ebmn9du-ZcUVl/ktPlTscWzmNyTzQJz/MVjmkjtkNNzmMT1WNsD/MWz/MQwZ";
 const VAST_AD_COOLDOWN_MS = 3 * 60 * 1000;
 
 const vastAdOverlay = document.getElementById("vastAdOverlay");
@@ -6115,31 +6074,7 @@ function vastNodes(root,name){
 
 async function fetchVastDocument(url,depth=0){
     if(depth>4) throw new Error("VAST wrapper depth exceeded");
-    if(!url) throw new Error("VAST tag is not configured");
-
-    /*
-     * Defensive timeout: a slow/broken ad endpoint must never make the
-     * movie player hang indefinitely.
-     */
-    const controller = typeof AbortController !== "undefined"
-        ? new AbortController()
-        : null;
-    const timeout = controller
-        ? setTimeout(()=>controller.abort(),8000)
-        : null;
-
-    let response;
-    try{
-        response=await fetch(url,{
-            method:"GET",
-            mode:"cors",
-            credentials:"omit",
-            cache:"no-store",
-            signal:controller ? controller.signal : undefined
-        });
-    }finally{
-        if(timeout) clearTimeout(timeout);
-    }
+    const response=await fetch(url,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store"});
     if(!response.ok) throw new Error("VAST request failed");
     const text=await response.text();
     const xml=new DOMParser().parseFromString(text,"text/xml");
@@ -7159,12 +7094,20 @@ window.addEventListener(
     "scroll",
     ()=>{
 
-        document
-        .getElementById("topbar")
-        .classList.toggle(
-            "scrolled",
-            window.scrollY>30
-        );
+        const topbar = document.getElementById("topbar");
+
+        /*
+           Some movie-page versions do not render #topbar.
+           Never call classList on a missing element.
+           This keeps the scroll handler working without
+           breaking the rest of the page.
+        */
+        if(topbar){
+            topbar.classList.toggle(
+                "scrolled",
+                window.scrollY>30
+            );
+        }
 
     },
     {passive:true}
@@ -7371,7 +7314,7 @@ document.addEventListener("fullscreenchange",()=>{
             castRow.innerHTML = cast.length ? cast.map(person => `
                 <div class="cast">
                     <div class="cast-photo">
-                        ${person.profile ? `<img src="${escapeHTML(person.profile)}" alt="${escapeHTML(person.name||"Cast")}" loading="lazy" decoding="async">` : `
+                        ${person.profile ? `<img src="${escapeHTML(person.profile)}" alt="${escapeHTML(person.name||"Cast")}" loading="lazy">` : `
                             <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <circle cx="12" cy="8" r="4"/>
                                 <path d="M4 21a8 8 0 0 1 16 0"/>
