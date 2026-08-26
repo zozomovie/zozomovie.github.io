@@ -4950,7 +4950,8 @@ function toggleVideoFromTap(){
     }
 
     if(video.paused || video.ended){
-        void playIntroThenMain();
+        playWithoutLoaderIfBuffered();
+        video.play().catch(()=>{});
     }else{
         video.pause();
     }
@@ -6208,10 +6209,31 @@ function finishVastAd(reason="complete"){
     /* Re-prime the next ad in the background while the movie plays. */
     void preloadVastForInstantPlay();
 
-    // Existing Ad is fully finished/skipped here.
-    // Insert Intro, then return to the existing Main Movie from 0:00.
+    // Always start the main movie from the beginning after the ad.
     if(currentMode==="movie"){
-        void playIntroThenMain();
+        try{video.currentTime=0;}catch(e){}
+        initialPoster.classList.add("hidden");
+
+        // If the background buffer is ready, start immediately. Otherwise the
+        // existing player loader remains visible until playback is ready.
+        if(getBufferedAheadSeconds()>0.15) hidePlayerLoading();
+        else showPlayerLoading();
+
+        const startMovie=()=>{
+            if(currentMode!=="movie") return;
+            try{video.currentTime=0;}catch(e){}
+            video.play().catch(()=>{});
+            showPlayerControls(true);
+            updateCenterPlayPause();
+        };
+
+        if(video.readyState>=2 || hlsReady){
+            startMovie();
+        }else{
+            video.addEventListener("canplay",startMovie,{once:true});
+            video.addEventListener("loadeddata",startMovie,{once:true});
+            setTimeout(startMovie,2500);
+        }
     }
 }
 
@@ -6400,127 +6422,6 @@ vastAdClick?.addEventListener("click",e=>{
     }
 });
 
-/* =========================================================
-   CINEFLIX INTRO — ADD ONLY
-   Existing VAST Ad code and Main Movie code stay intact.
-========================================================= */
-const CINEFLIX_INTRO_URL = "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
-let cineflixIntroVideo = null;
-let cineflixIntroPlaying = false;
-
-function preloadCineflixIntro(){
-    if(cineflixIntroVideo) return;
-
-    const v=document.createElement("video");
-    v.preload="auto";
-    v.muted=true;
-    v.playsInline=true;
-    v.setAttribute("playsinline","");
-    v.setAttribute("webkit-playsinline","");
-    v.src=CINEFLIX_INTRO_URL;
-
-    v.addEventListener("error",()=>{},{once:true});
-    try{v.load();}catch(e){}
-    cineflixIntroVideo=v;
-}
-
-function playIntroThenMain(){
-    const intro=cineflixIntroVideo;
-
-    /* If the Intro could not be created/loaded, never block the movie. */
-    if(!intro){
-        try{video.currentTime=0;}catch(e){}
-        try{video.play().catch(()=>{});}catch(e){}
-        return Promise.resolve();
-    }
-
-    if(cineflixIntroPlaying) return Promise.resolve();
-    cineflixIntroPlaying=true;
-
-    return new Promise(resolve=>{
-        let finished=false;
-
-        const startMain=()=>{
-            if(finished) return;
-            finished=true;
-
-            try{intro.pause();}catch(e){}
-            try{intro.removeAttribute("src");}catch(e){}
-            try{intro.load();}catch(e){}
-            try{intro.remove();}catch(e){}
-
-            intro.style.display="none";
-            cineflixIntroPlaying=false;
-
-            try{video.style.visibility="visible";}catch(e){}
-            try{video.currentTime=0;}catch(e){}
-            try{initialPoster.classList.add("hidden");}catch(e){}
-
-            const start=()=>{
-                try{video.currentTime=0;}catch(e){}
-                try{video.play().catch(()=>{});}catch(e){}
-                try{hidePlayerLoading();}catch(e){}
-                try{showPlayerControls(true);}catch(e){}
-                try{updateCenterPlayPause();}catch(e){}
-                resolve();
-            };
-
-            if(video.readyState>=2 || hlsReady) start();
-            else{
-                video.addEventListener("canplay",start,{once:true});
-                video.addEventListener("loadeddata",start,{once:true});
-                setTimeout(start,4000);
-            }
-        };
-
-        intro.onended=startMain;
-        intro.onerror=startMain;
-
-        intro.style.position="absolute";
-        intro.style.inset="0";
-        intro.style.width="100%";
-        intro.style.height="100%";
-        intro.style.objectFit="contain";
-        intro.style.background="#000";
-        intro.style.zIndex="190";
-        intro.style.display="block";
-
-        try{playerSurface.appendChild(intro);}catch(e){
-            startMain();
-            return;
-        }
-
-        try{video.pause();}catch(e){}
-        try{video.style.visibility="hidden";}catch(e){}
-        try{initialPoster.classList.add("hidden");}catch(e){}
-        try{showPlayerLoading();}catch(e){}
-
-        intro.currentTime=0;
-        intro.muted=false;
-
-        try{
-            const p=intro.play();
-            if(p && p.catch){
-                p.catch(()=>{
-                    /* User already pressed Play; this is only a browser
-                       autoplay fallback for the Intro after the Ad. */
-                    intro.muted=true;
-                    intro.play().catch(startMain);
-                });
-            }
-        }catch(e){
-            startMain();
-        }
-    });
-}
-
-/* Preload Intro as soon as the page opens, without changing player state. */
-if(document.readyState==="loading"){
-    document.addEventListener("DOMContentLoaded",preloadCineflixIntro,{once:true});
-}else{
-    preloadCineflixIntro();
-}
-
 async function togglePlay(){
     if(vastAdActive || vastAdLoading) return;
 
@@ -6529,8 +6430,7 @@ async function togglePlay(){
         showPlayerLoading();
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
-        loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,false,video.currentTime||0);
-        void playIntroThenMain();
+        loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,true,video.currentTime||0);
         return;
     }
 
