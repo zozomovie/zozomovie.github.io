@@ -34,7 +34,26 @@ html{
     scroll-behavior:smooth;
 }
 
+/* =========================================================
+   SCROLL PERFORMANCE — additive only
+   Keeps every existing function/UI, but reduces paint work
+   while the main page is being scrolled.
+========================================================= */
+.section{
+    content-visibility:auto;
+    contain-intrinsic-size:320px;
+}
+
+.movie-row{
+    -webkit-overflow-scrolling:touch;
+}
+
+.hero-track{
+    will-change:transform;
+}
+
 body{
+
     background:var(--bg);
     color:var(--text);
     font-family:Inter,Arial,sans-serif;
@@ -83,13 +102,14 @@ body{
         rgba(0,0,0,.55),
         transparent
     );
-    transition:.35s;
+    transition:background .22s ease;
+    transform:translateZ(0);
 }
 
 .header.scrolled{
-    background:rgba(5,5,6,.96);
-    backdrop-filter:blur(16px);
-    box-shadow:0 10px 30px rgba(0,0,0,.3);
+    /* Solid background avoids an expensive blur repaint on every scroll frame. */
+    background:rgba(5,5,6,.98);
+    box-shadow:none;
 }
 
 .logo{
@@ -1736,6 +1756,7 @@ function createMovieCard(movie){
             src="${movie.image}"
             alt="${movie.title}"
             loading="lazy"
+            decoding="async"
         >
 
         <div class="movie-gradient"></div>
@@ -2093,12 +2114,23 @@ function startHeroTimer(){
 
     clearInterval(heroTimer);
 
+    /* Do not keep the slider timer running in a hidden tab. */
+    if(document.hidden) return;
+
     heroTimer=setInterval(
         nextHero,
         6500
     );
 
 }
+
+document.addEventListener("visibilitychange",()=>{
+    if(document.hidden){
+        clearInterval(heroTimer);
+    }else{
+        startHeroTimer();
+    }
+});
 
 
 document.getElementById("heroNext")
@@ -2258,17 +2290,35 @@ searchInput.addEventListener("input",()=>{
    HEADER SCROLL
 ========================================================= */
 
+/* =========================================================
+   HEADER SCROLL — rAF THROTTLED
+   Same behavior, but never performs DOM work more than once
+   per animation frame during a fast wheel/touch scroll.
+========================================================= */
+const headerElement = document.getElementById("header");
+let headerScrollFrame = 0;
+let headerScrolledState = false;
+
+function updateHeaderOnScroll(){
+    headerScrollFrame = 0;
+    if(!headerElement) return;
+
+    const shouldBeScrolled = window.scrollY > 40;
+
+    /* Avoid class writes when the state did not actually change. */
+    if(shouldBeScrolled === headerScrolledState) return;
+
+    headerScrolledState = shouldBeScrolled;
+    headerElement.classList.toggle("scrolled", shouldBeScrolled);
+}
+
 window.addEventListener("scroll",()=>{
+    if(headerScrollFrame) return;
 
-    const header =
-        document.getElementById("header");
-
-    header.classList.toggle(
-        "scrolled",
-        window.scrollY>40
-    );
-
+    headerScrollFrame = requestAnimationFrame(updateHeaderOnScroll);
 },{passive:true});
+
+updateHeaderOnScroll();
 
 
 /* =========================================================
