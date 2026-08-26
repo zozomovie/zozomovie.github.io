@@ -6117,7 +6117,7 @@ function setPlayerMode(mode,autoPlay=true){
    - Keeps the existing CINEFLIX movie/HLS player untouched underneath.
    - A 3-minute cooldown prevents an ad on every quick pause/resume.
 ========================================================= */
-const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dLmAFkz.ddG/NQvyZrGoUb/_ebmn9du-ZcUVl/ktPlTscWzmNyTzQJz/MVjmkjtkNNzmMT1WNsD/MWz/MQwZ";
+const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dRmnFzz.dzGrNcvxZhGKUC/_ejmd9EuQZMU-lkkkPATvc/zYN/TTUVwuOpT/crtSNQzyMx1/NJTSEgwVMFQG";
 const VAST_AD_COOLDOWN_MS = 3 * 60 * 1000;
 
 const vastAdOverlay = document.getElementById("vastAdOverlay");
@@ -6377,14 +6377,18 @@ function startVastCountdown(){
     window.__cineflixVastTimer=setInterval(update,250);
 }
 
-async function preloadVastForInstantPlay(){
-    if(vastPreloadedData && vastPreloadedMedia) return {data:vastPreloadedData,media:vastPreloadedMedia};
+async function preloadVastForInstantPlay(forceRetry=false){
+    if(!forceRetry && vastPreloadedData && vastPreloadedMedia) return {data:vastPreloadedData,media:vastPreloadedMedia};
     if(vastPreloadPromise) return vastPreloadPromise;
     if(!HILLTOP_VAST_TAG) return null;
 
     vastPreloadPromise=(async()=>{
         try{
-            const data=await fetchVastDocument(HILLTOP_VAST_TAG);
+            /* Retry the exact Hilltop VAST feed on the real Play gesture.
+               This does not change the ad URL or ad behavior; it only avoids
+               reusing a failed preload result. */
+            const requestUrl=forceRetry ? (HILLTOP_VAST_TAG + (HILLTOP_VAST_TAG.includes('?')?'&':'?') + '_cb=' + Date.now()) : HILLTOP_VAST_TAG;
+            const data=await fetchVastDocument(requestUrl);
             const media=chooseVastMedia(data.media);
             if(!media) throw new Error("No playable ad");
 
@@ -6433,7 +6437,10 @@ async function playVastAdThenMovie(){
         }
         try{video.currentTime=0;}catch(e){}
 
-        const preloaded=await preloadVastForInstantPlay();
+        let preloaded=await preloadVastForInstantPlay();
+        /* If the quiet page preload failed, retry the exact same VAST feed
+           once from the user's Play gesture before allowing any fallback. */
+        if(!preloaded) preloaded=await preloadVastForInstantPlay(true);
         if(!preloaded) throw new Error("No playable ad");
         const data=preloaded.data;
         const media=preloaded.media;
