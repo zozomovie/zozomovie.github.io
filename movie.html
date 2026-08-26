@@ -4673,105 +4673,6 @@ body.cineflix-db-error .cineflix-db-message{
 const video =
     document.getElementById("movieVideo");
 
-const CINEFLIX_INTRO_URL =
-    "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
-
-/* INTRO ONLY — additive. Ad video, ad functions, movie source/HLS and
-   existing controls are left unchanged. */
-let __cineflixIntroVideo = null;
-let __cineflixIntroPlayed = false;
-
-function __cineflixPreloadIntro(){
-    if(__cineflixIntroVideo) return;
-
-    const v=document.createElement("video");
-    v.preload="auto";
-    v.muted=true;
-    v.playsInline=true;
-    v.setAttribute("playsinline","");
-    v.setAttribute("webkit-playsinline","");
-    v.src=CINEFLIX_INTRO_URL;
-
-    try{v.load();}catch(e){}
-    __cineflixIntroVideo=v;
-}
-
-function __cineflixPlayIntroThenMain(){
-    const intro=__cineflixIntroVideo;
-
-    if(__cineflixIntroPlayed || !intro){
-        return __cineflixOriginalMoviePlay();
-    }
-
-    __cineflixIntroPlayed=true;
-
-    const player=document.getElementById("videoPlayer") || video.parentElement;
-
-    const finish=()=>{
-        try{intro.pause();}catch(e){}
-        intro.style.display="none";
-        intro.remove();
-
-        try{video.style.visibility="visible";}catch(e){}
-        try{video.currentTime=0;}catch(e){}
-
-        try{__cineflixOriginalMoviePlay();}catch(e){}
-    };
-
-    intro.onended=finish;
-    intro.onerror=finish;
-
-    intro.style.position="absolute";
-    intro.style.inset="0";
-    intro.style.width="100%";
-    intro.style.height="100%";
-    intro.style.objectFit="contain";
-    intro.style.background="#000";
-    intro.style.zIndex="210";
-    intro.style.display="block";
-
-    try{player.appendChild(intro);}catch(e){
-        __cineflixIntroPlayed=false;
-        return __cineflixOriginalMoviePlay();
-    }
-
-    try{video.style.visibility="hidden";}catch(e){}
-
-    intro.currentTime=0;
-    intro.muted=false;
-
-    let p;
-    try{
-        p=intro.play();
-    }catch(e){
-        finish();
-        return Promise.resolve();
-    }
-
-    return Promise.resolve(p).catch(()=>{
-        /* Browser autoplay policy fallback. */
-        intro.muted=true;
-        return intro.play().catch(()=>{
-            finish();
-        });
-    });
-}
-
-/* Keep the original movie play function untouched; only intercept its
-   first call so the separate Intro can play before the movie. */
-const __cineflixOriginalMoviePlay = video.play.bind(video);
-video.play = function(){
-    return __cineflixPlayIntroThenMain();
-};
-
-if(document.readyState==="loading"){
-    document.addEventListener("DOMContentLoaded",__cineflixPreloadIntro,{once:true});
-}else{
-    __cineflixPreloadIntro();
-}
-
-
-
 const centerPlay =
     document.getElementById("centerPlay");
 
@@ -6112,7 +6013,7 @@ function setPlayerMode(mode,autoPlay=true){
    - Keeps the existing CINEFLIX movie/HLS player untouched underneath.
    - A 3-minute cooldown prevents an ad on every quick pause/resume.
 ========================================================= */
-const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dRmnFzz.dzGrNcvxZhGKUC/_ejmd9EuQZMU-lkkkPATvc/zYN/TTUVwuOpT/crtSNQzyMx1/NJTSEgwVMFQG";
+const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dLmAFkz.ddG/NQvyZrGoUb/_ebmn9du-ZcUVl/ktPlTscWzmNyTzQJz/MVjmkjtkNNzmMT1WNsD/MWz/MQwZ";
 const VAST_AD_COOLDOWN_MS = 3 * 60 * 1000;
 
 const vastAdOverlay = document.getElementById("vastAdOverlay");
@@ -6175,7 +6076,17 @@ function vastNodes(root,name){
 
 async function fetchVastDocument(url,depth=0){
     if(depth>4) throw new Error("VAST wrapper depth exceeded");
-    const response=await fetch(url,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store"});
+
+    /* Fresh VAST request each time.
+       Do not reuse the same cached ad response. */
+    let requestUrl=url;
+    try{
+        const u=new URL(url,window.location.href);
+        u.searchParams.set("cb",Date.now().toString()+"_"+Math.random().toString(36).slice(2));
+        requestUrl=u.toString();
+    }catch(e){}
+
+    const response=await fetch(requestUrl,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store"});
     if(!response.ok) throw new Error("VAST request failed");
     const text=await response.text();
     const xml=new DOMParser().parseFromString(text,"text/xml");
@@ -6498,6 +6409,115 @@ async function playVastAdThenMovie(){
         return false;
     }
 }
+
+
+/* =========================================================
+   INTRO VIDEO — ADD-ONLY
+   Background preload; Ad and Main Movie logic unchanged.
+========================================================= */
+const CINEFLIX_INTRO_URL = "https://bbqaagbypawcpszjwzii.supabase.co/storage/v1/object/public/Intro/intro.mp4";
+let cineflixIntroVideo = null;
+let cineflixIntroRunning = false;
+
+function preloadCineflixIntro(){
+    if(cineflixIntroVideo) return;
+    const v=document.createElement("video");
+    v.preload="auto";
+    v.muted=true;
+    v.playsInline=true;
+    v.setAttribute("playsinline","");
+    v.setAttribute("webkit-playsinline","");
+    v.src=CINEFLIX_INTRO_URL;
+    try{v.load();}catch(e){}
+    cineflixIntroVideo=v;
+}
+
+function playCineflixIntro(){
+    if(cineflixIntroRunning || !cineflixIntroVideo) return;
+    cineflixIntroRunning=true;
+
+    const intro=cineflixIntroVideo;
+
+    const finish=()=>{
+        try{intro.pause();}catch(e){}
+        intro.style.display="none";
+        try{intro.remove();}catch(e){}
+        cineflixIntroRunning=false;
+
+        try{video.style.visibility="visible";}catch(e){}
+        try{video.currentTime=0;}catch(e){}
+
+        const start=()=>{
+            try{video.currentTime=0;}catch(e){}
+            try{video.play().catch(()=>{});}catch(e){}
+            try{hidePlayerLoading();}catch(e){}
+            try{showPlayerControls(true);}catch(e){}
+            try{updateCenterPlayPause();}catch(e){}
+        };
+
+        if(video.readyState>=2 || hlsReady) start();
+        else {
+            video.addEventListener("canplay",start,{once:true});
+            video.addEventListener("loadeddata",start,{once:true});
+        }
+    };
+
+    intro.onended=finish;
+    intro.onerror=finish;
+
+    intro.style.position="absolute";
+    intro.style.inset="0";
+    intro.style.width="100%";
+    intro.style.height="100%";
+    intro.style.objectFit="contain";
+    intro.style.background="#000";
+    intro.style.zIndex="190";
+    intro.style.display="block";
+
+    try{playerSurface.appendChild(intro);}catch(e){
+        cineflixIntroRunning=false;
+        return;
+    }
+
+    try{video.style.visibility="hidden";}catch(e){}
+    try{initialPoster.classList.add("hidden");}catch(e){}
+    try{showPlayerLoading();}catch(e){}
+
+    intro.currentTime=0;
+    intro.muted=false;
+
+    const p=intro.play();
+    if(p && p.catch){
+        p.catch(()=>{
+            intro.muted=true;
+            return intro.play().catch(finish);
+        });
+    }
+}
+
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",preloadCineflixIntro,{once:true});
+}else{
+    preloadCineflixIntro();
+}
+
+/* Intercept only the existing Main Movie play call.
+   Existing Ad code itself is not modified. */
+(function(){
+    const originalPlay=HTMLMediaElement.prototype.play;
+    let introOnce=false;
+
+    HTMLMediaElement.prototype.play=function(){
+        if(this===video && !introOnce && currentMode==="movie" && !vastAdActive && !vastAdLoading){
+            introOnce=true;
+            const p=playCineflixIntro();
+            if(p!==undefined || cineflixIntroVideo){
+                return Promise.resolve();
+            }
+        }
+        return originalPlay.call(this);
+    };
+})();
 
 vastAdSkip?.addEventListener("click",e=>{
     e.stopPropagation();
