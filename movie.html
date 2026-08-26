@@ -3275,6 +3275,11 @@ body.cineflix-db-error .cineflix-db-message{
     overflow:hidden;
 }
 .vast-ad-overlay.show{display:block;}
+.vast-ad-overlay.waiting{background:transparent;pointer-events:none;}
+.vast-ad-overlay.waiting .vast-ad-scrim,
+.vast-ad-overlay.waiting .vast-ad-click,
+.vast-ad-overlay.waiting .vast-ad-label,
+.vast-ad-overlay.waiting .vast-ad-skip{display:none !important;}
 .vast-ad-loading{
     position:absolute;
     inset:0;
@@ -4693,6 +4698,7 @@ body.cineflix-db-error .cineflix-db-message{
 
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+<script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
 <script>
 
 /* =========================================================
@@ -6036,14 +6042,17 @@ function setPlayerMode(mode,autoPlay=true){
 }
 
 /* =========================================================
-   HILLTOPADS VAST PRE-ROLL — ADDITIVE PLAYER LAYER
-   - Uses the exact VAST tag supplied for this site.
-   - Respects the VAST ad's own skipOffset/skippability.
-   - Keeps the existing CINEFLIX movie/HLS player untouched underneath.
-   - A 3-minute cooldown prevents an ad on every quick pause/resume.
+   HILLTOPADS VAST PRE-ROLL — IMA SDK PLAYER LAYER
+   - No page-load VAST fetch/preloader.
+   - Requests the Hilltop VAST only after the user's Play action.
+   - Google IMA handles the VAST request/parsing/playback instead of
+     fetch()+DOMParser, avoiding the direct JavaScript VAST fetch path.
+   - Existing Cineflix movie/HLS player remains underneath.
+   - 8s fail-open: if the ad cannot start in time, the movie starts.
 ========================================================= */
 const HILLTOP_VAST_TAG = "https://troubled-entertainment.com/dImJFNzPd.GANWvGZ_G/Un/YeAmE9WuxZRUZlskpPKTMcIzzNLTfUUw/O/TscYtQNZzeMm1HNpTLEIw/MJQc";
 const VAST_AD_COOLDOWN_MS = 3 * 60 * 1000;
+const VAST_AD_RESPONSE_TIMEOUT_MS = 8000;
 
 const vastAdOverlay = document.getElementById("vastAdOverlay");
 const vastAdVideo = document.getElementById("vastAdVideo");
@@ -6055,285 +6064,223 @@ const vastAdClick = document.getElementById("vastAdClick");
 
 let vastAdActive = false;
 let vastAdLoading = false;
-let vastAdSavedTime = 0;
-let vastAdData = null;
-let vastAdSkipAt = null;
-let vastAdStartedAt = 0;
-let vastAdQuartiles = {25:false,50:false,75:false};
 let vastAdLastShownAt = 0;
-let vastAdTracking = {};
-let vastAdClickUrl = "";
-let vastAdPreloadedData = null;
-let vastAdPreloadedMediaUrl = "";
-let vastAdPreloadPromise = null;
 let vastAdAttemptId = 0;
-const VAST_AD_RESPONSE_TIMEOUT_MS = 8000;
-
-function vastText(node){
-    return node ? (node.textContent || "").trim() : "";
-}
-function vastAbsUrl(value,base){
-    try{return new URL(String(value||"").trim(),base).href;}catch(e){return String(value||"").trim();}
-}
-function vastTrack(url){
-    if(!url) return;
-    try{
-        const img=new Image();
-        img.referrerPolicy="no-referrer";
-        img.src=url;
-    }catch(e){}
-}
-function vastTrackMany(name){
-    (vastAdTracking[name]||[]).forEach(vastTrack);
-}
-function parseVastTime(value,duration){
-    if(!value) return null;
-    const raw=String(value).trim();
-    if(raw.endsWith("%")){
-        const pct=parseFloat(raw);
-        return Number.isFinite(pct) && Number.isFinite(duration) ? duration*pct/100 : null;
-    }
-    const parts=raw.split(":").map(Number);
-    if(parts.length===3 && parts.every(Number.isFinite)) return parts[0]*3600+parts[1]*60+parts[2];
-    if(parts.length===2 && parts.every(Number.isFinite)) return parts[0]*60+parts[1];
-    const n=parseFloat(raw);
-    return Number.isFinite(n)?n:null;
-}
-function vastNodes(root,name){
-    return Array.from(root.getElementsByTagName(name));
-}
-
-async function fetchVastDocument(url,depth=0){
-    if(depth>4) throw new Error("VAST wrapper depth exceeded");
-    const response=await fetch(url,{method:"GET",mode:"cors",credentials:"omit",cache:"no-store"});
-    if(!response.ok) throw new Error("VAST request failed");
-    const text=await response.text();
-    const xml=new DOMParser().parseFromString(text,"text/xml");
-    if(xml.querySelector("parsererror")) throw new Error("Invalid VAST XML");
-
-    const ad=vastNodes(xml,"Ad")[0];
-    if(!ad) throw new Error("No VAST Ad");
-
-    const inline=ad.querySelector("InLine");
-    const wrapper=ad.querySelector("Wrapper");
-    if(wrapper){
-        const tag=vastText(wrapper.querySelector("VASTAdTagURI"));
-        if(!tag) throw new Error("VAST wrapper has no tag URI");
-        const child=await fetchVastDocument(vastAbsUrl(tag,url),depth+1);
-        const wrapperTracking={};
-        vastNodes(wrapper,"Tracking").forEach(n=>{
-            const event=n.getAttribute("event")||"";
-            const u=vastText(n);
-            if(u){(wrapperTracking[event]||(wrapperTracking[event]=[])).push(vastAbsUrl(u,url));}
-        });
-        Object.keys(wrapperTracking).forEach(k=>{
-            child.tracking[k]=[...(wrapperTracking[k]||[]),...(child.tracking[k]||[])];
-        });
-        const wc=vastText(wrapper.querySelector("ClickTracking"));
-        if(wc && !child.clickUrl) child.clickUrl=vastAbsUrl(wc,url);
-        return child;
-    }
-
-    if(!inline) throw new Error("No VAST Inline/Wrapper");
-    const linear=inline.querySelector("Linear");
-    if(!linear) throw new Error("No Linear creative");
-    const media=Array.from(linear.querySelectorAll("MediaFiles MediaFile"));
-    const usable=media.map(n=>({
-        url:vastAbsUrl(vastText(n),url),
-        type:(n.getAttribute("type")||"").toLowerCase(),
-        width:Number(n.getAttribute("width")||0),
-        height:Number(n.getAttribute("height")||0),
-        bitrate:Number(n.getAttribute("bitrate")||0)
-    })).filter(x=>x.url && (/video\/(mp4|webm|ogg)/.test(x.type)||/\.mp4(?:$|\?)/i.test(x.url)||/\.webm(?:$|\?)/i.test(x.url)));
-    if(!usable.length) throw new Error("No playable VAST media file");
-
-    const tracking={};
-    vastNodes(linear,"Tracking").forEach(n=>{
-        const event=n.getAttribute("event")||"";
-        const u=vastText(n);
-        if(u){(tracking[event]||(tracking[event]=[])).push(vastAbsUrl(u,url));}
-    });
-    const impression=vastText(inline.querySelector("Impression"));
-    if(impression) (tracking.impression||(tracking.impression=[])).push(vastAbsUrl(impression,url));
-    const clickThrough=vastText(linear.querySelector("VideoClicks ClickThrough"));
-    const clickTracking=vastText(linear.querySelector("VideoClicks ClickTracking"));
-    if(clickTracking) (tracking.clickTracking||(tracking.clickTracking=[])).push(vastAbsUrl(clickTracking,url));
-
-    return {
-        media:usable,
-        skipOffset:linear.getAttribute("skipoffset")||null,
-        tracking,
-        clickUrl:clickThrough ? vastAbsUrl(clickThrough,url) : ""
-    };
-}
-
-function chooseVastMedia(media){
-    const list=[...media];
-    list.sort((a,b)=>{
-        const aMp4=a.type.includes("mp4")?0:1;
-        const bMp4=b.type.includes("mp4")?0:1;
-        if(aMp4!==bMp4) return aMp4-bMp4;
-        const ah=Math.abs((a.height||720)-720), bh=Math.abs((b.height||720)-720);
-        return ah-bh;
-    });
-    return list[0]||null;
-}
-
-/* Preload the VAST XML as soon as the page is ready. This removes the
-   fetch/wrapper delay from the first Play click when the network allows it. */
-function primeVastMedia(data){
-    try{
-        const media=chooseVastMedia(data?.media||[]);
-        if(!media?.url) return null;
-        if(vastAdVideo.src!==media.url){
-            vastAdVideo.pause();
-            vastAdVideo.preload="auto";
-            vastAdVideo.src=media.url;
-            vastAdVideo.load();
-        }
-        vastAdPreloadedMediaUrl=media.url;
-        return media;
-    }catch(e){
-        console.warn("CINEFLIX VAST media preload unavailable:",e);
-        return null;
-    }
-}
-
-function preloadHilltopVast(){
-    if(!HILLTOP_VAST_TAG || vastAdPreloadPromise) return vastAdPreloadPromise;
-    vastAdPreloadPromise=fetchVastDocument(HILLTOP_VAST_TAG)
-        .then(data=>{
-            vastAdPreloadedData=data;
-            // Also warm the actual video file, not just the VAST XML, so the
-            // first Play click can start the ad with minimal visible loading.
-            primeVastMedia(data);
-            return data;
-        })
-        .catch(err=>{
-            console.warn("CINEFLIX VAST preload unavailable:",err);
-            vastAdPreloadPromise=null;
-            return null;
-        });
-    return vastAdPreloadPromise;
-}
+let vastAdManager = null;
+let vastAdLoader = null;
+let vastAdDisplayContainer = null;
+let vastAdInitialized = false;
+let vastAdCurrent = null;
+let vastAdSkipOffset = -1;
+let vastAdStartedAt = 0;
+let vastAdRequestTimer = null;
+let vastAdSdkReady = false;
 
 function vastSetCountdown(text){
-    // Countdown is shown inside the bottom-right Skip badge.
-    if(vastAdCountdown) vastAdCountdown.textContent=text;
-    if(vastAdSkip && vastAdActive){
-        const m=String(text||"").match(/Skip in\s+(\d+)s/i);
-        vastAdSkip.textContent=m ? `Skip in ${m[1]}s` : (vastAdSkip.disabled ? "Skip" : "Skip");
-    }
+    if(vastAdCountdown) vastAdCountdown.textContent=text || "";
 }
 function vastResetUI(){
     if(vastAdSkip){
         vastAdSkip.disabled=true;
         vastAdSkip.classList.remove("ready");
         vastAdSkip.textContent="Skip";
+        vastAdSkip.style.display="none";
     }
-    vastSetCountdown("Advertisement");
+    vastSetCountdown("");
+    if(vastAdLabel) vastAdLabel.setAttribute("aria-hidden","true");
 }
-function vastShowOverlay(loading=false){
-    vastAdOverlay.classList.toggle("loading",!!loading);
+function vastShowOverlay(waiting=false){
     vastAdOverlay.classList.add("show");
+    vastAdOverlay.classList.toggle("waiting",!!waiting);
+    vastAdOverlay.classList.remove("loading");
     vastAdOverlay.setAttribute("aria-hidden","false");
     vastAdOverlay.style.zIndex="200";
     if(vastAdLabel) vastAdLabel.setAttribute("aria-hidden","false");
-    if(vastAdLoadingUI) vastAdLoadingUI.setAttribute("aria-hidden",loading?"false":"true");
+    /* No dotted preloader: the existing movie/poster stays visible until
+       IMA reports the ad is actually starting. */
+    if(vastAdLoadingUI) vastAdLoadingUI.setAttribute("aria-hidden","true");
 }
 function vastHideOverlay(){
-    vastAdOverlay.classList.remove("loading","show");
+    vastAdOverlay.classList.remove("show","loading","waiting");
     vastAdOverlay.setAttribute("aria-hidden","true");
     vastAdOverlay.style.zIndex="";
     if(vastAdLabel) vastAdLabel.setAttribute("aria-hidden","true");
     if(vastAdLoadingUI) vastAdLoadingUI.setAttribute("aria-hidden","true");
+    vastResetUI();
 }
-function vastFireQuartiles(){
-    if(!vastAdVideo.duration || !Number.isFinite(vastAdVideo.duration)) return;
-    const pct=(vastAdVideo.currentTime/vastAdVideo.duration)*100;
-    [25,50,75].forEach(q=>{
-        if(pct>=q && !vastAdQuartiles[q]){
-            vastAdQuartiles[q]=true;
-            vastTrackMany(q===25?"firstQuartile":q===50?"midpoint":"thirdQuartile");
-        }
-    });
+function vastStartMovieFromBeginning(){
+    if(currentMode!=="movie") return;
+    initialPoster.classList.add("hidden");
+    initialPoster.setAttribute("aria-hidden","true");
+    try{video.currentTime=0;}catch(e){}
+    const playNow=()=>{
+        if(currentMode!=="movie") return;
+        try{video.currentTime=0;}catch(e){}
+        video.play().catch(()=>{});
+        hidePlayerLoading();
+        showPlayerControls(true);
+        updateCenterPlayPause();
+    };
+    if(video.readyState>=2 || hlsReady) playNow();
+    else{
+        showPlayerLoading();
+        video.addEventListener("canplay",playNow,{once:true});
+        video.addEventListener("loadeddata",playNow,{once:true});
+        setTimeout(playNow,2500);
+    }
 }
-
 function finishVastAd(reason="complete"){
     if(!vastAdActive && !vastAdLoading) return;
     vastAdAttemptId++;
-    const wasActive=vastAdActive;
+    clearTimeout(vastAdRequestTimer);
+    vastAdRequestTimer=null;
     vastAdActive=false;
     vastAdLoading=false;
-    clearInterval(window.__cineflixVastTimer);
-    if(wasActive){
-        if(reason==="skip") vastTrackMany("skip");
-        else if(reason==="complete") vastTrackMany("complete");
-        else vastTrackMany("error");
-    }
-    try{vastAdVideo.pause();}catch(e){}
-    vastAdVideo.removeAttribute("src");
-    vastAdVideo.load();
-    vastAdPreloadedMediaUrl="";
+    try{
+        if(vastAdManager){
+            if(reason!=="complete" && reason!=="skip") vastAdManager.stop();
+            vastAdManager.destroy();
+        }
+    }catch(e){}
+    vastAdManager=null;
+    vastAdCurrent=null;
+    vastAdSkipOffset=-1;
+    vastAdStartedAt=0;
     vastHideOverlay();
-    vastAdData=null;
-    vastAdSkipAt=null;
-    vastAdClickUrl="";
-    vastResetUI();
-
-    // Always start the main movie from the beginning after the ad.
-    if(currentMode==="movie"){
-        try{video.currentTime=0;}catch(e){}
-        initialPoster.classList.add("hidden");
-
-        // If the background buffer is ready, start immediately. Otherwise the
-        // existing player loader remains visible until playback is ready.
-        if(getBufferedAheadSeconds()>0.15) hidePlayerLoading();
-        else showPlayerLoading();
-
-        const startMovie=()=>{
-            if(currentMode!=="movie") return;
-            try{video.currentTime=0;}catch(e){}
-            video.play().catch(()=>{});
-            showPlayerControls(true);
-            updateCenterPlayPause();
-        };
-
-        if(video.readyState>=2 || hlsReady){
-            startMovie();
-        }else{
-            video.addEventListener("canplay",startMovie,{once:true});
-            video.addEventListener("loadeddata",startMovie,{once:true});
-            setTimeout(startMovie,2500);
-        }
+    vastStartMovieFromBeginning();
+}
+function updateVastSkipUI(currentTime){
+    if(!vastAdActive || !vastAdSkip) return;
+    let canSkip=false;
+    try{canSkip=!!vastAdManager && vastAdManager.getAdSkippableState();}catch(e){}
+    if(vastAdSkipOffset < 0){
+        vastAdSkip.style.display="none";
+        return;
+    }
+    const remain=Math.max(0,vastAdSkipOffset-(Number(currentTime)||0));
+    if(canSkip || remain<=0){
+        vastAdSkip.textContent="Skip";
+        vastAdSkip.disabled=false;
+        vastAdSkip.classList.add("ready");
+        vastAdSkip.style.display="block";
+    }else{
+        vastAdSkip.textContent=`Skip in ${Math.ceil(remain)}s`;
+        vastAdSkip.disabled=true;
+        vastAdSkip.classList.remove("ready");
+        vastAdSkip.style.display="block";
     }
 }
-
-function startVastCountdown(){
-    clearInterval(window.__cineflixVastTimer);
-    const update=()=>{
-        if(!vastAdActive) return;
-        const now=vastAdVideo.currentTime||0;
-        const duration=vastAdVideo.duration||0;
-        if(vastAdSkipAt===null){
-            vastSetCountdown("Advertisement");
-            if(vastAdSkip) vastAdSkip.style.display="none";
-        }else{
-            const remain=Math.max(0,vastAdSkipAt-now);
-            if(remain>0){
-                vastSetCountdown(`Ad • Skip in ${Math.ceil(remain)}s`);
-                if(vastAdSkip){vastAdSkip.textContent=`Skip in ${Math.ceil(remain)}s`;vastAdSkip.style.display="block";vastAdSkip.disabled=true;vastAdSkip.classList.remove("ready");}
-            }else{
-                vastSetCountdown("Skip");
-                if(vastAdSkip){vastAdSkip.textContent="Skip";vastAdSkip.style.display="block";vastAdSkip.disabled=false;vastAdSkip.classList.add("ready");}
-            }
+function vastOnAdEvent(adEvent){
+    if(!adEvent) return;
+    const T=google.ima.AdEvent.Type;
+    switch(adEvent.type){
+        case T.LOADED:{
+            try{
+                vastAdCurrent=adEvent.getAd();
+                vastAdSkipOffset=vastAdCurrent ? Number(vastAdCurrent.getSkipTimeOffset()) : -1;
+            }catch(e){vastAdSkipOffset=-1;}
+            break;
         }
-        vastFireQuartiles();
-    };
-    update();
-    window.__cineflixVastTimer=setInterval(update,250);
+        case T.STARTED:
+            clearTimeout(vastAdRequestTimer);
+            vastAdRequestTimer=null;
+            vastAdActive=true;
+            vastAdLoading=false;
+            vastAdStartedAt=Date.now();
+            vastShowOverlay(false);
+            vastAdLastShownAt=Date.now();
+            break;
+        case T.AD_PROGRESS:{
+            let t=0;
+            try{t=Number(adEvent.getAdData()?.currentTime)||0;}catch(e){}
+            updateVastSkipUI(t);
+            break;
+        }
+        case T.SKIPPABLE_STATE_CHANGED:
+            updateVastSkipUI(0);
+            break;
+        case T.COMPLETE:
+        case T.SKIPPED:
+        case T.ALL_ADS_COMPLETED:
+            finishVastAd(adEvent.type===T.SKIPPED?"skip":"complete");
+            break;
+        case T.ERROR:
+            finishVastAd("error");
+            break;
+    }
 }
-
+function vastOnAdsManagerLoaded(loadedEvent){
+    if(!vastAdLoading || !vastAdDisplayContainer) return;
+    try{
+        const settings=new google.ima.AdsRenderingSettings();
+        /* No page-load preload. The request itself begins only after Play. */
+        settings.enablePreloading=false;
+        settings.bitrate=0; // let IMA select according to current connection.
+        vastAdManager=loadedEvent.getAdsManager(video,settings);
+        vastAdManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR,()=>finishVastAd("error"));
+        Object.values(google.ima.AdEvent.Type).forEach(type=>{
+            try{vastAdManager.addEventListener(type,vastOnAdEvent);}catch(e){}
+        });
+        const w=videoPlayer.clientWidth||640;
+        const h=videoPlayer.clientHeight||360;
+        vastAdManager.init(w,h,google.ima.ViewMode.NORMAL);
+        vastAdManager.start();
+    }catch(err){
+        console.warn("CINEFLIX IMA manager error:",err);
+        finishVastAd("error");
+    }
+}
+function vastOnAdError(err){
+    console.warn("CINEFLIX IMA ad unavailable:",err);
+    if(vastAdLoading || vastAdActive) finishVastAd("error");
+}
+function initVastSdk(){
+    if(vastAdSdkReady) return true;
+    if(!window.google || !google.ima) return false;
+    try{
+        if(!vastAdDisplayContainer){
+            /* IMA owns the ad playback layer. The movie <video> remains the
+               content video and is automatically paused/resumed by IMA. */
+            vastAdDisplayContainer=new google.ima.AdDisplayContainer(vastAdOverlay,video);
+        }
+        if(!vastAdLoader){
+            vastAdLoader=new google.ima.AdsLoader(vastAdDisplayContainer);
+            vastAdLoader.addEventListener(
+                google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+                vastOnAdsManagerLoaded,
+                false
+            );
+            vastAdLoader.addEventListener(
+                google.ima.AdErrorEvent.Type.AD_ERROR,
+                vastOnAdError,
+                false
+            );
+        }
+        vastAdSdkReady=true;
+        return true;
+    }catch(e){
+        console.warn("CINEFLIX IMA init failed:",e);
+        return false;
+    }
+}
+function requestVastAdNow(){
+    if(!initVastSdk()) return false;
+    try{
+        vastAdDisplayContainer.initialize();
+        const req=new google.ima.AdsRequest();
+        req.adTagUrl=HILLTOP_VAST_TAG;
+        req.linearAdSlotWidth=videoPlayer.clientWidth||640;
+        req.linearAdSlotHeight=videoPlayer.clientHeight||360;
+        req.nonLinearAdSlotWidth=videoPlayer.clientWidth||640;
+        req.nonLinearAdSlotHeight=Math.max(90,Math.round((videoPlayer.clientHeight||360)*0.25));
+        req.forceNonLinearFullSlot=true;
+        vastAdLoader.requestAds(req);
+        return true;
+    }catch(e){
+        console.warn("CINEFLIX IMA request failed:",e);
+        return false;
+    }
+}
 async function playVastAdThenMovie(){
     if(vastAdActive || vastAdLoading) return true;
     if(currentMode!=="movie") return false;
@@ -6341,136 +6288,42 @@ async function playVastAdThenMovie(){
     if(vastAdLastShownAt && now-vastAdLastShownAt<VAST_AD_COOLDOWN_MS) return false;
     if(!HILLTOP_VAST_TAG) return false;
 
-    const attemptId=++vastAdAttemptId;
-    let timeoutId=null;
-    const failOpenToMovie=()=>{
-        if(attemptId!==vastAdAttemptId || !vastAdLoading) return;
-        console.warn("CINEFLIX VAST: no ad response/playable ad within 5s; starting movie.");
-        finishVastAd("timeout");
-    };
-    timeoutId=setTimeout(failOpenToMovie,VAST_AD_RESPONSE_TIMEOUT_MS);
-
+    const attempt=++vastAdAttemptId;
     vastAdLoading=true;
-    // Show the ad layer IMMEDIATELY on Play. If the VAST is not ready yet,
-    // the user sees only the compact three-dot loader until the ad is ready.
-    vastShowOverlay(true);
     vastResetUI();
-
-    // Always restart the main movie from 0 after this ad. Initialize its
-    // source quietly now so the first ~10 seconds can buffer in the background.
-    vastAdSavedTime=0;
+    /* Keep the normal player/poster underneath while the ad request is made.
+       This removes the black/dotted preload screen entirely. */
+    vastShowOverlay(true);
     try{video.pause();}catch(e){}
-    showPlayerLoading();
 
-    try{
-        const movieSource = QUALITY_SOURCES.movie?.[currentQuality] ||
-            QUALITY_SOURCES.movie?.["480"] || MOVIE_DEMO_URL || "";
-        if(movieSource && !hlsReady && !video.src){
-            loadHlsSource(movieSource,false,0);
-        }
-        try{video.currentTime=0;}catch(e){}
-
-        // Use the already-prefetched VAST XML when available. Otherwise wait
-        // behind the visible dotted loader; the ad starts immediately after it arrives.
-        let data=vastAdPreloadedData;
-        if(!data){
-            data = await (vastAdPreloadPromise || preloadHilltopVast());
-        }
-        if(attemptId!==vastAdAttemptId || !vastAdLoading) return true;
-        if(!data) throw new Error("VAST data unavailable");
-
-        const media=chooseVastMedia(data.media);
-        if(!media) throw new Error("No playable ad");
-        vastAdData=data;
-        vastAdTracking=data.tracking||{};
-        vastAdClickUrl=data.clickUrl||"";
-        vastAdQuartiles={25:false,50:false,75:false};
-        vastAdSkipAt=parseVastTime(data.skipOffset,null);
-        vastAdLastShownAt=Date.now();
-        vastAdActive=true;
-
-        vastResetUI();
-        if(vastAdSkipAt===null) vastAdSkip.style.display="none";
-        else vastAdSkip.style.display="block";
-        // Reuse the media already warmed on page load whenever possible.
-        if(vastAdVideo.src!==media.url){
-            vastAdVideo.pause();
-            vastAdVideo.preload="auto";
-            vastAdVideo.src=media.url;
-            vastAdVideo.load();
-            vastAdPreloadedMediaUrl=media.url;
-        }
-        try{vastAdVideo.currentTime=0;}catch(e){}
-        // Keep the loader visible only until the ad actually starts rendering.
-        vastShowOverlay(true);
-        vastTrackMany("impression");
-        vastTrackMany("creativeView");
-        vastAdStartedAt=0;
-
-        vastAdVideo.onloadedmetadata=()=>{
-            if(data.skipOffset){
-                vastAdSkipAt=parseVastTime(data.skipOffset,vastAdVideo.duration||0);
-            }
-            startVastCountdown();
-        };
-        vastAdVideo.onplay=()=>{
-            if(!vastAdStartedAt){
-                vastAdStartedAt=Date.now();
-                vastTrackMany("start");
-            }
-        };
-        vastAdVideo.onplaying=()=>{
-            clearTimeout(timeoutId);
-            timeoutId=null;
-            vastAdOverlay.classList.remove("loading");
-            if(vastAdLoadingUI) vastAdLoadingUI.setAttribute("aria-hidden","true");
-        };
-        vastAdVideo.ontimeupdate=()=>{vastFireQuartiles();};
-        vastAdVideo.onended=()=>finishVastAd("complete");
-        vastAdVideo.onerror=()=>finishVastAd("error");
-
-        vastAdVideo.muted=false;
-        const p=vastAdVideo.play();
-        if(p && p.catch){
-            await p.catch(()=>{
-                // Mobile autoplay policy: retry muted so the ad can still run.
-                vastAdVideo.muted=true;
-                return vastAdVideo.play();
-            });
-        }
-        if(attemptId!==vastAdAttemptId || !vastAdLoading) return true;
-        // The 8-second watchdog remains active until the ad actually starts.
-        // Once playback begins, it is safe to let the ad continue normally.
-        clearTimeout(timeoutId);
-        timeoutId=null;
-        return true;
-    }catch(err){
-        console.warn("CINEFLIX VAST ad unavailable:",err);
-        clearTimeout(timeoutId);
-        timeoutId=null;
-        if(attemptId!==vastAdAttemptId || !vastAdLoading) return true;
+    const requested=requestVastAdNow();
+    if(!requested){
         vastAdLoading=false;
-        vastAdActive=false;
         vastHideOverlay();
-        vastResetUI();
-        hidePlayerLoading();
         return false;
     }
+
+    vastAdRequestTimer=setTimeout(()=>{
+        if(attempt!==vastAdAttemptId) return;
+        if(vastAdLoading && !vastAdActive){
+            console.warn("CINEFLIX IMA: no ad start within 8s; continuing to movie.");
+            finishVastAd("timeout");
+        }
+    },VAST_AD_RESPONSE_TIMEOUT_MS);
+    return true;
 }
 
 vastAdSkip?.addEventListener("click",e=>{
+    e.preventDefault();
     e.stopPropagation();
-    if(!vastAdSkip.disabled && vastAdActive) finishVastAd("skip");
+    if(vastAdSkip.disabled || !vastAdManager) return;
+    try{
+        if(vastAdManager.getAdSkippableState()) vastAdManager.skip();
+    }catch(err){console.warn("CINEFLIX IMA skip failed:",err);}
 });
 
-vastAdClick?.addEventListener("click",e=>{
-    e.stopPropagation();
-    if(!vastAdActive) return;
-    vastTrackMany("clickTracking");
-    if(vastAdClickUrl){
-        try{window.open(vastAdClickUrl,"_blank","noopener,noreferrer");}catch(_){location.href=vastAdClickUrl;}
-    }
-});
+/* The IMA ad is started only from the existing user Play action. There is
+   deliberately NO page-load VAST fetch/preload here. */
 
 async function togglePlay(){
     if(vastAdActive || vastAdLoading) return;
@@ -6486,8 +6339,6 @@ async function togglePlay(){
 
     if(video.paused){
         initialPoster.classList.add("hidden");
-        // playVastAdThenMovie() shows its own instant dotted loader before
-        // waiting for the VAST, so there is no 2–3 second black gap.
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
         playWithoutLoaderIfBuffered();
@@ -6496,9 +6347,6 @@ async function togglePlay(){
         video.pause();
     }
 }
-
-// Begin fetching the VAST in the background so the first Play click is as fast as possible.
-preloadHilltopVast();
 
 centerPlay.addEventListener("click",togglePlay);
 playPause.addEventListener("click",togglePlay);
