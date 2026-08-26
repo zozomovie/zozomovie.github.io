@@ -6047,19 +6047,40 @@ function setPlayerMode(mode,autoPlay=true){
    - If the ad is skipped/completed, intro starts immediately.
 ========================================================= */
 const CINEFLIX_INTRO_DRIVE_URL =
+    "https://drive.google.com/uc?export=download&id=1XUp_IlzVrawech90fOFfD90Rt9q2SXh7&confirm=t";
+const CINEFLIX_INTRO_DRIVE_FALLBACK_URL =
     "https://drive.usercontent.google.com/download?id=1XUp_IlzVrawech90fOFfD90Rt9q2SXh7&export=download&confirm=t";
 let cineflixIntroStarted = false;
+let cineflixIntroDriveFallbackUsed = false;
 let cineflixIntroFinished = false;
 let cineflixIntroConsumed = false;
 let cineflixIntroMainResume = null;
 
 function preloadCineflixDriveIntro(){
     if(!cineflixIntroVideo) return;
-    if(cineflixIntroVideo.src !== CINEFLIX_INTRO_DRIVE_URL){
+    if(cineflixIntroVideo.src !== CINEFLIX_INTRO_DRIVE_URL &&
+       cineflixIntroVideo.src !== CINEFLIX_INTRO_DRIVE_FALLBACK_URL){
         cineflixIntroVideo.src = CINEFLIX_INTRO_DRIVE_URL;
     }
     cineflixIntroVideo.preload = "auto";
     try{ cineflixIntroVideo.load(); }catch(e){}
+}
+
+/* Google Drive can cancel/redirect one of its download URLs differently
+   across browsers. If the primary URL fails, retry once using Drive's
+   user-content download endpoint before giving up on the intro. */
+function retryCineflixDriveIntroSource(){
+    if(!cineflixIntroVideo || cineflixIntroDriveFallbackUsed) return false;
+    cineflixIntroDriveFallbackUsed = true;
+    try{
+        cineflixIntroVideo.pause();
+        cineflixIntroVideo.src = CINEFLIX_INTRO_DRIVE_FALLBACK_URL;
+        cineflixIntroVideo.preload = "auto";
+        cineflixIntroVideo.load();
+        return true;
+    }catch(e){
+        return false;
+    }
 }
 
 /* Browser media cache/preload is used; no page-side fetch is performed. */
@@ -6124,7 +6145,9 @@ function startCineflixDriveIntro(resumeMain){
         playIntro();
     }else if(cineflixIntroVideo){
         cineflixIntroVideo.addEventListener("canplay",playIntro,{once:true});
-        cineflixIntroVideo.addEventListener("error",()=>finishCineflixDriveIntro(),{once:true});
+        cineflixIntroVideo.addEventListener("error",()=>{
+            if(!retryCineflixDriveIntroSource()) finishCineflixDriveIntro();
+        },{once:true});
         try{ cineflixIntroVideo.load(); }catch(e){}
     }else{
         finishCineflixDriveIntro();
@@ -6132,6 +6155,11 @@ function startCineflixDriveIntro(resumeMain){
 }
 
 cineflixIntroVideo?.addEventListener("ended",finishCineflixDriveIntro);
+cineflixIntroVideo?.addEventListener("error",()=>{
+    if(cineflixIntroStarted && !cineflixIntroFinished){
+        if(!retryCineflixDriveIntroSource()) finishCineflixDriveIntro();
+    }
+});
 
 /* =========================================================
    HILLTOPADS VAST PRE-ROLL — GOOGLE IMA RENDERER
@@ -6498,11 +6526,45 @@ if(vastAdClick) vastAdClick.style.display="none";
    immediately after ad completion/skip, before the existing movie resume.
 ========================================================= */
 const cineflixOriginalVastResumeMovieFromStart = vastResumeMovieFromStart;
+
+function cineflixResumeMainAfterDriveIntro(){
+    if(currentMode!=="movie") return;
+
+    /* IMA uses the same <video> element as the movie. After an ad is
+       destroyed, that element can have lost its media source even though
+       the HLS object still exists. Reuse the existing source when possible;
+       otherwise rebuild the exact same movie source and start at 0:00. */
+    const source = QUALITY_SOURCES.movie?.[currentQuality] ||
+        QUALITY_SOURCES.movie?.["480"] || MOVIE_DEMO_URL || "";
+
+    initialPoster.classList.add("hidden");
+    initialPoster.setAttribute("aria-hidden","true");
+    try{ video.currentTime=0; }catch(e){}
+
+    const mediaStillUsable = !!video.currentSrc &&
+        (video.readyState >= 2 || hlsReady);
+
+    if(mediaStillUsable){
+        showPlayerLoading();
+        video.play().then(()=>{
+            hidePlayerLoading();
+            showPlayerControls(true);
+            updateCenterPlayPause();
+        }).catch(()=>{
+            if(source) loadHlsSource(source,true,0);
+        });
+    }else if(source){
+        loadHlsSource(source,true,0);
+    }else{
+        cineflixOriginalVastResumeMovieFromStart();
+    }
+}
+
 vastResumeMovieFromStart = function(){
     if(cineflixIntroConsumed){
-        return cineflixOriginalVastResumeMovieFromStart();
+        return cineflixResumeMainAfterDriveIntro();
     }
-    return startCineflixDriveIntro(cineflixOriginalVastResumeMovieFromStart);
+    return startCineflixDriveIntro(cineflixResumeMainAfterDriveIntro);
 };
 
 async function togglePlay(){
