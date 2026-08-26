@@ -3319,18 +3319,16 @@ body.cineflix-db-error .cineflix-db-message{
     top:10px;
     left:10px;
     z-index:6;
-    padding:5px 8px;
+    padding:5px 9px;
     border-radius:5px;
     background:rgba(0,0,0,.72);
     color:#fff;
-    font:800 10px/1 Inter,Arial,sans-serif;
+    font:800 11px/1 Inter,Arial,sans-serif;
     letter-spacing:.2px;
     pointer-events:none;
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
+    display:none;
 }
-.vast-ad-overlay.loading .vast-ad-label{display:block;}
-.vast-ad-overlay:not(.show) .vast-ad-label{display:none;}
+.vast-ad-overlay.show .vast-ad-label{display:block;}
 .vast-ad-countdown{
     position:absolute;
     top:10px;
@@ -3510,10 +3508,10 @@ body.cineflix-db-error .cineflix-db-message{
     <div class="vast-ad-overlay" id="vastAdOverlay" aria-hidden="true">
         <video class="vast-ad-video" id="vastAdVideo" playsinline preload="auto"></video>
         <div class="vast-ad-scrim" aria-hidden="true"></div>
-        <div class="vast-ad-label" id="vastAdLabel" aria-hidden="true">Ad</div>
         <div class="vast-ad-loading" id="vastAdLoading" aria-hidden="true">
             <span></span><span></span><span></span>
         </div>
+        <div class="vast-ad-label" id="vastAdLabel" aria-hidden="true">Ad</div>
         <div class="vast-ad-countdown" id="vastAdCountdown">Advertisement</div>
         <button class="vast-ad-skip" id="vastAdSkip" type="button" disabled>Skip</button>
         <div class="vast-ad-click" id="vastAdClick" aria-hidden="true"></div>
@@ -6050,6 +6048,7 @@ const VAST_AD_COOLDOWN_MS = 3 * 60 * 1000;
 const vastAdOverlay = document.getElementById("vastAdOverlay");
 const vastAdVideo = document.getElementById("vastAdVideo");
 const vastAdCountdown = document.getElementById("vastAdCountdown");
+const vastAdLabel = document.getElementById("vastAdLabel");
 const vastAdLoadingUI = document.getElementById("vastAdLoading");
 const vastAdSkip = document.getElementById("vastAdSkip");
 const vastAdClick = document.getElementById("vastAdClick");
@@ -6065,9 +6064,10 @@ let vastAdLastShownAt = 0;
 let vastAdTracking = {};
 let vastAdClickUrl = "";
 let vastAdPreloadedData = null;
+let vastAdPreloadedMediaUrl = "";
 let vastAdPreloadPromise = null;
 let vastAdAttemptId = 0;
-const VAST_AD_RESPONSE_TIMEOUT_MS = 5000;
+const VAST_AD_RESPONSE_TIMEOUT_MS = 8000;
 
 function vastText(node){
     return node ? (node.textContent || "").trim() : "";
@@ -6181,22 +6181,32 @@ function chooseVastMedia(media){
 
 /* Preload the VAST XML as soon as the page is ready. This removes the
    fetch/wrapper delay from the first Play click when the network allows it. */
+function primeVastMedia(data){
+    try{
+        const media=chooseVastMedia(data?.media||[]);
+        if(!media?.url) return null;
+        if(vastAdVideo.src!==media.url){
+            vastAdVideo.pause();
+            vastAdVideo.preload="auto";
+            vastAdVideo.src=media.url;
+            vastAdVideo.load();
+        }
+        vastAdPreloadedMediaUrl=media.url;
+        return media;
+    }catch(e){
+        console.warn("CINEFLIX VAST media preload unavailable:",e);
+        return null;
+    }
+}
+
 function preloadHilltopVast(){
     if(!HILLTOP_VAST_TAG || vastAdPreloadPromise) return vastAdPreloadPromise;
     vastAdPreloadPromise=fetchVastDocument(HILLTOP_VAST_TAG)
         .then(data=>{
             vastAdPreloadedData=data;
-            // Preload the actual creative as well, but NEVER play it here.
-            // The impression is only generated when the ad is actually shown.
-            const media=chooseVastMedia(data.media||[]);
-            if(media && media.url){
-                try{
-                    if(vastAdVideo.src !== media.url){
-                        vastAdVideo.src=media.url;
-                        vastAdVideo.load();
-                    }
-                }catch(e){}
-            }
+            // Also warm the actual video file, not just the VAST XML, so the
+            // first Play click can start the ad with minimal visible loading.
+            primeVastMedia(data);
             return data;
         })
         .catch(err=>{
@@ -6228,12 +6238,14 @@ function vastShowOverlay(loading=false){
     vastAdOverlay.classList.add("show");
     vastAdOverlay.setAttribute("aria-hidden","false");
     vastAdOverlay.style.zIndex="200";
+    if(vastAdLabel) vastAdLabel.setAttribute("aria-hidden","false");
     if(vastAdLoadingUI) vastAdLoadingUI.setAttribute("aria-hidden",loading?"false":"true");
 }
 function vastHideOverlay(){
     vastAdOverlay.classList.remove("loading","show");
     vastAdOverlay.setAttribute("aria-hidden","true");
     vastAdOverlay.style.zIndex="";
+    if(vastAdLabel) vastAdLabel.setAttribute("aria-hidden","true");
     if(vastAdLoadingUI) vastAdLoadingUI.setAttribute("aria-hidden","true");
 }
 function vastFireQuartiles(){
@@ -6262,6 +6274,7 @@ function finishVastAd(reason="complete"){
     try{vastAdVideo.pause();}catch(e){}
     vastAdVideo.removeAttribute("src");
     vastAdVideo.load();
+    vastAdPreloadedMediaUrl="";
     vastHideOverlay();
     vastAdData=null;
     vastAdSkipAt=null;
@@ -6379,11 +6392,16 @@ async function playVastAdThenMovie(){
         vastResetUI();
         if(vastAdSkipAt===null) vastAdSkip.style.display="none";
         else vastAdSkip.style.display="block";
-        if(vastAdVideo.src !== media.url){
+        // Reuse the media already warmed on page load whenever possible.
+        if(vastAdVideo.src!==media.url){
+            vastAdVideo.pause();
+            vastAdVideo.preload="auto";
             vastAdVideo.src=media.url;
             vastAdVideo.load();
+            vastAdPreloadedMediaUrl=media.url;
         }
-        // Keep the loader visible until the ad actually starts rendering.
+        try{vastAdVideo.currentTime=0;}catch(e){}
+        // Keep the loader visible only until the ad actually starts rendering.
         vastShowOverlay(true);
         vastTrackMany("impression");
         vastTrackMany("creativeView");
@@ -6421,7 +6439,7 @@ async function playVastAdThenMovie(){
             });
         }
         if(attemptId!==vastAdAttemptId || !vastAdLoading) return true;
-        // The 5-second watchdog remains active until the ad actually starts.
+        // The 8-second watchdog remains active until the ad actually starts.
         // Once playback begins, it is safe to let the ad continue normally.
         clearTimeout(timeoutId);
         timeoutId=null;
