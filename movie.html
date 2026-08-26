@@ -6184,14 +6184,9 @@ function finishVastAd(reason="complete"){
     vastAdClickUrl="";
     vastResetUI();
 
-    /*
-       After the ad the movie ALWAYS starts from the beginning.
-       While the ad was playing, the real movie was allowed to buffer in the
-       background. If enough media is already buffered, playback can therefore
-       resume immediately without a black/loader gap.
-    */
+    // Resume the exact movie position immediately after the ad.
     if(currentMode==="movie"){
-        try{video.currentTime=0;}catch(e){}
+        try{video.currentTime=vastAdSavedTime||0;}catch(e){}
         initialPoster.classList.add("hidden");
         hidePlayerLoading();
         playWithoutLoaderIfBuffered();
@@ -6234,26 +6229,9 @@ async function playVastAdThenMovie(){
     if(!HILLTOP_VAST_TAG) return false;
 
     vastAdLoading=true;
-
-    /*
-       The ad is a pre-roll: the movie must begin at 00:00 afterwards.
-       Start loading/playing the movie underneath the ad immediately so the
-       browser/HLS stack can build a useful buffer (target: ~10 seconds)
-       while the advertisement is visible. The ad overlay remains on top.
-    */
-    vastAdSavedTime=0;
-    try{
-        if(!video.src && !hlsReady){
-            const startupSource=QUALITY_SOURCES.movie?.["480"] || MOVIE_DEMO_URL || QUALITY_SOURCES.movie?.[currentQuality] || "";
-            if(startupSource){
-                loadHlsSource(startupSource,true,0);
-            }
-        }else{
-            video.currentTime=0;
-            const bgPlay=video.play();
-            if(bgPlay && bgPlay.catch) bgPlay.catch(()=>{});
-        }
-    }catch(e){}
+    vastAdSavedTime=Number.isFinite(video.currentTime)?video.currentTime:0;
+    try{video.pause();}catch(e){}
+    showPlayerLoading();
 
     try{
         const data=await fetchVastDocument(HILLTOP_VAST_TAG);
