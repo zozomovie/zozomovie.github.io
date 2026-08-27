@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link id="cineflixInstantThumbPreload" rel="preload" as="image" href="https://i.ibb.co/dz5y0Vq/ZOZO-Movies.jpg" fetchpriority="high">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -3145,6 +3147,9 @@ body.cineflix-db-loading .initial-poster img{
     visibility:visible !important;
     opacity:1 !important;
 }
+body.cineflix-db-loading .initial-poster-play{
+    display:none !important;
+}
 
 /* Error state still exposes the normal page. */
 body.cineflix-db-error .page{
@@ -3719,7 +3724,7 @@ body.cineflix-db-error .cineflix-db-message{
     </div>
     <div class="initial-poster" id="initialPoster" aria-hidden="false">
         <img
-            src=""
+            src="https://i.ibb.co/dz5y0Vq/ZOZO-Movies.jpg"
             alt="Movie thumbnail"
         >
         <div class="initial-poster-shade"></div>
@@ -7556,15 +7561,14 @@ window.addEventListener("beforeunload",()=>{
             const movie=await getMovie();
             renderMovieDetails(movie);
 
-            /* Data has arrived: reveal the real text/images. */
-            setDataSkeletonState(false);
-
-            /* The custom instant thumbnail is only the loading bridge.
-               After Supabase supplies the real movie artwork, hide it. */
+            /* Data has arrived: renderMovieDetails() has already replaced
+               the loading thumbnail with the real Admin/Supabase artwork.
+               Keep the poster and its center Play button visible. */
             if(initialPoster){
-                initialPoster.classList.add("hidden");
-                initialPoster.setAttribute("aria-hidden","true");
+                initialPoster.classList.remove("hidden");
+                initialPoster.setAttribute("aria-hidden","false");
             }
+            setDataSkeletonState(false);
 
             const pageSkeleton=document.getElementById("moviePageSkeleton");
             if(pageSkeleton){
