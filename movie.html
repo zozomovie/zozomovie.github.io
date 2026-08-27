@@ -3151,6 +3151,26 @@ body.cineflix-db-loading .initial-poster-play{
     display:none !important;
 }
 
+/* Instant loading thumbnail: no fade/transition. It is removed synchronously
+   with the DB skeleton; the real Admin poster/play state is underneath. */
+#initialPoster.cineflix-instant-loading{
+    opacity:1 !important;
+    visibility:visible !important;
+    transition:none !important;
+}
+#initialPoster.cineflix-instant-loading img{
+    content:url("https://i.ibb.co/dz5y0Vq/ZOZO-Movies.jpg") !important;
+}
+#initialPoster.cineflix-instant-loading .initial-poster-play{
+    display:none !important;
+}
+#initialPoster.cineflix-loading-removed{
+    opacity:0 !important;
+    visibility:hidden !important;
+    transition:none !important;
+    pointer-events:none !important;
+}
+
 /* Error state still exposes the normal page. */
 body.cineflix-db-error .page{
     visibility:visible !important;
@@ -7554,6 +7574,13 @@ window.addEventListener("beforeunload",()=>{
 });
 
     async function initMovie(){
+        /* Custom loading thumbnail is visible from the first paint. */
+        if(initialPoster){
+            initialPoster.classList.add("cineflix-instant-loading");
+            initialPoster.classList.remove("cineflix-loading-removed");
+            initialPoster.setAttribute("aria-hidden","false");
+        }
+
         /* Keep the real page visible immediately; only Supabase data shimmers. */
         setDataSkeletonState(true);
 
@@ -7561,10 +7588,14 @@ window.addEventListener("beforeunload",()=>{
             const movie=await getMovie();
             renderMovieDetails(movie);
 
-            /* Data has arrived: renderMovieDetails() has already replaced
-               the loading thumbnail with the real Admin/Supabase artwork.
-               Keep the poster and its center Play button visible. */
+            /* IMPORTANT:
+               Remove the custom loading image at the EXACT same moment as
+               the DB skeleton. No timeout, fade, or extra wait.
+               renderMovieDetails() has already placed the real Admin poster
+               into the same image element and restored the normal Play SVG. */
             if(initialPoster){
+                initialPoster.classList.remove("cineflix-instant-loading");
+                initialPoster.classList.remove("cineflix-loading-removed");
                 initialPoster.classList.remove("hidden");
                 initialPoster.setAttribute("aria-hidden","false");
             }
