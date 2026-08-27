@@ -538,10 +538,18 @@ button{
     transform:translate(-50%,-50%) scale(.94);
 }
 .center-play-pause svg{
-    width:40px;
-    height:40px;
-    fill:#fff;
+    width:46px;
+    height:46px;
+    display:block;
+    fill:none;
+    stroke:#fff;
+    stroke-width:2;
     filter:drop-shadow(0 2px 7px rgba(0,0,0,.55));
+}
+.center-play-pause .center-play-icon,
+.center-play-pause .center-pause-icon{
+    width:46px;
+    height:46px;
 }
 .center-play-icon,.center-pause-icon{display:none;}
 .center-play-pause[data-state="play"] .center-play-icon{display:block;margin-left:2px;}
@@ -3757,12 +3765,26 @@ body.cineflix-db-error .cineflix-db-message{
         </button>
     </div>
     <button class="center-play-pause" id="centerPlayPause" type="button" aria-label="Play">
-        <svg class="center-play-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8.15 5.05c-.72-.45-1.65.07-1.65.92v12.06c0 .85.93 1.37 1.65.92l9.65-6.03a1.09 1.09 0 0 0 0-1.84L8.15 5.05Z"/>
-        </svg>
-        <svg class="center-pause-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6.7 5.1c0-.61.49-1.1 1.1-1.1h2.2c.61 0 1.1.49 1.1 1.1v13.8c0 .61-.49 1.1-1.1 1.1H7.8c-.61 0-1.1-.49-1.1-1.1V5.1Zm6.2 0c0-.61.49-1.1 1.1-1.1h2.2c.61 0 1.1.49 1.1 1.1v13.8c0 .61-.49 1.1-1.1 1.1H14c-.61 0-1.1-.49-1.1-1.1V5.1Z"/>
-        </svg>
+        <!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
+<svg class="center-play-icon" width="800px" height="800px" viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+<g id="SVGRepo_bgCarrier" stroke-width="0"/>
+
+<g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
+
+<g id="SVGRepo_iconCarrier"> <g id="Media / Play_Circle"> <g id="Vector"> <path d="M3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12Z" stroke="#ffffff" stroke-width="0.9359999999999999" stroke-linecap="round" stroke-linejoin="round"/> <path d="M10 15V9L15 12L10 15Z" stroke="#ffffff" stroke-width="0.9359999999999999" stroke-linecap="round" stroke-linejoin="round"/> </g> </g> </g>
+
+</svg>
+        <!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
+<svg class="center-pause-icon" width="800px" height="800px" viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+<g id="SVGRepo_bgCarrier" stroke-width="0"/>
+
+<g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
+
+<g id="SVGRepo_iconCarrier"> <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#ffffff" stroke-width="0.9359999999999999"/> <path d="M14 9L14 15" stroke="#ffffff" stroke-width="0.9359999999999999" stroke-linecap="round" stroke-linejoin="round"/> <path d="M10 9L10 15" stroke="#ffffff" stroke-width="0.9359999999999999" stroke-linecap="round" stroke-linejoin="round"/> </g>
+
+</svg>
     </button>
 
 
