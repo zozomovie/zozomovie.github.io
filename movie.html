@@ -2828,25 +2828,23 @@ button{
 
 
 /* =========================================================
-   INSTANT MOVIE PAGE / TEXT-ONLY DATA SKELETON
-   Header, player, tabs/action buttons and page structure stay visible.
-   Only content that comes from Supabase gets a shimmer.
+   INSTANT MOVIE PAGE / EXACT DATA TEXT SKELETON
+   IMPORTANT:
+   - Real page/layout is always visible.
+   - Only text/data supplied by Supabase gets a skeleton.
+   - Static labels, dots, buttons, tabs, header and player are untouched.
 ========================================================= */
 
-/* Old full-page skeleton is disabled completely. */
 .movie-page-skeleton{
     display:none !important;
 }
 
-/* Never hide the real page while Supabase is loading. */
-body.cineflix-db-loading .page{
-    visibility:visible !important;
-}
+body.cineflix-db-loading .page,
 body.cineflix-db-loading .initial-poster{
     visibility:visible !important;
 }
 
-/* Generic shimmer for actual Supabase-backed elements. */
+/* Common shimmer. Applied ONLY to the exact text/value box. */
 .cineflix-data-shimmer{
     position:relative !important;
     overflow:hidden !important;
@@ -2854,19 +2852,18 @@ body.cineflix-db-loading .initial-poster{
     -webkit-text-fill-color:transparent !important;
     background:#17171b !important;
     border-color:transparent !important;
-    border-radius:4px !important;
 }
 .cineflix-data-shimmer::after{
     content:"";
     position:absolute;
     inset:0;
-    transform:translateX(-100%);
     background:linear-gradient(
         90deg,
         transparent,
         rgba(255,255,255,.065),
         transparent
     );
+    transform:translateX(-100%);
     animation:cineflixDataShimmer 1.15s ease-in-out infinite;
     pointer-events:none;
 }
@@ -2874,35 +2871,27 @@ body.cineflix-db-loading .initial-poster{
     100%{transform:translateX(100%);}
 }
 
-/* TITLE — only the approximate text area gets a skeleton. */
+/* =========================================================
+   MOVIE TITLE
+   Skeleton width/height follows the title text area only.
+========================================================= */
 body.cineflix-db-loading .movie-title{
     position:relative !important;
-    width:max-content !important;
-    max-width:86% !important;
-    min-width:0 !important;
-    min-height:0 !important;
+    display:block !important;
+    width:min(330px,72vw) !important;
+    height:29px !important;
+    margin-bottom:10px !important;
+    font-size:0 !important;
+    line-height:0 !important;
     color:transparent !important;
-    background:transparent !important;
-    -webkit-text-fill-color:transparent !important;
-    overflow:visible !important;
+    background:#17171b !important;
+    border-radius:5px !important;
+    overflow:hidden !important;
 }
 body.cineflix-db-loading .movie-title::after{
     content:"";
-    display:block;
-    width:min(330px,72vw);
-    height:31px;
-    margin-top:2px;
-    border-radius:5px;
-    background:#17171b;
-}
-body.cineflix-db-loading .movie-title::before{
-    content:"";
     position:absolute;
-    left:0;
-    top:2px;
-    width:min(330px,72vw);
-    height:31px;
-    border-radius:5px;
+    inset:0;
     background:linear-gradient(
         90deg,
         transparent,
@@ -2911,42 +2900,161 @@ body.cineflix-db-loading .movie-title::before{
     );
     transform:translateX(-100%);
     animation:cineflixDataShimmer 1.15s ease-in-out infinite;
-    z-index:2;
-    pointer-events:none;
 }
 
-/* META — only the individual fetched text values shimmer. */
+/* =========================================================
+   MOVIE META
+   ONLY actual data values shimmer.
+   The separator dots remain completely normal.
+========================================================= */
 body.cineflix-db-loading .movie-meta{
     background:transparent !important;
 }
-body.cineflix-db-loading .movie-meta > *{
-    color:transparent !important;
-    -webkit-text-fill-color:transparent !important;
-    background:#17171b !important;
-    border-color:transparent !important;
-    border-radius:4px !important;
+body.cineflix-db-loading .movie-meta .dot{
+    background:transparent !important;
+    color:#555 !important;
+    -webkit-text-fill-color:initial !important;
 }
 
-/* GENRES — only each fetched genre text/pill shimmers. */
+/* Rating */
+body.cineflix-db-loading .movie-meta .rating{
+    display:inline-block !important;
+    width:29px !important;
+    height:11px !important;
+    padding:0 !important;
+    margin:0 !important;
+    border:0 !important;
+    border-radius:3px !important;
+    background:#17171b !important;
+    color:transparent !important;
+    -webkit-text-fill-color:transparent !important;
+    overflow:hidden !important;
+    position:relative !important;
+}
+/* Year */
+body.cineflix-db-loading .movie-meta > span:not(.dot):not(.rating):not(.age):last-child{
+    width:16px !important;
+}
+
+/* All normal text values in meta get compact text-sized bars. */
+body.cineflix-db-loading .movie-meta > span:not(.dot):not(.rating):not(.age){
+    display:inline-block !important;
+    height:11px !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:3px !important;
+    background:#17171b !important;
+    color:transparent !important;
+    -webkit-text-fill-color:transparent !important;
+    position:relative !important;
+    overflow:hidden !important;
+}
+body.cineflix-db-loading .movie-meta > span:not(.dot):not(.rating):not(.age)::after,
+body.cineflix-db-loading .movie-meta .rating::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.065),
+        transparent
+    );
+    transform:translateX(-100%);
+    animation:cineflixDataShimmer 1.15s ease-in-out infinite;
+}
+
+/* Exact widths for the known meta structure:
+   rating • year • runtime • age • HD */
+body.cineflix-db-loading .movie-meta > span:not(.dot):not(.rating):not(.age):nth-of-type(3){
+    width:38px !important;
+}
+body.cineflix-db-loading .movie-meta > span:not(.dot):not(.rating):not(.age):nth-of-type(5){
+    width:18px !important;
+}
+body.cineflix-db-loading .movie-meta .age{
+    width:20px !important;
+    height:13px !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:3px !important;
+    background:#17171b !important;
+    color:transparent !important;
+    -webkit-text-fill-color:transparent !important;
+    position:relative !important;
+    overflow:hidden !important;
+}
+body.cineflix-db-loading .movie-meta .age::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.065),
+        transparent
+    );
+    transform:translateX(-100%);
+    animation:cineflixDataShimmer 1.15s ease-in-out infinite;
+}
+
+/* =========================================================
+   GENRES
+   Keep the existing row/spacing, but skeleton ONLY the text-sized
+   portion — no giant rectangular pill.
+========================================================= */
 body.cineflix-db-loading .genres{
     background:transparent !important;
 }
 body.cineflix-db-loading .genres .genre{
+    flex:none !important;
+    width:auto !important;
+    height:10px !important;
+    min-width:0 !important;
+    padding:0 !important;
+    margin:6px 8px 6px 0 !important;
+    border:0 !important;
+    border-radius:3px !important;
+    background:#17171b !important;
     color:transparent !important;
     -webkit-text-fill-color:transparent !important;
-    background:#17171b !important;
-    border-color:transparent !important;
-    min-width:0 !important;
+    position:relative !important;
+    overflow:hidden !important;
+}
+body.cineflix-db-loading .genres .genre:nth-child(1){width:37px !important;}
+body.cineflix-db-loading .genres .genre:nth-child(2){width:53px !important;}
+body.cineflix-db-loading .genres .genre:nth-child(3){width:34px !important;}
+body.cineflix-db-loading .genres .genre:nth-child(4){width:49px !important;}
+body.cineflix-db-loading .genres .genre::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.065),
+        transparent
+    );
+    transform:translateX(-100%);
+    animation:cineflixDataShimmer 1.15s ease-in-out infinite;
 }
 
-/* DESCRIPTION — only text-line areas shimmer, not the whole section. */
+/* =========================================================
+   DESCRIPTION
+   Only the actual description text lines become skeletons.
+   "About the Movie" and "Read more" stay visible.
+========================================================= */
 body.cineflix-db-loading .description{
     position:relative !important;
-    min-height:54px;
+    display:block !important;
+    min-height:54px !important;
+    height:54px !important;
+    font-size:0 !important;
+    line-height:0 !important;
     color:transparent !important;
-    -webkit-text-fill-color:transparent !important;
     background:transparent !important;
-    overflow:visible !important;
+    -webkit-text-fill-color:transparent !important;
+    overflow:hidden !important;
 }
 body.cineflix-db-loading .description::after{
     content:"";
@@ -2954,9 +3062,7 @@ body.cineflix-db-loading .description::after{
     left:0;
     top:0;
     width:91%;
-    max-width:100%;
     height:54px;
-    border-radius:4px;
     background:
         linear-gradient(
             #17171b 0 12px,
@@ -2965,6 +3071,7 @@ body.cineflix-db-loading .description::after{
             transparent 33px 42px,
             #17171b 42px 54px
         );
+    border-radius:4px;
 }
 body.cineflix-db-loading .description::before{
     content:"";
@@ -2981,23 +3088,50 @@ body.cineflix-db-loading .description::before{
     );
     transform:translateX(-100%);
     animation:cineflixDataShimmer 1.15s ease-in-out infinite;
-    z-index:1;
+    z-index:2;
     pointer-events:none;
 }
 
-/* MOVIE DETAILS — labels stay visible; only Supabase values shimmer. */
+/* =========================================================
+   MOVIE DETAILS
+   Labels such as RELEASE DATE / TYPE remain real.
+   Only the <strong> values shimmer.
+========================================================= */
 body.cineflix-db-loading .info-item strong{
-    display:block;
-    width:max-content;
-    max-width:100%;
-    min-height:14px;
+    display:block !important;
+    width:max-content !important;
+    min-width:38px !important;
+    max-width:100% !important;
+    height:12px !important;
+    min-height:12px !important;
+    padding:0 !important;
+    margin:0 !important;
+    border:0 !important;
+    border-radius:3px !important;
+    background:#17171b !important;
     color:transparent !important;
     -webkit-text-fill-color:transparent !important;
-    background:#17171b !important;
-    border-radius:4px;
+    position:relative !important;
+    overflow:hidden !important;
+}
+body.cineflix-db-loading .info-item strong::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.065),
+        transparent
+    );
+    transform:translateX(-100%);
+    animation:cineflixDataShimmer 1.15s ease-in-out infinite;
 }
 
-/* Cast/recommendations/trailer are fetched content. */
+/* =========================================================
+   CAST / SIMILAR
+   Only fetched text/image boxes shimmer; no whole-section overlay.
+========================================================= */
 body.cineflix-db-loading .cast-photo,
 body.cineflix-db-loading .cast-name,
 body.cineflix-db-loading .cast-role{
@@ -3007,34 +3141,23 @@ body.cineflix-db-loading .cast-role{
     border-color:transparent !important;
 }
 body.cineflix-db-loading .similar-card{
-    background:#17171b !important;
+    background:transparent !important;
     border-color:transparent !important;
 }
-body.cineflix-db-loading .similar-art::before{
+body.cineflix-db-loading .similar-art{
     background:#17171b !important;
 }
 body.cineflix-db-loading .similar-content{
-    opacity:0;
-}
-body.cineflix-db-loading .trailer{
-    background:#17171b !important;
-    border-color:transparent !important;
-}
-body.cineflix-db-loading .trailer::before,
-body.cineflix-db-loading .trailer-play{
-    opacity:0;
+    opacity:0 !important;
 }
 
-/* PLAYER IS NEVER A FULL SKELETON.
-   The custom thumbnail remains visible instantly while DB data loads. */
+/* Player NEVER becomes a page skeleton. */
 body.cineflix-db-loading .initial-poster img{
     visibility:visible !important;
     opacity:1 !important;
 }
-body.cineflix-db-loading .player-loading{
-    z-index:31 !important;
-}
 
+/* Error state still exposes the normal page. */
 body.cineflix-db-error .page{
     visibility:visible !important;
 }
@@ -7655,18 +7778,12 @@ document.addEventListener("fullscreenchange",()=>{
 
     /* =========================================================
        DATA-ONLY SKELETON STATE
-       Never skeletonize the complete movie page.
-       Only values/images populated from Supabase shimmer.
+       CSS targets the exact Supabase-backed elements directly.
+       This function intentionally does not add classes to parent rows,
+       so freshly-rendered Supabase HTML keeps the same skeleton behavior.
     ========================================================= */
     function setDataSkeletonState(loading){
-        const dataNodes =
-            ".movie-title, .description, .movie-meta > *, .genres .genre, " +
-            ".info-item strong, .cast-photo, .cast-name, .cast-role, " +
-            ".similar-card, .trailer";
-
-        $$(dataNodes).forEach(el=>{
-            el.classList.toggle("cineflix-data-shimmer", loading);
-        });
+        document.body.classList.toggle("cineflix-db-loading", !!loading);
     }
 
     async function getMovie(){
@@ -7706,7 +7823,7 @@ window.addEventListener("beforeunload",()=>{
 });
 
     async function initMovie(){
-        /* Page is visible immediately; only DB-backed content shimmers. */
+        /* Keep the real page visible immediately; only Supabase data shimmers. */
         setDataSkeletonState(true);
 
         try{
