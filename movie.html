@@ -537,23 +537,45 @@ button{
 .center-play-pause:active{
     transform:translate(-50%,-50%) scale(.94);
 }
-.center-play-pause svg{
-    width:46px;
-    height:46px;
+ .center-play-pause svg{
+    width:50px !important;
+    height:50px !important;
     display:block;
+    position:absolute;
+    left:50%;
+    top:50%;
+    margin:0 !important;
     fill:none;
     stroke:#fff;
     stroke-width:2;
     filter:drop-shadow(0 2px 7px rgba(0,0,0,.55));
+    pointer-events:none;
+    transform:translate(-50%,-50%) scale(.94);
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .16s ease, transform .16s ease;
 }
 .center-play-pause .center-play-icon,
 .center-play-pause .center-pause-icon{
-    width:46px;
-    height:46px;
+    width:50px !important;
+    height:50px !important;
 }
-.center-play-icon,.center-pause-icon{display:none;}
-.center-play-pause[data-state="play"] .center-play-icon{display:block;margin-left:2px;}
-.center-play-pause[data-state="pause"] .center-pause-icon{display:block;}
+.center-play-pause[data-state="play"] .center-play-icon{
+    opacity:1;
+    visibility:visible;
+    transform:translate(-50%,-50%) scale(1);
+}
+.center-play-pause[data-state="pause"] .center-pause-icon{
+    opacity:1;
+    visibility:visible;
+    transform:translate(-50%,-50%) scale(1);
+}
+
+.center-play-pause[data-state="play"] .center-pause-icon,
+.center-play-pause[data-state="pause"] .center-play-icon{
+    opacity:0 !important;
+    visibility:hidden !important;
+}
 
 /* PLAYER TOP */
 
