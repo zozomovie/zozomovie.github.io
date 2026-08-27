@@ -3004,39 +3004,23 @@ body.cineflix-db-loading .movie-meta .age::after{
    portion — no giant rectangular pill.
 ========================================================= */
 body.cineflix-db-loading .genres{
+    display:flex !important;
+    gap:8px !important;
+    min-height:22px !important;
     background:transparent !important;
 }
-body.cineflix-db-loading .genres .genre{
-    flex:none !important;
-    width:auto !important;
-    height:10px !important;
-    min-width:0 !important;
-    padding:0 !important;
-    margin:6px 8px 6px 0 !important;
-    border:0 !important;
-    border-radius:3px !important;
-    background:#17171b !important;
-    color:transparent !important;
-    -webkit-text-fill-color:transparent !important;
-    position:relative !important;
-    overflow:hidden !important;
-}
-body.cineflix-db-loading .genres .genre:nth-child(1){width:37px !important;}
-body.cineflix-db-loading .genres .genre:nth-child(2){width:53px !important;}
-body.cineflix-db-loading .genres .genre:nth-child(3){width:34px !important;}
-body.cineflix-db-loading .genres .genre:nth-child(4){width:49px !important;}
-body.cineflix-db-loading .genres .genre::after{
+body.cineflix-db-loading .genres::before{
     content:"";
-    position:absolute;
-    inset:0;
-    background:linear-gradient(
-        90deg,
-        transparent,
-        rgba(255,255,255,.065),
-        transparent
-    );
-    transform:translateX(-100%);
-    animation:cineflixDataShimmer 1.15s ease-in-out infinite;
+    display:block;
+    width:38px;
+    height:10px;
+    margin-top:6px;
+    border-radius:3px;
+    background:#17171b;
+    box-shadow:
+        46px 0 0 #17171b,
+        92px 0 0 #17171b;
+    position:relative;
 }
 
 /* =========================================================
@@ -3144,6 +3128,11 @@ body.cineflix-db-loading .similar-card{
     background:transparent !important;
     border-color:transparent !important;
 }
+body.cineflix-db-loading .similar-card[aria-hidden="true"] .similar-art{
+    background:#17171b !important;
+    opacity:.65;
+}
+
 body.cineflix-db-loading .similar-art{
     background:#17171b !important;
 }
@@ -3730,7 +3719,7 @@ body.cineflix-db-error .cineflix-db-message{
     </div>
     <div class="initial-poster" id="initialPoster" aria-hidden="false">
         <img
-            src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=85"
+            src=""
             alt="Movie thumbnail"
         >
         <div class="initial-poster-shade"></div>
@@ -4032,45 +4021,21 @@ body.cineflix-db-error .cineflix-db-message{
 <section class="content">
 
 
-<h1 class="movie-title">
-    The Last Journey
-</h1>
-
+<h1 class="movie-title"></h1>
 
 <div class="movie-meta">
-
-    <span class="rating">
-        ★ 8.9
-    </span>
-
+    <span class="rating"></span>
     <span class="dot">•</span>
-
-    <span>2026</span>
-
+    <span></span>
     <span class="dot">•</span>
-
-    <span>2h 18m</span>
-
+    <span></span>
     <span class="dot">•</span>
-
-    <span class="age">16+</span>
-
+    <span class="age"></span>
     <span class="dot">•</span>
-
-    <span>HD</span>
-
+    <span></span>
 </div>
 
-
-<div class="genres">
-
-    <span class="genre">Action</span>
-    <span class="genre">Adventure</span>
-    <span class="genre">Sci-Fi</span>
-    <span class="genre">Thriller</span>
-
-</div>
-
+<div class="genres"></div>
 
 <!-- =======================================================
      ACTION BUTTONS
@@ -4139,23 +4104,7 @@ body.cineflix-db-error .cineflix-db-message{
 
     <p class="description">
 
-        A fearless explorer returns to a forgotten world where
-        every secret comes with a price. When an unexpected
-        discovery changes the course of his mission, he must
-        travel beyond the limits of human exploration to uncover
-        the truth.
-
-        <span
-            class="description-more"
-            id="descriptionMore"
-        >
-
-            Along the way, he encounters a mysterious force,
-            dangerous landscapes and a secret that could change
-            humanity forever. The final journey becomes more
-            than an adventure — it becomes a fight for survival.
-
-        </span>
+    </p>
 
     </p>
 
@@ -4190,8 +4139,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Release Date</small>
 
                 <strong>
-                    24 August 2026
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4201,8 +4150,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Type</small>
 
                 <strong>
-                    Movie
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4212,8 +4161,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Category</small>
 
                 <strong>
-                    Action / Adventure
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4223,8 +4172,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Runtime</small>
 
                 <strong>
-                    2h 18m
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4234,8 +4183,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Language</small>
 
                 <strong>
-                    Hindi • English
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4245,8 +4194,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Audio</small>
 
                 <strong>
-                    Hindi 5.1 • English 5.1
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4256,8 +4205,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Quality</small>
 
                 <strong>
-                    1080p • 720p • 480p
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4267,8 +4216,8 @@ body.cineflix-db-error .cineflix-db-message{
                 <small>Subtitles</small>
 
                 <strong>
-                    Hindi • English
-                </strong>
+                
+            </strong>
 
             </div>
 
@@ -4293,132 +4242,6 @@ body.cineflix-db-error .cineflix-db-message{
 
     <div class="cast-row">
 
-
-        <div class="cast">
-
-            <div class="cast-photo">
-
-                <svg viewBox="0 0 24 24">
-
-                    <circle cx="12" cy="8" r="4"/>
-
-                    <path d="M4 21a8 8 0 0 1 16 0"/>
-
-                </svg>
-
-            </div>
-
-            <div class="cast-name">
-                Alex Carter
-            </div>
-
-            <div class="cast-role">
-                Lead Actor
-            </div>
-
-        </div>
-
-
-        <div class="cast">
-
-            <div class="cast-photo">
-
-                <svg viewBox="0 0 24 24">
-
-                    <circle cx="12" cy="8" r="4"/>
-
-                    <path d="M4 21a8 8 0 0 1 16 0"/>
-
-                </svg>
-
-            </div>
-
-            <div class="cast-name">
-                Emma Stone
-            </div>
-
-            <div class="cast-role">
-                Actress
-            </div>
-
-        </div>
-
-
-        <div class="cast">
-
-            <div class="cast-photo">
-
-                <svg viewBox="0 0 24 24">
-
-                    <circle cx="12" cy="8" r="4"/>
-
-                    <path d="M4 21a8 8 0 0 1 16 0"/>
-
-                </svg>
-
-            </div>
-
-            <div class="cast-name">
-                Daniel Ray
-            </div>
-
-            <div class="cast-role">
-                Actor
-            </div>
-
-        </div>
-
-
-        <div class="cast">
-
-            <div class="cast-photo">
-
-                <svg viewBox="0 0 24 24">
-
-                    <circle cx="12" cy="8" r="4"/>
-
-                    <path d="M4 21a8 8 0 0 1 16 0"/>
-
-                </svg>
-
-            </div>
-
-            <div class="cast-name">
-                John Miller
-            </div>
-
-            <div class="cast-role">
-                Director
-            </div>
-
-        </div>
-
-
-        <div class="cast">
-
-            <div class="cast-photo">
-
-                <svg viewBox="0 0 24 24">
-
-                    <circle cx="12" cy="8" r="4"/>
-
-                    <path d="M4 21a8 8 0 0 1 16 0"/>
-
-                </svg>
-
-            </div>
-
-            <div class="cast-name">
-                Sarah Lee
-            </div>
-
-            <div class="cast-role">
-                Writer
-            </div>
-
-        </div>
-
-
     </div>
 
 </section>
@@ -4434,114 +4257,14 @@ body.cineflix-db-error .cineflix-db-message{
         You May Also Like
     </h2>
 
-
+    <!-- One empty grid item only — layout demo, no fake movie data. -->
     <div class="similar-row">
 
-
-        <div class="similar-card">
-
+        <div class="similar-card" aria-hidden="true">
             <div class="similar-art">
-
-                <div class="similar-content">
-
-                    <div class="similar-title">
-                        Dark Horizon
-                    </div>
-
-                    <div class="similar-meta">
-                        2026 • ★ 8.6
-                    </div>
-
-                </div>
-
+                <div class="similar-content"></div>
             </div>
-
         </div>
-
-
-        <div class="similar-card">
-
-            <div class="similar-art">
-
-                <div class="similar-content">
-
-                    <div class="similar-title">
-                        Beyond Stars
-                    </div>
-
-                    <div class="similar-meta">
-                        2026 • ★ 9.1
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="similar-card">
-
-            <div class="similar-art">
-
-                <div class="similar-content">
-
-                    <div class="similar-title">
-                        Silent City
-                    </div>
-
-                    <div class="similar-meta">
-                        2026 • ★ 8.7
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="similar-card">
-
-            <div class="similar-art">
-
-                <div class="similar-content">
-
-                    <div class="similar-title">
-                        Lost Kingdom
-                    </div>
-
-                    <div class="similar-meta">
-                        2025 • ★ 8.4
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="similar-card">
-
-            <div class="similar-art">
-
-                <div class="similar-content">
-
-                    <div class="similar-title">
-                        Red Planet
-                    </div>
-
-                    <div class="similar-meta">
-                        2026 • ★ 8.2
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
 
     </div>
 
@@ -5639,13 +5362,7 @@ function showToast(message){
    PLAYER + HLS MOVIE / TRAILER SWITCH
 ========================================================= */
 
-/*
-   The StreamHG link supplied for the demo is an HLS stream.
-   The original player source shows that its proxy exposes the
-   master.m3u8 manifest through serve_m3u8=1.  We use HLS.js here
-   so Chromium/Firefox can play that manifest and expose its real
-   quality levels instead of treating the m3u8 as a normal MP4.
-*/
+/* Movie/trailer sources are populated only from Admin/Supabase data. */
 let MOVIE_DEMO_URL = "";
 let TRAILER_DEMO_URL = "";
 
@@ -7507,27 +7224,34 @@ document.addEventListener("fullscreenchange",()=>{
     }
 
     function renderMovieDetails(movie){
-        const title = movie.title || movie.original_title || "Movie";
+        const title = String(movie.title || movie.original_title || "").trim();
         const year = getYear(movie);
         const runtime = formatRuntime(movie.runtime);
-        const rating = Number(movie.rating || 0).toFixed(1);
+        const ratingValue = movie.rating;
+        const rating = ratingValue === null || ratingValue === undefined || ratingValue === ""
+            ? ""
+            : Number(ratingValue).toFixed(1);
         const genres = getGenres(movie);
 
-        document.title = `${title} — CINEFLIX`;
+        document.title = title ? `${title} — CINEFLIX` : "CINEFLIX";
 
         setText(".movie-title", title);
 
         const meta = $(".movie-meta");
         if(meta){
             meta.innerHTML = `
-                <span class="rating">★ ${rating}</span>
+                <span class="rating">${rating ? `★ ${escapeHTML(rating)}` : ""}</span>
                 <span class="dot">•</span>
-                <span>${escapeHTML(year)}</span>
+                <span>${escapeHTML(year || "")}</span>
                 ${runtime ? `<span class="dot">•</span><span>${escapeHTML(runtime)}</span>` : ""}
-                <span class="dot">•</span>
-                <span class="age">16+</span>
-                <span class="dot">•</span>
-                <span>HD</span>
+                ${movie.age_rating || movie.certificate ? `
+                    <span class="dot">•</span>
+                    <span class="age">${escapeHTML(movie.age_rating || movie.certificate)}</span>
+                ` : ""}
+                ${movie.quality ? `
+                    <span class="dot">•</span>
+                    <span>${escapeHTML(movie.quality)}</span>
+                ` : ""}
             `;
         }
 
@@ -7540,36 +7264,48 @@ document.addEventListener("fullscreenchange",()=>{
 
         const description=$(".description");
         if(description){
-            description.textContent = movie.overview || movie.tagline || "No description available.";
+            description.textContent = movie.overview || movie.tagline || "";
         }
 
-        // Movie details info card
+        // Movie details — show only values actually supplied by Admin/Supabase.
         const infoItems=$$(".info-item");
         infoItems.forEach(item=>{
             const label=(item.querySelector("small")?.textContent || "").trim().toLowerCase();
             const strong=item.querySelector("strong");
             if(!strong) return;
 
-            if(label.includes("release")) strong.textContent=movie.release_date || "—";
-            else if(label==="type") strong.textContent=(movie.media_type||"movie").toUpperCase();
-            else if(label.includes("category")) strong.textContent=genres.join(" / ") || movie.category || "Movie";
-            else if(label.includes("runtime")) strong.textContent=runtime || "—";
-            else if(label.includes("language")) strong.textContent=movie.language ? String(movie.language).toUpperCase() : "—";
-            else if(label.includes("quality")) strong.textContent=
-                [movie.video_1080,movie.video_720,movie.video_480].some(Boolean)
-                ? "1080p • 720p • 480p" : "—";
+            let value = "";
+
+            if(label.includes("release")) value = movie.release_date || "";
+            else if(label==="type") value = movie.media_type ? String(movie.media_type).toUpperCase() : "";
+            else if(label.includes("category")) value = genres.join(" / ") || movie.category || "";
+            else if(label.includes("runtime")) value = runtime || "";
+            else if(label.includes("language")) value = movie.language ? String(movie.language).toUpperCase() : "";
+            else if(label.includes("audio")) value = movie.audio || movie.audio_languages || "";
+            else if(label.includes("subtitle")) value = movie.subtitles || movie.subtitle_languages || "";
+            else if(label.includes("quality")){
+                value = movie.quality ||
+                    ([movie.video_1080,movie.video_720,movie.video_480].some(Boolean)
+                        ? [
+                            movie.video_1080 ? "1080p" : "",
+                            movie.video_720 ? "720p" : "",
+                            movie.video_480 ? "480p" : ""
+                          ].filter(Boolean).join(" • ")
+                        : "");
+            }
+
+            strong.textContent = value;
         });
 
-        // Player thumbnail = actual TMDB poster/backdrop, never the old demo image.
+        // Player thumbnail = Admin/Supabase artwork only.
         const poster = movie.backdrop_url || movie.poster_url || "";
-        setImage("#initialPoster img", poster, title);
+        setImage("#initialPoster img", poster, title || "Movie");
 
-        // Backdrop elements if present.
         $$("[data-movie-backdrop]").forEach(el=>{
             if(movie.backdrop_url) el.style.backgroundImage=`url("${movie.backdrop_url}")`;
         });
 
-        // Cast & Crew
+        // Cast & Crew — only Admin/Supabase data. Never show demo people.
         const castRow=$(".cast-row");
         if(castRow){
             const cast=[...getCast(movie), ...getCrew(movie)].slice(0,10);
@@ -7583,35 +7319,26 @@ document.addEventListener("fullscreenchange",()=>{
                             </svg>
                         `}
                     </div>
-                    <div class="cast-name">${escapeHTML(person.name || "Unknown")}</div>
+                    <div class="cast-name">${escapeHTML(person.name || "")}</div>
                     <div class="cast-role">${escapeHTML(person.character || person.job || "")}</div>
-                </div>
-            `).join("") : `
-                <div class="cast">
-                    <div class="cast-photo"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
-                    <div class="cast-name">No cast data</div>
-                    <div class="cast-role"></div>
-                </div>
-            `;
-        }
-
-        // Similar / recommendations
-        const similarRow=$(".similar-row");
-        if(similarRow){
-            const items=getSimilar(movie);
-            similarRow.innerHTML = items.length ? items.map(item => `
-                <div class="similar-card" data-tmdb-id="${escapeHTML(item.tmdb_id || "")}">
-                    <div class="similar-art" style="${item.poster ? `background-image:url('${escapeHTML(item.poster)}');background-size:cover;background-position:center;` : ""}">
-                        <div class="similar-content">
-                            <div class="similar-title">${escapeHTML(item.title || "Movie")}</div>
-                            <div class="similar-meta">${escapeHTML(item.year || "")} • ★ ${Number(item.rating||0).toFixed(1)}</div>
-                        </div>
-                    </div>
                 </div>
             `).join("") : "";
         }
 
-        // Trailer button uses the actual TMDB trailer URL when available.
+        // You May Also Like is intentionally kept as one empty grid demo.
+        // No TMDB/similar-data demo movies are inserted here.
+        const similarRow=$(".similar-row");
+        if(similarRow){
+            similarRow.innerHTML = `
+                <div class="similar-card" aria-hidden="true">
+                    <div class="similar-art">
+                        <div class="similar-content"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Trailer button uses only the Admin/Supabase trailer URL.
         const trailerUrl=normalizeTrailerUrl(movie.trailer_url || "");
         const trailerBtn=$("#trailerToggle");
         if(trailerBtn){
@@ -7620,20 +7347,19 @@ document.addEventListener("fullscreenchange",()=>{
             trailerBtn.style.opacity=trailerUrl ? "1" : ".55";
         }
 
-        // Share uses actual movie title.
         const shareBtn=$("#shareBtn");
         if(shareBtn){
             shareBtn.dataset.movieTitle=title;
         }
 
-        // Real video sources saved by Admin.
+        // Real video sources saved by Admin only. No demo fallback.
         MOVIE_DEMO_URL = movie.video_1080 || movie.video_720 || movie.video_480 || "";
         TRAILER_DEMO_URL = normalizeTrailerUrl(movie.trailer_url || "");
 
         QUALITY_SOURCES.movie = {
-            "480": movie.video_480 || MOVIE_DEMO_URL,
-            "720": movie.video_720 || movie.video_480 || MOVIE_DEMO_URL,
-            "1080": movie.video_1080 || movie.video_720 || movie.video_480 || MOVIE_DEMO_URL
+            "480": movie.video_480 || "",
+            "720": movie.video_720 || "",
+            "1080": movie.video_1080 || ""
         };
         QUALITY_SOURCES.trailer = {
             "480": TRAILER_DEMO_URL,
@@ -7641,7 +7367,6 @@ document.addEventListener("fullscreenchange",()=>{
             "1080": TRAILER_DEMO_URL
         };
 
-        // Rebuild the initial player source using the real Admin URL.
         if(MOVIE_DEMO_URL){
             destroyHls();
             video.removeAttribute("src");
@@ -7654,6 +7379,7 @@ document.addEventListener("fullscreenchange",()=>{
         }
 
         window.CINEFLIX_MOVIE=movie;
+
 /* =========================================================
    CONTINUE WATCHING — ADD-ONLY LOGIC
    Existing player/source/quality code is untouched.
