@@ -3154,6 +3154,7 @@ body.cineflix-db-loading .initial-poster-play{
 /* Instant loading thumbnail: no fade/transition. It is removed synchronously
    with the DB skeleton; the real Admin poster/play state is underneath. */
 #initialPoster.cineflix-instant-loading{
+    will-change:opacity;
     opacity:1 !important;
     visibility:visible !important;
     transition:none !important;
