@@ -8,6 +8,23 @@
 
 <meta name="theme-color" content="#070708">
 
+<!-- INSTANT PLAYER THUMBNAIL: browser starts fetching this before Supabase.
+     If index.html stores a custom thumbnail in localStorage, that cached URL is
+     used immediately by movie.html. Otherwise this fallback is used. -->
+<link rel="preload" as="image" href="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=85" fetchpriority="high" id="cineflixPosterPreload">
+<script>
+(function(){
+    try{
+        var key="cineflix_custom_player_thumb_v1";
+        var cached=localStorage.getItem(key);
+        if(cached){
+            var link=document.getElementById("cineflixPosterPreload");
+            if(link) link.href=cached;
+        }
+    }catch(e){}
+})();
+</script>
+
 <style>
 
 /* CINEFLIX: Auto mode starts at 480p (level 0), then adapts to network speed. */
@@ -2932,13 +2949,118 @@ body.cineflix-db-error .movie-page-skeleton{
     .skeleton-about,.skeleton-lines{margin-left:17px;margin-right:17px;}
 }
 
-/* Prevent the old demo content from flashing before Supabase data arrives. */
+/* =========================================================
+   INSTANT MOVIE PAGE / DATA-ONLY SKELETON
+   The real page is visible immediately. Only Supabase-backed values
+   shimmer while the request is in flight. The custom player thumbnail
+   remains visible above the page loader.
+========================================================= */
+.movie-page-skeleton{
+    display:none !important;
+}
 body.cineflix-db-loading .page{
-    visibility:hidden;
+    visibility:visible !important;
 }
 body.cineflix-db-loading .initial-poster{
-    visibility:hidden;
+    visibility:visible !important;
 }
+
+.cineflix-data-shimmer{
+    position:relative !important;
+    overflow:hidden !important;
+    color:transparent !important;
+    background:#17171b !important;
+    border-radius:7px !important;
+    -webkit-text-fill-color:transparent !important;
+}
+.cineflix-data-shimmer::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    transform:translateX(-100%);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.065),transparent);
+    animation:cineflixDataShimmer 1.15s ease-in-out infinite;
+    pointer-events:none;
+}
+@keyframes cineflixDataShimmer{100%{transform:translateX(100%);}}
+
+body.cineflix-db-loading .movie-title{
+    width:min(76%,520px);
+    min-height:31px;
+}
+body.cineflix-db-loading .movie-meta{
+    min-height:13px;
+}
+body.cineflix-db-loading .movie-meta > *{
+    color:transparent !important;
+    background:#17171b !important;
+    border-color:transparent !important;
+    border-radius:4px !important;
+    -webkit-text-fill-color:transparent !important;
+}
+body.cineflix-db-loading .genres .genre{
+    color:transparent !important;
+    background:#17171b !important;
+    border-color:transparent !important;
+    min-width:58px;
+}
+body.cineflix-db-loading .description{
+    color:transparent !important;
+    background:linear-gradient(#17171b 0 12px,transparent 12px 21px,#17171b 21px 33px,transparent 33px 42px,#17171b 42px 54px,transparent 54px) !important;
+    border-radius:5px;
+    min-height:54px;
+    -webkit-text-fill-color:transparent !important;
+}
+body.cineflix-db-loading .info-item strong{
+    min-height:14px;
+    width:75%;
+    color:transparent !important;
+    background:#17171b !important;
+    border-radius:4px;
+    -webkit-text-fill-color:transparent !important;
+}
+body.cineflix-db-loading .cast-photo,
+body.cineflix-db-loading .cast-name,
+body.cineflix-db-loading .cast-role{
+    color:transparent !important;
+    background:#17171b !important;
+    border-color:transparent !important;
+    -webkit-text-fill-color:transparent !important;
+}
+body.cineflix-db-loading .similar-card{
+    background:#17171b !important;
+    border-color:transparent !important;
+}
+body.cineflix-db-loading .similar-art::before{
+    background:#17171b !important;
+}
+body.cineflix-db-loading .similar-content{
+    opacity:0;
+}
+body.cineflix-db-loading .trailer{
+    background:#17171b !important;
+    border-color:transparent !important;
+}
+body.cineflix-db-loading .trailer::before,
+body.cineflix-db-loading .trailer-play{
+    opacity:0;
+}
+
+/* Player is intentionally NOT skeletonized. The custom thumbnail is the
+   instant visual until real Supabase data is ready. */
+body.cineflix-db-loading .initial-poster img{
+    visibility:visible !important;
+    opacity:1 !important;
+}
+body.cineflix-db-loading .player-loading{
+    z-index:31 !important;
+}
+
+/* Remove the old full-page loader rules that hid the actual movie page. */
+body.cineflix-db-error .page{
+    visibility:visible !important;
+}
+
 body.cineflix-db-error .page{
     visibility:visible;
 }
@@ -7214,6 +7336,31 @@ document.addEventListener("fullscreenchange",()=>{
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
+    /* Instant custom thumbnail: use the value cached by index.html before
+       Supabase is contacted. This does not wait for movie data. */
+    const CINEFLIX_CUSTOM_THUMB_KEY = "cineflix_custom_player_thumb_v1";
+    const CINEFLIX_CUSTOM_THUMB_FALLBACK = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=85";
+    function getInstantPlayerThumb(){
+        try{
+            return localStorage.getItem(CINEFLIX_CUSTOM_THUMB_KEY) || CINEFLIX_CUSTOM_THUMB_FALLBACK;
+        }catch(e){
+            return CINEFLIX_CUSTOM_THUMB_FALLBACK;
+        }
+    }
+    (function bootInstantPoster(){
+        const img=document.querySelector("#initialPoster img");
+        const url=getInstantPlayerThumb();
+        if(img && url){
+            img.src=url;
+            img.fetchPriority="high";
+        }
+        const preload=document.getElementById("cineflixPosterPreload");
+        if(preload && url) preload.href=url;
+        try{
+            if(url) new Image().src=url;
+        }catch(e){}
+    })();
+
     function setText(selector, value){
         const el = $(selector);
         if(el) el.textContent = value ?? "";
@@ -7262,6 +7409,22 @@ document.addEventListener("fullscreenchange",()=>{
         if(el && src){
             el.src=src;
             if(alt) el.alt=alt;
+        }
+    }
+
+    function setDataSkeletonState(loading){
+        const selectors=[
+            ".movie-title", ".movie-meta", ".genres", ".description",
+            ".trailer"
+        ];
+        selectors.forEach(sel=>{
+            $$(sel).forEach(el=>el.classList.toggle("cineflix-data-shimmer", loading));
+        });
+        /* Keep child layout intact while Supabase data is unavailable. */
+        if(loading){
+            $$(".movie-meta > *, .genres .genre, .info-item strong, .cast-photo, .cast-name, .cast-role, .similar-card, .trailer").forEach(el=>el.classList.add("cineflix-data-shimmer"));
+        }else{
+            $$(".movie-meta > *, .genres .genre, .info-item strong, .cast-photo, .cast-name, .cast-role, .similar-card, .trailer").forEach(el=>el.classList.remove("cineflix-data-shimmer"));
         }
     }
 
@@ -7572,9 +7735,19 @@ window.addEventListener("beforeunload",()=>{
 });
 
     async function initMovie(){
+        setDataSkeletonState(true);
         try{
             const movie=await getMovie();
             renderMovieDetails(movie);
+            setDataSkeletonState(false);
+
+            /* The custom instant thumbnail is only a DB-loading bridge.
+               Once movie data has arrived, remove it so the normal player
+               state/real movie artwork logic takes over. */
+            if(initialPoster){
+                initialPoster.classList.add("hidden");
+                initialPoster.setAttribute("aria-hidden","true");
+            }
 
             const pageSkeleton=document.getElementById("moviePageSkeleton");
             if(pageSkeleton){
@@ -7586,6 +7759,7 @@ window.addEventListener("beforeunload",()=>{
             document.body.classList.remove("cineflix-db-error");
         }catch(error){
             console.error("CINEFLIX movie load failed:",error);
+            setDataSkeletonState(false);
             document.body.classList.remove("cineflix-db-loading");
             document.body.classList.add("cineflix-db-error");
             const msg=$("#cineflixDbMessage");
