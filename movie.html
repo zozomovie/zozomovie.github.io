@@ -7688,34 +7688,34 @@ window.addEventListener("beforeunload",()=>{
 const SUPABASE_URL = 'https://bbqaagbypawcpszjwzii.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJicWFhZ2J5cGF3Y3Bzemp3emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MDEyODIsImV4cCI6MjEwMzE3NzI4Mn0.iBI4qLAxoUcuzWprmmWiwWirWhJ42hr_gSnuZsQVYOY';
 
-const movieVideo = document.getElementById('movieVideo'); // Aapke video player ki ID 'movieVideo' honi chahiye
+const movieVideo = document.getElementById('movieVideo'); // Aapke video player ki ID
 
-// URL se tmdb_id nikalne ke liye (jaise: movie.html?tmdb_id=12345)
+// 2. URL se movie ki unique ID nikalne ke liye (e.g., ?id=c0f645cb-...)
 const urlParams = new URLSearchParams(window.location.search);
-const tmdbId = urlParams.get('tmdb_id') || urlParams.get('id'); 
+const movieId = urlParams.get('id'); 
 
-// 2. Main Function: Link expire hone par naya link layega aur Supabase update karega
+// 3. Main Function: Link expire hone par naya link layega aur Supabase update karega
 async function handleExpiredCdnAndAutoUpdate() {
     console.log("CDN link expire ho gaya, naya link laya ja raha hai...");
 
     try {
-        // Step A: Apne local Node.js scraper server ko call karein
-        const response = await fetch(`http://localhost:3000/get-fresh-link?tmdb_id=${tmdbId}`);
+        // Apne local Node.js scraper server ko call karein (id pass karke)
+        const response = await fetch(`http://localhost:3000/get-fresh-link?id=${movieId}`);
         const data = await response.json();
 
         if (data && data.freshCdnUrl) {
             const newCdnUrl = data.freshCdnUrl;
             
-            // Step B: Video ka current playback time save karein taaki wahi se movie chale
+            // Video ka current time save karein taaki wahi se movie chale
             const currentTime = movieVideo.currentTime;
 
-            // Step C: Player me naya link daal kar video play karein
+            // Player me naya link daal kar video play karein
             movieVideo.src = newCdnUrl;
             movieVideo.currentTime = currentTime;
             await movieVideo.play();
 
-            // Step D: Supabase ki 'generated_hls_links' table ko update karein
-            await updateSupabaseDirectly(tmdbId, newCdnUrl);
+            // Supabase ki 'generated_hls_links' table ko update karein
+            await updateSupabaseDirectly(movieId, newCdnUrl);
 
             console.log("Naya link successfully update ho gaya!");
         }
@@ -7724,13 +7724,12 @@ async function handleExpiredCdnAndAutoUpdate() {
     }
 }
 
-// 3. Supabase Database Update Function (`generated_hls_links` table ke liye)
+// 4. Supabase Database Update Function ('id' ke base par links column update karega)
 async function updateSupabaseDirectly(id, newUrl) {
     try {
-        // JSONB format ke hisab se links array banayein
         const updatedLinksJson = JSON.stringify([{ url: newUrl }]);
 
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/generated_hls_links?tmdb_id=eq.${id}`, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/generated_hls_links?id=eq.${id}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -7738,18 +7737,20 @@ async function updateSupabaseDirectly(id, newUrl) {
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
                 'Prefer': 'return=minimal'
             },
-            body: JSON.stringify({ links: updatedLinksJson }) // 'links' column update hoga
+            body: JSON.stringify({ links: updatedLinksJson })
         });
 
-        if (!res.ok) {
-            console.error("Supabase update error status:", res.status);
+        if (res.ok) {
+            console.log("Supabase successfully update ho gaya!");
+        } else {
+            console.error("Supabase update error:", await res.text());
         }
     } catch (dbError) {
         console.error("Database background update error:", dbError);
     }
 }
 
-// 4. Video Error Listener: Jab bhi link expire hone ki wajah se error aayega, yeh automatically chal padega
+// 5. Video Error Listener: Link expire hone par yeh automatically trigger hoga
 if (movieVideo) {
     movieVideo.addEventListener('error', () => {
         const mediaError = movieVideo.error;
