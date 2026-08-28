@@ -7684,6 +7684,60 @@ window.addEventListener("beforeunload",()=>{
 
     initMovie();
 })();
+   // Apni Supabase ki details yahan exact daalein
+const SUPABASE_URL = 'https://bbqaagbypawcpszjwzii.supabase.co/rest';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJicWFhZ2J5cGF3Y3Bzemp3emlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MDEyODIsImV4cCI6MjEwMzE3NzI4Mn0.iBI4qLAxoUcuzWprmmWiwWirWhJ42hr_gSnuZsQVYOY';
+
+const movieVideo = document.getElementById('movieVideo'); // Aapke video tag ki ID 'movieVideo' honi chahiye
+const urlParams = new URLSearchParams(window.location.search);
+const movieId = urlParams.get('id'); // URL se movie ki ID aayegi (e.g., movie.html?id=1)
+
+async function handleExpiredCdnAndAutoUpdate() {
+    console.log("CDN link expire ho gaya, naya link fetch ho raha hai...");
+
+    try {
+        // Step 1: Apne local scraper server ko call karein
+        const response = await fetch(`http://localhost:3000/get-fresh-link?id=${movieId}`);
+        const data = await response.json();
+
+        if (data && data.freshCdnUrl) {
+            const newCdnUrl = data.freshCdnUrl;
+            
+            // Step 2: Video ka current time save karein taaki wahi se movie chale
+            const currentTime = movieVideo.currentTime;
+
+            // Step 3: Player me naya link set karke video play karein
+            movieVideo.src = newCdnUrl;
+            movieVideo.currentTime = currentTime;
+            await movieVideo.play();
+
+            // Step 4: Supabase database me bhi naya link automatically update kar dein
+            await fetch(`${SUPABASE_URL}/rest/v1/movies?id=eq.${movieId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                },
+                body: JSON.stringify({ cdn_url: newCdnUrl }) // Database ka column name 'cdn_url' hona chahiye
+            });
+
+            console.log("Naya link successfully update ho gaya!");
+        }
+    } catch (error) {
+        console.error("Auto-update fail ho gaya:", error);
+    }
+}
+
+// Step 5: Jab bhi video me link expire hone ki wajah se error aaye (Error 2, 3, ya 4), yeh khud chal padega
+if (movieVideo) {
+    movieVideo.addEventListener('error', () => {
+        const mediaError = movieVideo.error;
+        if (mediaError && [2, 3, 4].includes(mediaError.code)) {
+            handleExpiredCdnAndAutoUpdate();
+        }
+    });
+}
 </script>
 
 </body>
