@@ -6554,6 +6554,18 @@ function cineflixAutoProxyUrl(path){
     return path;
 }
 
+function cineflixServer2PlayableUrl(source){
+    const raw=String(source||'').trim();
+    if(!raw) return '';
+    try{
+        const base=String(CINEFLIX_AUTO_PROXY_URL||'').trim().replace(/\/$/,'');
+        if(base && !/PASTE_YOUR_CLOUDFLARE_TUNNEL_URL_HERE/i.test(base)){
+            return base + '/server2_proxy?url=' + encodeURIComponent(raw);
+        }
+    }catch(e){}
+    return raw;
+}
+
 async function refreshCurrentMovieSource(){
     if(currentMode!=="movie" || movieSourceRefreshRunning) return false;
 
@@ -6578,9 +6590,17 @@ async function refreshCurrentMovieSource(){
             }
             const server2=String(window.CINEFLIX_MOVIE?.server_2 || "").trim();
             if(!server2) throw new Error("Server-2 link available nahi hai.");
+            const playable=cineflixServer2PlayableUrl(server2);
+            SERVER_SOURCES.movie["2"]={"480":playable,"720":playable,"1080":playable};
+            QUALITY_SOURCES.movie=SERVER_SOURCES.movie["2"];
+            MOVIE_DEMO_URL=playable;
             movieSourceNeedsRefresh=false;
             hlsNetworkRetryCount=0;
             nativeRetryCount=0;
+            try{ destroyHls(); }catch(e){}
+            video.removeAttribute("src");
+            video.load();
+            setPlayerMode("movie",true);
             return true;
         }
 
@@ -7622,9 +7642,9 @@ document.addEventListener("fullscreenchange",()=>{
                 "1080": movie.video_1080 || ""
             },
             "2": {
-                "480": movie.server_2 || "",
-                "720": movie.server_2 || "",
-                "1080": movie.server_2 || ""
+                "480": cineflixServer2PlayableUrl(movie.server_2 || ""),
+                "720": cineflixServer2PlayableUrl(movie.server_2 || ""),
+                "1080": cineflixServer2PlayableUrl(movie.server_2 || "")
             }
         };
 
@@ -7818,25 +7838,25 @@ document.addEventListener("fullscreenchange",()=>{
         if(error) throw error;
         if(!data) throw new Error("This movie was not found in Supabase.");
 
-        // Server-2 is stored directly in movies.server_2.
-        // Fallback to generated_hls_links.hls_input.server_2 for older rows.
-        if(typeof data.server_2 !== "string" || !data.server_2.trim()){
-            try{
-                const {data:hlsRow,error:hlsError}=await client
-                    .from("generated_hls_links")
-                    .select("hls_input,links,updated_at")
-                    .eq("tmdb_id",data.tmdb_id)
-                    .maybeSingle();
-                if(!hlsError){
-                    data.server_2=typeof hlsRow?.hls_input?.server_2 === "string"
-                        ? hlsRow.hls_input.server_2.trim()
-                        : "";
-                }
-            }catch(e){
-                console.warn("CINEFLIX legacy Server-2 load failed:",e);
+        // Server-2 is kept in generated_hls_links.hls_input so no existing
+        // movies-table column/schema is changed. Server-1 remains movies.video_* .
+        try{
+            const {data:hlsRow,error:hlsError}=await client
+                .from("generated_hls_links")
+                .select("hls_input,links,updated_at")
+                .eq("tmdb_id",data.tmdb_id)
+                .maybeSingle();
+            if(!hlsError){
+                data.server_2 = typeof hlsRow?.hls_input?.server_2 === "string"
+                    ? hlsRow.hls_input.server_2.trim()
+                    : "";
+            }else{
+                data.server_2 = "";
             }
+        }catch(e){
+            data.server_2 = "";
+            console.warn("CINEFLIX Server-2 load failed:",e);
         }
-        data.server_2=String(data.server_2||"").trim();
 
         return data;
     }
@@ -7876,9 +7896,9 @@ window.addEventListener("beforeunload",()=>{
             "1080": movie.video_1080 || ""
         };
         const nextSources2 = {
-            "480": movie.server_2 || "",
-            "720": movie.server_2 || "",
-            "1080": movie.server_2 || ""
+            "480": cineflixServer2PlayableUrl(movie.server_2 || ""),
+            "720": cineflixServer2PlayableUrl(movie.server_2 || ""),
+            "1080": cineflixServer2PlayableUrl(movie.server_2 || "")
         };
 
         SERVER_SOURCES.movie = {"1":nextSources1,"2":nextSources2};
