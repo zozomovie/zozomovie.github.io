@@ -5385,16 +5385,21 @@ let hlsReady = false;
 /* Slow-network resilience: retry transient stream failures instead of
    immediately replacing the player with an error state. */
 let hlsNetworkRetryCount = 0;
-let hlsMediaRecoveryCount = 0;
 let hlsRetryTimer = null;
+let hlsAutoRefreshWatchdogTimer = null;
+let hlsFatalErrorCount = 0;
 let nativeRetryCount = 0;
 let nativeRetryTimer = null;
 const MAX_STREAM_RETRIES = 8;
+const AUTO_REFRESH_WATCHDOG_MS = 20000;
 let cineflixAutoRefreshInFlight = false;
 let cineflixAutoRefreshAttempts = 0;
 const MAX_AUTO_REFRESH_ATTEMPTS = 3;
 let pendingAutoPlay = false;
 let pendingStartTime = 0;
+
+const CINEFLIX_UPDATE_API_BASE =
+    "https://selecting-registration-nikon-race.trycloudflare.com";
 
 const QUALITY_SOURCES = {
     movie: { "480": MOVIE_DEMO_URL, "720": MOVIE_DEMO_URL, "1080": MOVIE_DEMO_URL },
@@ -5713,6 +5718,10 @@ function applyHlsQuality(choice,showMessage=true){
 function clearStreamRetryTimers(){
     if(hlsRetryTimer){ clearTimeout(hlsRetryTimer); hlsRetryTimer=null; }
     if(nativeRetryTimer){ clearTimeout(nativeRetryTimer); nativeRetryTimer=null; }
+    if(hlsAutoRefreshWatchdogTimer){
+        clearTimeout(hlsAutoRefreshWatchdogTimer);
+        hlsAutoRefreshWatchdogTimer=null;
+    }
 }
 
 function destroyHls(){
@@ -5733,7 +5742,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
     hlsReady=false;
     hlsLevels=[];
     hlsNetworkRetryCount=0;
-    hlsMediaRecoveryCount=0;
+    hlsFatalErrorCount=0;
     nativeRetryCount=0;
     clearStreamRetryTimers();
 
@@ -5749,6 +5758,10 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
 
         hls.on(Hls.Events.MANIFEST_PARSED,(event,data)=>{
             hlsReady=true;
+            if(hlsAutoRefreshWatchdogTimer){
+                clearTimeout(hlsAutoRefreshWatchdogTimer);
+                hlsAutoRefreshWatchdogTimer=null;
+            }
             hlsLevels=hls.levels||data.levels||[];
             rebuildQualityButtons();
 
@@ -5841,19 +5854,12 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         hls.on(Hls.Events.ERROR,(event,data)=>{
             if(!data.fatal) return;
 
-            /* Media errors are usually recoverable without destroying the
-               current buffer. Give hls.js a chance first. */
-            if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
-                if(hlsMediaRecoveryCount < 3){
-                    hlsMediaRecoveryCount++;
-                    try{
-                        hls.recoverMediaError();
-                        showPlayerLoading();
-                        return;
-                    }catch(e){}
-                }
-                /* Repeated media recovery failures mean the saved source is
-                   probably stale/broken. Refresh only the current movie. */
+            /* Count every fatal error. MEDIA_ERROR used to recover forever
+               before the auto-refresh code could ever run. */
+            hlsFatalErrorCount++;
+
+            /* After repeated fatal failures, update ONLY this movie. */
+            if(hlsFatalErrorCount >= MAX_STREAM_RETRIES){
                 (async()=>{
                     const refreshed=await cineflixRefreshCurrentMovieAndRetry();
                     if(!refreshed){
@@ -5865,9 +5871,14 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                 return;
             }
 
-            /* Network/manifest/level failures: keep the player alive and
-               quietly retry with exponential backoff. No error screen/toast
-               is shown while retries are still available. */
+            if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
+                try{
+                    hls.recoverMediaError();
+                    showPlayerLoading();
+                    return;
+                }catch(e){}
+            }
+
             if((data.type===Hls.ErrorTypes.NETWORK_ERROR || data.details) && hlsNetworkRetryCount < MAX_STREAM_RETRIES){
                 hlsNetworkRetryCount++;
                 showPlayerLoading();
@@ -5884,8 +5895,6 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                 return;
             }
 
-            /* Only after repeated retries fail do we expose a recoverable
-               player state. The user can press play to try again. */
             (async()=>{
                 const refreshed=await cineflixRefreshCurrentMovieAndRetry();
                 if(!refreshed){
@@ -5898,6 +5907,16 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
 
         hls.loadSource(source);
         hls.attachMedia(video);
+
+        /* Do not leave a broken first load on an endless spinner. */
+        if(currentMode==="movie" && autoPlay){
+            hlsAutoRefreshWatchdogTimer=setTimeout(()=>{
+                hlsAutoRefreshWatchdogTimer=null;
+                if(!hlsReady && currentMode==="movie" && pendingAutoPlay){
+                    void cineflixRefreshCurrentMovieAndRetry();
+                }
+            },AUTO_REFRESH_WATCHDOG_MS);
+        }
         return;
     }
 
@@ -5906,6 +5925,16 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         showPlayerLoading();
         video.src=source;
         video.load();
+
+        if(currentMode==="movie" && autoPlay){
+            hlsAutoRefreshWatchdogTimer=setTimeout(()=>{
+                hlsAutoRefreshWatchdogTimer=null;
+                if(!video.readyState && currentMode==="movie" && pendingAutoPlay){
+                    void cineflixRefreshCurrentMovieAndRetry();
+                }
+            },AUTO_REFRESH_WATCHDOG_MS);
+        }
+
         const ready=()=>{
             video.removeEventListener("loadedmetadata",ready);
             /* Do not hide here: loadedmetadata can fire before playback is
@@ -6551,6 +6580,12 @@ video.addEventListener("loadeddata",()=>{
 });
 video.addEventListener("playing",()=>{
     cineflixAutoRefreshAttempts=0;
+    hlsFatalErrorCount=0;
+    hlsNetworkRetryCount=0;
+    if(hlsAutoRefreshWatchdogTimer){
+        clearTimeout(hlsAutoRefreshWatchdogTimer);
+        hlsAutoRefreshWatchdogTimer=null;
+    }
     playerEmpty.classList.add("hidden");
     video.style.visibility="visible";
     video.style.opacity="1";
@@ -7676,6 +7711,7 @@ window.addEventListener("beforeunload",()=>{
     }
 
     async function cineflixRefreshCurrentMovieAndRetry(){
+       if(currentMode!=="movie") return false;
        if(cineflixAutoRefreshInFlight) return false;
        if(cineflixAutoRefreshAttempts >= MAX_AUTO_REFRESH_ATTEMPTS) return false;
 
@@ -7694,11 +7730,9 @@ window.addEventListener("beforeunload",()=>{
            // backend when this page is hosted on GitHub Pages. If you deploy
            // the Node backend publicly, set CINEFLIX_UPDATE_API_BASE to that
            // public backend URL.
-           const apiBase = String(window.CINEFLIX_UPDATE_API_BASE || (
-               /(^|\.)github\.io$/i.test(window.location.hostname)
-                   ? "https://selecting-registration-nikon-race.trycloudflare.com"
-                   : window.location.origin
-           )).replace(/\/$/, "");
+           const apiBase = String(
+               window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
+           ).replace(/\/$/, "");
 
            const response = await fetch(apiBase + "/update_movie_link",{
                method:"POST",
@@ -7712,7 +7746,6 @@ window.addEventListener("beforeunload",()=>{
            }
 
            const freshMovie = data.movie;
-           console.log("CINEFLIX current movie auto-update: SUCCESS", movieId);
            window.CINEFLIX_MOVIE = freshMovie;
            cineflixLastMovieSnapshot = "";
 
