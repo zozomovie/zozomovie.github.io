@@ -7601,6 +7601,7 @@ document.addEventListener("fullscreenchange",()=>{
         }
 
         const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+        window.__CINEFLIX_SUPABASE_CLIENT = client;
 
         const {data,error}=await client
             .from("movies")
@@ -7619,6 +7620,229 @@ window.addEventListener("beforeunload",()=>{
     clearStreamRetryTimers();
 });
 
+    let cineflixMovieRealtimeChannel = null;
+    let cineflixMoviePollTimer = null;
+    let cineflixLastMovieSnapshot = "";
+
+    function cineflixMovieSnapshot(movie){
+        if(!movie) return "";
+        return JSON.stringify({
+            id: movie.id,
+            video_1080: movie.video_1080 || "",
+            video_720: movie.video_720 || "",
+            video_480: movie.video_480 || "",
+            trailer_url: movie.trailer_url || "",
+            updated_at: movie.updated_at || ""
+        });
+    }
+
+    function cineflixApplyLiveMovieSource(movie){
+        if(!movie) return;
+
+        const nextSnapshot = cineflixMovieSnapshot(movie);
+        if(nextSnapshot === cineflixLastMovieSnapshot) return;
+        cineflixLastMovieSnapshot = nextSnapshot;
+
+        const nextSources = {
+            "480": movie.video_480 || "",
+            "720": movie.video_720 || "",
+            "1080": movie.video_1080 || ""
+        };
+
+        const nextMain =
+            nextSources[String(currentQuality)] ||
+            nextSources["480"] ||
+            nextSources["720"] ||
+            nextSources["1080"] ||
+            "";
+
+        const oldMain =
+            MOVIE_DEMO_URL ||
+            QUALITY_SOURCES.movie?.[String(currentQuality)] ||
+            QUALITY_SOURCES.movie?.["480"] ||
+            "";
+
+        QUALITY_SOURCES.movie = nextSources;
+        MOVIE_DEMO_URL =
+            nextSources["1080"] ||
+            nextSources["720"] ||
+            nextSources["480"] ||
+            "";
+
+        TRAILER_DEMO_URL = normalizeTrailerUrl(movie.trailer_url || "");
+
+        QUALITY_SOURCES.trailer = {
+            "480": TRAILER_DEMO_URL,
+            "720": TRAILER_DEMO_URL,
+            "1080": TRAILER_DEMO_URL
+        };
+
+        if(nextMain && nextMain !== oldMain){
+
+            const wasPlaying = !video.paused;
+            const oldTime =
+                Number.isFinite(video.currentTime)
+                    ? video.currentTime
+                    : 0;
+
+            pendingAutoPlay = wasPlaying;
+            pendingStartTime = oldTime;
+
+            try{ destroyHls(); }catch(e){}
+
+            video.removeAttribute("src");
+            video.load();
+
+            initialPoster.classList.remove("hidden");
+            hidePlayerLoading();
+            playerEmpty.classList.add("hidden");
+            centerPlay.style.display = wasPlaying ? "none" : "grid";
+
+            setPlayerMode("movie", wasPlaying);
+
+        }else if(!nextMain){
+
+            try{ destroyHls(); }catch(e){}
+
+            video.removeAttribute("src");
+            video.load();
+            hidePlayerLoading();
+            playerEmpty.classList.remove("hidden");
+            centerPlay.style.display = "grid";
+        }
+    }
+
+    async function cineflixFetchLatestMovie(){
+        const params = new URLSearchParams(window.location.search);
+        const movieId = params.get("id");
+        if(!movieId) return null;
+
+        const client = window.__CINEFLIX_SUPABASE_CLIENT;
+        if(!client) return null;
+
+        const {data,error} = await client
+            .from("movies")
+            .select("*")
+            .eq("id",movieId)
+            .maybeSingle();
+
+        if(error){
+            console.warn("CINEFLIX live movie refresh failed:",error);
+            return null;
+        }
+
+        return data || null;
+    }
+
+    function startCineflixMovieRealtime(movie){
+        try{
+            const client = window.__CINEFLIX_SUPABASE_CLIENT;
+            if(!client) return;
+
+            if(cineflixMovieRealtimeChannel){
+                try{
+                    client.removeChannel(cineflixMovieRealtimeChannel);
+                }catch(e){}
+            }
+
+            cineflixMovieRealtimeChannel =
+                client
+                    .channel("cineflix-movie-live-" + String(movie.id))
+                    .on(
+                        "postgres_changes",
+                        {
+                            event:"UPDATE",
+                            schema:"public",
+                            table:"movies",
+                            filter:"id=eq." + String(movie.id)
+                        },
+                        payload => {
+                            try{
+                                if(payload?.new){
+                                    window.CINEFLIX_MOVIE = payload.new;
+                                    cineflixApplyLiveMovieSource(payload.new);
+                                }
+                            }catch(e){
+                                console.warn("CINEFLIX movie realtime update:",e);
+                            }
+                        }
+                    )
+                    .on(
+                        "postgres_changes",
+                        {
+                            event:"DELETE",
+                            schema:"public",
+                            table:"movies",
+                            filter:"id=eq." + String(movie.id)
+                        },
+                        () => {
+                            console.warn("CINEFLIX movie was deleted from Supabase.");
+                        }
+                    )
+                    .on(
+                        "postgres_changes",
+                        {
+                            event:"*",
+                            schema:"public",
+                            table:"generated_hls_links",
+                            filter:"tmdb_id=eq." + String(movie.tmdb_id)
+                        },
+                        async payload => {
+                            try{
+                                if(!payload) return;
+                                if(payload.eventType === "DELETE") return;
+
+                                const row = payload.new || {};
+                                const links = Array.isArray(row.links) ? row.links : [];
+                                const sorted = [...links].sort((a,b)=>
+                                    new Date(b?.updated_at || b?.created_at || 0) -
+                                    new Date(a?.updated_at || a?.created_at || 0)
+                                );
+                                const latestHls = sorted[0]?.url || "";
+
+                                if(!latestHls) return;
+
+                                /*
+                                 * If HLS was edited directly in generated_hls_links,
+                                 * make the public movie page use it immediately too.
+                                 */
+                                const liveMovie = {
+                                    ...window.CINEFLIX_MOVIE,
+                                    video_1080: latestHls,
+                                    video_720: latestHls,
+                                    video_480: latestHls,
+                                    updated_at: new Date().toISOString()
+                                };
+
+                                cineflixApplyLiveMovieSource(liveMovie);
+                                window.CINEFLIX_MOVIE = liveMovie;
+                            }catch(e){
+                                console.warn("CINEFLIX HLS realtime update:",e);
+                            }
+                        }
+                    )
+                    .subscribe(status => {
+                        console.log("CINEFLIX movie realtime:",status);
+                    });
+
+        }catch(e){
+            console.warn("CINEFLIX realtime unavailable:",e);
+        }
+
+        clearInterval(cineflixMoviePollTimer);
+        cineflixMoviePollTimer = setInterval(async()=>{
+            try{
+                const latest = await cineflixFetchLatestMovie();
+                if(latest){
+                    window.CINEFLIX_MOVIE = latest;
+                    cineflixApplyLiveMovieSource(latest);
+                }
+            }catch(e){
+                console.warn("CINEFLIX movie polling:",e);
+            }
+        },5000);
+    }
+
     async function initMovie(){
         /* Custom loading thumbnail is visible from the first paint. */
         if(initialPoster){
@@ -7632,7 +7856,9 @@ window.addEventListener("beforeunload",()=>{
 
         try{
             const movie=await getMovie();
+            cineflixLastMovieSnapshot = cineflixMovieSnapshot(movie);
             renderMovieDetails(movie);
+            startCineflixMovieRealtime(movie);
 
             /* IMPORTANT:
                Remove the custom loading image at the EXACT same moment as
