@@ -5453,6 +5453,12 @@ let hlsRetryTimer = null;
 let nativeRetryCount = 0;
 let nativeRetryTimer = null;
 const MAX_STREAM_RETRIES = 8;
+
+/* If the current movie's HLS has failed after normal retries, the next
+   Retry/Play click refreshes ONLY this movie's source on the server, then
+   saves the new link to Supabase and reloads the existing player. */
+let movieSourceNeedsRefresh = false;
+let movieSourceRefreshRunning = false;
 let pendingAutoPlay = false;
 let pendingStartTime = 0;
 
@@ -5934,6 +5940,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             hidePlayerLoading();
             playerEmpty.classList.remove("hidden");
             centerPlay.style.display="grid";
+            if(currentMode==="movie") movieSourceNeedsRefresh=true;
         });
 
         hls.loadSource(source);
@@ -6451,8 +6458,75 @@ vastAdClick?.addEventListener("click",e=>{
     }
 });
 
+async function refreshCurrentMovieSource(){
+    if(currentMode!=="movie" || movieSourceRefreshRunning) return false;
+
+    const movieId = String(window.CINEFLIX_MOVIE?.id || "").trim();
+    const tmdbId = String(window.CINEFLIX_MOVIE?.tmdb_id || "").trim();
+    if(!movieId && !tmdbId){
+        showToast("Movie details nahi mile.");
+        return false;
+    }
+
+    movieSourceRefreshRunning=true;
+    showPlayerLoading();
+
+    try{
+        const response=await fetch("/update_movie",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({id:movieId,tmdb_id:tmdbId})
+        });
+
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok || !data?.success || !data?.generated_link){
+            throw new Error(data?.message || "Movie link auto-update nahi hua.");
+        }
+
+        const link=String(data.generated_link).trim();
+        MOVIE_DEMO_URL=link;
+        QUALITY_SOURCES.movie={"480":link,"720":link,"1080":link};
+        if(window.CINEFLIX_MOVIE){
+            window.CINEFLIX_MOVIE={
+                ...window.CINEFLIX_MOVIE,
+                video_1080:link,
+                video_720:link,
+                video_480:link,
+                updated_at:new Date().toISOString()
+            };
+        }
+
+        movieSourceNeedsRefresh=false;
+        hlsNetworkRetryCount=0;
+        nativeRetryCount=0;
+        return true;
+    }catch(e){
+        console.error("CINEFLIX MOVIE AUTO UPDATE ERROR:",e);
+        hidePlayerLoading();
+        playerEmpty.classList.remove("hidden");
+        centerPlay.style.display="grid";
+        showToast(e?.message || "Movie link update failed.");
+        return false;
+    }finally{
+        movieSourceRefreshRunning=false;
+    }
+}
+
 async function togglePlay(){
-    if(vastAdActive || vastAdLoading) return;
+    if(vastAdActive || vastAdLoading || movieSourceRefreshRunning) return;
+
+    /* This is the user's Retry action after the current movie failed.
+       Refresh only the opened movie; Update All remains unchanged. */
+    if(currentMode==="movie" && movieSourceNeedsRefresh){
+        initialPoster.classList.add("hidden");
+        const refreshed=await refreshCurrentMovieSource();
+        if(!refreshed) return;
+        showPlayerLoading();
+        const adShown=await playVastAdThenMovie();
+        if(adShown) return;
+        loadHlsSource(QUALITY_SOURCES.movie?.[currentQuality] || MOVIE_DEMO_URL,true,video.currentTime||0);
+        return;
+    }
 
     if(!hlsReady && !video.src){
         initialPoster.classList.add("hidden");
@@ -6603,6 +6677,7 @@ video.addEventListener("error",()=>{
         hidePlayerLoading();
         playerEmpty.classList.remove("hidden");
         centerPlay.style.display="grid";
+        if(currentMode==="movie") movieSourceNeedsRefresh=true;
         return;
     }
 
