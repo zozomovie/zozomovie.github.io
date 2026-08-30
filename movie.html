@@ -7674,7 +7674,17 @@ window.addEventListener("beforeunload",()=>{
        centerPlay.style.display="none";
 
        try{
-           const response = await fetch("/update_movie_link",{
+           // GitHub Pages cannot serve the Node.js API. Use the local Node
+           // backend when this page is hosted on GitHub Pages. If you deploy
+           // the Node backend publicly, set CINEFLIX_UPDATE_API_BASE to that
+           // public backend URL.
+           const apiBase = String(window.CINEFLIX_UPDATE_API_BASE || (
+               /(^|\.)github\.io$/i.test(window.location.hostname)
+                   ? "http://localhost:3000"
+                   : window.location.origin
+           )).replace(/\/$/, "");
+
+           const response = await fetch(apiBase + "/update_movie_link",{
                method:"POST",
                headers:{"Content-Type":"application/json"},
                body:JSON.stringify({movie_id:movieId}),
