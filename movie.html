@@ -6458,6 +6458,25 @@ vastAdClick?.addEventListener("click",e=>{
     }
 });
 
+/* =========================================================
+   CINEFLIX PUBLIC AUTO-PROXY CONNECTION
+   GitHub Pages -> Cloudflare Tunnel -> local auto-proxy.js
+
+   After starting cloudflared, paste the generated public URL here.
+   Example:
+   const CINEFLIX_AUTO_PROXY_URL = "https://abc.trycloudflare.com";
+   ========================================================= */
+const CINEFLIX_AUTO_PROXY_URL = "PASTE_YOUR_CLOUDFLARE_TUNNEL_URL_HERE";
+
+function cineflixAutoProxyUrl(path){
+    const base = String(CINEFLIX_AUTO_PROXY_URL || "").trim().replace(/\/$/,"");
+    if(base && !/PASTE_YOUR_CLOUDFLARE_TUNNEL_URL_HERE/i.test(base)){
+        return base + path;
+    }
+    // Local fallback when movie.html is being tested from localhost.
+    return path;
+}
+
 async function refreshCurrentMovieSource(){
     if(currentMode!=="movie" || movieSourceRefreshRunning) return false;
 
@@ -6472,7 +6491,7 @@ async function refreshCurrentMovieSource(){
     showPlayerLoading();
 
     try{
-        const response=await fetch("/update_movie",{
+        const response=await fetch(cineflixAutoProxyUrl("/update_movie"),{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({id:movieId,tmdb_id:tmdbId})
