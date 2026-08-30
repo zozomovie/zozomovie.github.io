@@ -5867,6 +5867,18 @@ function destroyHls(){
 }
 
 function loadHlsSource(source,autoPlay=true,savedTime=0){
+    // FINAL SERVER-2 SAFETY: even if any older/live code passes the raw
+    // Server-2 URL, never give the remote host directly to HLS.js/browser.
+    // Route Server-2 streams through our local auto-proxy tunnel so CORS on
+    // the upstream host cannot block the player.
+    try{
+        const rawSource=String(source||'').trim();
+        if(/^https:\/\/(?:[^/]+\.)?itsnitrox\.tech\//i.test(rawSource) ||
+           /^https:\/\/wts\.itsnitrox\.tech\//i.test(rawSource)){
+            source=cineflixServer2PlayableUrl(rawSource);
+        }
+    }catch(e){}
+
     pendingAutoPlay=autoPlay;
     pendingStartTime=savedTime||0;
     hlsReady=false;
@@ -6541,8 +6553,7 @@ vastAdClick?.addEventListener("click",e=>{
 
    After starting cloudflared, paste the generated public URL here.
    Example:
-   const CINEFLIX_AUTO_PROXY_URL = "https://abc.trycloudflare.com";
-   ========================================================= */
+      ========================================================= */
 const CINEFLIX_AUTO_PROXY_URL = "https://jacksonville-thinks-concern-lambda.trycloudflare.com";
 
 function cineflixAutoProxyUrl(path){
