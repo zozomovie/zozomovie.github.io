@@ -5385,6 +5385,7 @@ let hlsReady = false;
 /* Slow-network resilience: retry transient stream failures instead of
    immediately replacing the player with an error state. */
 let hlsNetworkRetryCount = 0;
+let hlsMediaRecoveryCount = 0;
 let hlsRetryTimer = null;
 let nativeRetryCount = 0;
 let nativeRetryTimer = null;
@@ -5732,6 +5733,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
     hlsReady=false;
     hlsLevels=[];
     hlsNetworkRetryCount=0;
+    hlsMediaRecoveryCount=0;
     nativeRetryCount=0;
     clearStreamRetryTimers();
 
@@ -5842,11 +5844,25 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             /* Media errors are usually recoverable without destroying the
                current buffer. Give hls.js a chance first. */
             if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
-                try{
-                    hls.recoverMediaError();
-                    showPlayerLoading();
-                    return;
-                }catch(e){}
+                if(hlsMediaRecoveryCount < 3){
+                    hlsMediaRecoveryCount++;
+                    try{
+                        hls.recoverMediaError();
+                        showPlayerLoading();
+                        return;
+                    }catch(e){}
+                }
+                /* Repeated media recovery failures mean the saved source is
+                   probably stale/broken. Refresh only the current movie. */
+                (async()=>{
+                    const refreshed=await cineflixRefreshCurrentMovieAndRetry();
+                    if(!refreshed){
+                        hidePlayerLoading();
+                        playerEmpty.classList.remove("hidden");
+                        centerPlay.style.display="grid";
+                    }
+                })();
+                return;
             }
 
             /* Network/manifest/level failures: keep the player alive and
@@ -7696,6 +7712,7 @@ window.addEventListener("beforeunload",()=>{
            }
 
            const freshMovie = data.movie;
+           console.log("CINEFLIX current movie auto-update: SUCCESS", movieId);
            window.CINEFLIX_MOVIE = freshMovie;
            cineflixLastMovieSnapshot = "";
 
