@@ -3271,56 +3271,6 @@ body.cineflix-db-error .cineflix-db-message{
     visibility:visible;
     transform:translateY(0);
 }
-
-/* SERVER SELECTOR — compact left-side player control. */
-.cineflix-server-switch{
-    position:absolute;
-    top:10px;
-    left:12px;
-    z-index:54;
-    display:flex;
-    align-items:center;
-    gap:4px;
-    height:28px;
-    padding:0 5px 0 7px;
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:6px;
-    background:rgba(0,0,0,.48);
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
-}
-.cineflix-server-label{
-    color:rgba(255,255,255,.72);
-    font:800 8px/1 Inter,Arial,sans-serif;
-    letter-spacing:.4px;
-    pointer-events:none;
-}
-.cineflix-server-switch select{
-    appearance:none;
-    -webkit-appearance:none;
-    border:0;
-    outline:0;
-    background:transparent;
-    color:#fff;
-    font:800 9px/1 Inter,Arial,sans-serif;
-    min-width:18px;
-    padding:5px 12px 5px 2px;
-    cursor:pointer;
-    background-image:linear-gradient(45deg,transparent 50%,#fff 50%),linear-gradient(135deg,#fff 50%,transparent 50%);
-    background-position:calc(100% - 6px) 50%,calc(100% - 3px) 50%;
-    background-size:3px 3px,3px 3px;
-    background-repeat:no-repeat;
-}
-.cineflix-server-switch select option{background:#17171b;color:#fff;}
-.video-player.trailer-mode .cineflix-server-switch{display:none;}
-@media(max-width:520px){
-    .cineflix-server-switch{top:8px;left:8px;height:26px;padding-left:6px;}
-    .cineflix-server-label{font-size:7.5px;}
-    .cineflix-server-switch select{font-size:8.5px;}
-}
-.player-mode-badge{left:76px;}
-.video-player.trailer-mode .player-mode-badge{left:12px;}
-@media(max-width:520px){.player-mode-badge{left:68px;}}
 </style>
 <style>
 
@@ -3813,15 +3763,6 @@ body.cineflix-db-error .cineflix-db-message{
 <div class="video-player" id="videoPlayer">
 
     <div class="player-mode-badge" id="playerModeBadge" aria-hidden="true">MOVIE</div>
-
-    <!-- SERVER SELECTOR: additive only; existing player controls stay unchanged. -->
-    <div class="cineflix-server-switch" id="cineflixServerSwitch" aria-label="Video server">
-        <span class="cineflix-server-label">Server</span>
-        <select id="cineflixServerSelect" aria-label="Choose video server">
-            <option value="1">Server - 1</option>
-            <option value="2">Server - 2</option>
-        </select>
-    </div>
 
 
     <!-- CINEFLIX VAST PRE-ROLL OVERLAY — added without removing existing player UI -->
@@ -4830,12 +4771,6 @@ const playerModeLabel =
 const playerModeBadge =
     document.getElementById("playerModeBadge");
 
-const cineflixServerSwitch =
-    document.getElementById("cineflixServerSwitch");
-
-const cineflixServerSelect =
-    document.getElementById("cineflixServerSelect");
-
 const trailerToggle =
     document.getElementById("trailerToggle");
 
@@ -5507,14 +5442,6 @@ let TRAILER_DEMO_URL = "";
 let currentMode = "movie";
 let currentQuality = "1080";
 let currentQualityChoice = "auto";
-let currentServer = "1";
-
-const SERVER_SOURCES = {
-    movie: {
-        "1": {"480":"", "720":"", "1080":""},
-        "2": {"480":"", "720":"", "1080":""}
-    }
-};
 let hls = null;
 let hlsLevels = [];
 let hlsReady = false;
@@ -5867,18 +5794,6 @@ function destroyHls(){
 }
 
 function loadHlsSource(source,autoPlay=true,savedTime=0){
-    // FINAL SERVER-2 SAFETY: even if any older/live code passes the raw
-    // Server-2 URL, never give the remote host directly to HLS.js/browser.
-    // Route Server-2 streams through our local auto-proxy tunnel so CORS on
-    // the upstream host cannot block the player.
-    try{
-        const rawSource=String(source||'').trim();
-        if(/^https:\/\/(?:[^/]+\.)?itsnitrox\.tech\//i.test(rawSource) ||
-           /^https:\/\/wts\.itsnitrox\.tech\//i.test(rawSource)){
-            source=cineflixServer2PlayableUrl(rawSource);
-        }
-    }catch(e){}
-
     pendingAutoPlay=autoPlay;
     pendingStartTime=savedTime||0;
     hlsReady=false;
@@ -6072,10 +5987,6 @@ function setPlayerMode(mode,autoPlay=true){
     closeSettings();
     currentMode=mode;
     const isTrailer=mode==="trailer";
-    if(!isTrailer){
-        QUALITY_SOURCES.movie = SERVER_SOURCES.movie?.[String(currentServer)] || SERVER_SOURCES.movie?.["1"] || QUALITY_SOURCES.movie;
-        if(cineflixServerSelect) cineflixServerSelect.value=String(currentServer);
-    }
     const source=QUALITY_SOURCES[mode]?.[currentQuality] || (isTrailer ? TRAILER_DEMO_URL : MOVIE_DEMO_URL);
 
     playerModeLabel.textContent=isTrailer ? "TRAILER" : "MOVIE";
@@ -6553,7 +6464,8 @@ vastAdClick?.addEventListener("click",e=>{
 
    After starting cloudflared, paste the generated public URL here.
    Example:
-      ========================================================= */
+   const CINEFLIX_AUTO_PROXY_URL = "https://abc.trycloudflare.com";
+   ========================================================= */
 const CINEFLIX_AUTO_PROXY_URL = "https://jacksonville-thinks-concern-lambda.trycloudflare.com";
 
 function cineflixAutoProxyUrl(path){
@@ -6563,18 +6475,6 @@ function cineflixAutoProxyUrl(path){
     }
     // Local fallback when movie.html is being tested from localhost.
     return path;
-}
-
-function cineflixServer2PlayableUrl(source){
-    const raw=String(source||'').trim();
-    if(!raw) return '';
-    try{
-        const base=String(CINEFLIX_AUTO_PROXY_URL||'').trim().replace(/\/$/,'');
-        if(base && !/PASTE_YOUR_CLOUDFLARE_TUNNEL_URL_HERE/i.test(base)){
-            return base + '/server2_proxy?url=' + encodeURIComponent(raw);
-        }
-    }catch(e){}
-    return raw;
 }
 
 async function refreshCurrentMovieSource(){
@@ -6591,34 +6491,10 @@ async function refreshCurrentMovieSource(){
     showPlayerLoading();
 
     try{
-        if(String(currentServer)==="2"){
-            // Server-2 is a direct source entered by Admin. Re-read only this
-            // movie so a newly saved Server-2 URL becomes active immediately.
-            const latest=await cineflixFetchLatestMovie();
-            if(latest){
-                window.CINEFLIX_MOVIE=latest;
-                cineflixApplyLiveMovieSource(latest);
-            }
-            const server2=String(window.CINEFLIX_MOVIE?.server_2 || "").trim();
-            if(!server2) throw new Error("Server-2 link available nahi hai.");
-            const playable=cineflixServer2PlayableUrl(server2);
-            SERVER_SOURCES.movie["2"]={"480":playable,"720":playable,"1080":playable};
-            QUALITY_SOURCES.movie=SERVER_SOURCES.movie["2"];
-            MOVIE_DEMO_URL=playable;
-            movieSourceNeedsRefresh=false;
-            hlsNetworkRetryCount=0;
-            nativeRetryCount=0;
-            try{ destroyHls(); }catch(e){}
-            video.removeAttribute("src");
-            video.load();
-            setPlayerMode("movie",true);
-            return true;
-        }
-
         const response=await fetch(cineflixAutoProxyUrl("/update_movie"),{
             method:"POST",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({id:movieId,tmdb_id:tmdbId,server:1})
+            body:JSON.stringify({id:movieId,tmdb_id:tmdbId})
         });
 
         const data=await response.json().catch(()=>({}));
@@ -6627,9 +6503,8 @@ async function refreshCurrentMovieSource(){
         }
 
         const link=String(data.generated_link).trim();
-        SERVER_SOURCES.movie["1"]={"480":link,"720":link,"1080":link};
         MOVIE_DEMO_URL=link;
-        QUALITY_SOURCES.movie=SERVER_SOURCES.movie["1"];
+        QUALITY_SOURCES.movie={"480":link,"720":link,"1080":link};
         if(window.CINEFLIX_MOVIE){
             window.CINEFLIX_MOVIE={
                 ...window.CINEFLIX_MOVIE,
@@ -7646,29 +7521,11 @@ document.addEventListener("fullscreenchange",()=>{
         MOVIE_DEMO_URL = movie.video_1080 || movie.video_720 || movie.video_480 || "";
         TRAILER_DEMO_URL = normalizeTrailerUrl(movie.trailer_url || "");
 
-        SERVER_SOURCES.movie = {
-            "1": {
-                "480": movie.video_480 || "",
-                "720": movie.video_720 || "",
-                "1080": movie.video_1080 || ""
-            },
-            "2": {
-                "480": cineflixServer2PlayableUrl(movie.server_2 || ""),
-                "720": cineflixServer2PlayableUrl(movie.server_2 || ""),
-                "1080": cineflixServer2PlayableUrl(movie.server_2 || "")
-            }
+        QUALITY_SOURCES.movie = {
+            "480": movie.video_480 || "",
+            "720": movie.video_720 || "",
+            "1080": movie.video_1080 || ""
         };
-
-        currentServer = SERVER_SOURCES.movie["1"]?.[String(currentQuality)]
-            ? "1"
-            : (SERVER_SOURCES.movie["2"]?.[String(currentQuality)] ? "2" : "1");
-        if(cineflixServerSelect){
-            cineflixServerSelect.value=currentServer;
-            const opt2=cineflixServerSelect.querySelector('option[value="2"]');
-            if(opt2) opt2.disabled=!movie.server_2;
-        }
-
-        QUALITY_SOURCES.movie = SERVER_SOURCES.movie["1"];
         QUALITY_SOURCES.trailer = {
             "480": TRAILER_DEMO_URL,
             "720": TRAILER_DEMO_URL,
@@ -7849,26 +7706,6 @@ document.addEventListener("fullscreenchange",()=>{
         if(error) throw error;
         if(!data) throw new Error("This movie was not found in Supabase.");
 
-        // Server-2 is kept in generated_hls_links.hls_input so no existing
-        // movies-table column/schema is changed. Server-1 remains movies.video_* .
-        try{
-            const {data:hlsRow,error:hlsError}=await client
-                .from("generated_hls_links")
-                .select("hls_input,links,updated_at")
-                .eq("tmdb_id",data.tmdb_id)
-                .maybeSingle();
-            if(!hlsError){
-                data.server_2 = typeof hlsRow?.hls_input?.server_2 === "string"
-                    ? hlsRow.hls_input.server_2.trim()
-                    : "";
-            }else{
-                data.server_2 = "";
-            }
-        }catch(e){
-            data.server_2 = "";
-            console.warn("CINEFLIX Server-2 load failed:",e);
-        }
-
         return data;
     }
 
@@ -7888,7 +7725,6 @@ window.addEventListener("beforeunload",()=>{
             video_1080: movie.video_1080 || "",
             video_720: movie.video_720 || "",
             video_480: movie.video_480 || "",
-            server_2: movie.server_2 || "",
             trailer_url: movie.trailer_url || "",
             updated_at: movie.updated_at || ""
         });
@@ -7901,24 +7737,11 @@ window.addEventListener("beforeunload",()=>{
         if(nextSnapshot === cineflixLastMovieSnapshot) return;
         cineflixLastMovieSnapshot = nextSnapshot;
 
-        const nextSources1 = {
+        const nextSources = {
             "480": movie.video_480 || "",
             "720": movie.video_720 || "",
             "1080": movie.video_1080 || ""
         };
-        const nextSources2 = {
-            "480": cineflixServer2PlayableUrl(movie.server_2 || ""),
-            "720": cineflixServer2PlayableUrl(movie.server_2 || ""),
-            "1080": cineflixServer2PlayableUrl(movie.server_2 || "")
-        };
-
-        SERVER_SOURCES.movie = {"1":nextSources1,"2":nextSources2};
-        if(cineflixServerSelect){
-            const opt2=cineflixServerSelect.querySelector('option[value="2"]');
-            if(opt2) opt2.disabled=!nextSources2["480"];
-            cineflixServerSelect.value=String(currentServer);
-        }
-        const nextSources = SERVER_SOURCES.movie[String(currentServer)] || nextSources1;
 
         const nextMain =
             nextSources[String(currentQuality)] ||
@@ -7928,10 +7751,9 @@ window.addEventListener("beforeunload",()=>{
             "";
 
         const oldMain =
+            MOVIE_DEMO_URL ||
             QUALITY_SOURCES.movie?.[String(currentQuality)] ||
             QUALITY_SOURCES.movie?.["480"] ||
-            QUALITY_SOURCES.movie?.["720"] ||
-            QUALITY_SOURCES.movie?.["1080"] ||
             "";
 
         QUALITY_SOURCES.movie = nextSources;
@@ -8071,11 +7893,8 @@ window.addEventListener("beforeunload",()=>{
                                     new Date(a?.updated_at || a?.created_at || 0)
                                 );
                                 const latestHls = sorted[0]?.url || "";
-                                const server2 = typeof row?.hls_input?.server_2 === "string"
-                                    ? row.hls_input.server_2.trim()
-                                    : (window.CINEFLIX_MOVIE?.server_2 || "");
 
-                                if(!latestHls && !server2) return;
+                                if(!latestHls) return;
 
                                 /*
                                  * If HLS was edited directly in generated_hls_links,
@@ -8085,8 +7904,7 @@ window.addEventListener("beforeunload",()=>{
                                     ...window.CINEFLIX_MOVIE,
                                     video_1080: latestHls,
                                     video_720: latestHls,
-                                    video_480: latestHls || window.CINEFLIX_MOVIE?.video_480 || "",
-                                    server_2: server2,
+                                    video_480: latestHls,
                                     updated_at: new Date().toISOString()
                                 };
 
@@ -8166,52 +7984,6 @@ window.addEventListener("beforeunload",()=>{
             const msg=$("#cineflixDbMessage");
             if(msg) msg.textContent="Movie data load failed: " + (error.message || "Unknown error");
         }
-    }
-
-    /* =========================================================
-       SERVER SWITCH — instant Movie -> Server 1 / Server 2
-       ========================================================= */
-    if(cineflixServerSelect){
-        cineflixServerSelect.addEventListener("change",async()=>{
-            if(currentMode!=="movie") return;
-
-            const next=String(cineflixServerSelect.value)==="2" ? "2" : "1";
-            const nextSource=SERVER_SOURCES.movie?.[next]?.[String(currentQuality)] ||
-                SERVER_SOURCES.movie?.[next]?.["480"] ||
-                SERVER_SOURCES.movie?.[next]?.["720"] ||
-                SERVER_SOURCES.movie?.[next]?.["1080"] || "";
-
-            if(next==="2" && !nextSource){
-                cineflixServerSelect.value=currentServer;
-                showToast("Server-2 link available nahi hai.");
-                return;
-            }
-
-            currentServer=next;
-            QUALITY_SOURCES.movie=SERVER_SOURCES.movie[currentServer];
-            MOVIE_DEMO_URL=SERVER_SOURCES.movie["1"]?.["1080"] ||
-                SERVER_SOURCES.movie["1"]?.["720"] ||
-                SERVER_SOURCES.movie["1"]?.["480"] || "";
-
-            const wasPlaying=!video.paused;
-            const oldTime=Number.isFinite(video.currentTime)?video.currentTime:0;
-            movieSourceNeedsRefresh=false;
-            pendingAutoPlay=wasPlaying;
-            pendingStartTime=oldTime;
-
-            try{destroyHls();}catch(e){}
-            video.removeAttribute("src");
-            video.load();
-            initialPoster.classList.toggle("hidden",wasPlaying);
-            if(wasPlaying){
-                showPlayerLoading();
-                loadHlsSource(nextSource, true, oldTime);
-            }else{
-                hidePlayerLoading();
-                centerPlay.style.display="grid";
-                loadHlsSource(nextSource, false, oldTime);
-            }
-        });
     }
 
     // Patch Share button text dynamically without changing its design.
