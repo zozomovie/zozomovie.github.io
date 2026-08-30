@@ -5861,7 +5861,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             /* After repeated fatal failures, update ONLY this movie. */
             if(hlsFatalErrorCount >= MAX_STREAM_RETRIES){
                 (async()=>{
-                    const refreshed=await cineflixRefreshCurrentMovieAndRetry();
+                    const refreshed=await window.cineflixRefreshCurrentMovieAndRetry();
                     if(!refreshed){
                         hidePlayerLoading();
                         playerEmpty.classList.remove("hidden");
@@ -5896,7 +5896,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             }
 
             (async()=>{
-                const refreshed=await cineflixRefreshCurrentMovieAndRetry();
+                const refreshed=await window.cineflixRefreshCurrentMovieAndRetry();
                 if(!refreshed){
                     hidePlayerLoading();
                     playerEmpty.classList.remove("hidden");
@@ -5913,7 +5913,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             hlsAutoRefreshWatchdogTimer=setTimeout(()=>{
                 hlsAutoRefreshWatchdogTimer=null;
                 if(!hlsReady && currentMode==="movie" && pendingAutoPlay){
-                    void cineflixRefreshCurrentMovieAndRetry();
+                    void window.cineflixRefreshCurrentMovieAndRetry();
                 }
             },AUTO_REFRESH_WATCHDOG_MS);
         }
@@ -5930,7 +5930,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             hlsAutoRefreshWatchdogTimer=setTimeout(()=>{
                 hlsAutoRefreshWatchdogTimer=null;
                 if(!video.readyState && currentMode==="movie" && pendingAutoPlay){
-                    void cineflixRefreshCurrentMovieAndRetry();
+                    void window.cineflixRefreshCurrentMovieAndRetry();
                 }
             },AUTO_REFRESH_WATCHDOG_MS);
         }
@@ -6597,7 +6597,7 @@ video.addEventListener("error",()=>{
     if(typeof Hls!=="undefined" && hls) return;
     if(!video.src || nativeRetryCount >= MAX_STREAM_RETRIES){
         (async()=>{
-            const refreshed=await cineflixRefreshCurrentMovieAndRetry();
+            const refreshed=await window.cineflixRefreshCurrentMovieAndRetry();
             if(!refreshed){
                 hidePlayerLoading();
                 playerEmpty.classList.remove("hidden");
@@ -7710,7 +7710,7 @@ window.addEventListener("beforeunload",()=>{
         }
     }
 
-    async function cineflixRefreshCurrentMovieAndRetry(){
+    window.cineflixRefreshCurrentMovieAndRetry = async function(){
        if(currentMode!=="movie") return false;
        if(cineflixAutoRefreshInFlight) return false;
        if(cineflixAutoRefreshAttempts >= MAX_AUTO_REFRESH_ATTEMPTS) return false;
