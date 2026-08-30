@@ -428,45 +428,6 @@ button{
     margin-top:5px;
 }
 
-/* MOVIE SOURCE RETRY */
-.player-retry-btn{
-    display:none;
-    margin:13px auto 0;
-    min-width:150px;
-    min-height:34px;
-    padding:0 14px;
-    border:1px solid rgba(229,9,20,.45);
-    border-radius:8px;
-    background:rgba(229,9,20,.10);
-    color:#fff;
-    font:800 10px/1 Inter,Arial,sans-serif;
-    letter-spacing:.15px;
-    cursor:pointer;
-    transition:background .18s ease,border-color .18s ease,transform .12s ease;
-}
-.player-retry-btn.show{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-}
-.player-retry-btn:hover{
-    background:rgba(229,9,20,.20);
-    border-color:rgba(229,9,20,.85);
-}
-.player-retry-btn:active{
-    transform:scale(.96);
-}
-.player-retry-btn svg{
-    width:14px;
-    height:14px;
-    margin-right:6px;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.9;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-}
-
 
 .player-empty.hidden{
     opacity:0;
@@ -3889,19 +3850,9 @@ body.cineflix-db-error .cineflix-db-message{
                 Movie Player
             </div>
 
-            <div class="player-empty-sub" id="playerEmptySub">
+            <div class="player-empty-sub">
                 Video source will appear here
             </div>
-
-            <button class="player-retry-btn" id="movieRetryBtn" type="button" aria-label="Retry and update movie link">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M20 11a8 8 0 0 0-14.9-4L3 10"/>
-                    <path d="M3 5v5h5"/>
-                    <path d="M4 13a8 8 0 0 0 14.9 4L21 14"/>
-                    <path d="M21 19v-5h-5"/>
-                </svg>
-                Retry &amp; Update Link
-            </button>
 
         </div>
 
@@ -4814,12 +4765,6 @@ const playerLoading =
 const playerEmpty =
     document.getElementById("playerEmpty");
 
-const playerEmptySub =
-    document.getElementById("playerEmptySub");
-
-const movieRetryBtn =
-    document.getElementById("movieRetryBtn");
-
 const playerModeLabel =
     document.getElementById("playerModeLabel");
 
@@ -5051,7 +4996,7 @@ function toggleVideoFromTap(){
     updateCenterPlayPause();
 }
 
-centerPlayPause.addEventListener("click",async(e)=>{
+centerPlayPause.addEventListener("click",(e)=>{
     e.stopPropagation();
 
     if(performance.now() < gestureSuppressClickUntil){
@@ -5059,10 +5004,7 @@ centerPlayPause.addEventListener("click",async(e)=>{
         return;
     }
 
-    /* Use the main play flow so a failed/expired movie source can
-       refresh itself instead of only trying the old URL again. */
-    await togglePlay();
-    updateCenterPlayPause();
+    toggleVideoFromTap();
 });
 
 /* =========================================================
@@ -5995,12 +5937,10 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
 
             /* Only after repeated retries fail do we expose a recoverable
                player state. The user can press play to try again. */
-            if(currentMode==="movie") showMovieRetryState();
-            else{
-                hidePlayerLoading();
-                playerEmpty.classList.remove("hidden");
-                centerPlay.style.display="grid";
-            }
+            hidePlayerLoading();
+            playerEmpty.classList.remove("hidden");
+            centerPlay.style.display="grid";
+            if(currentMode==="movie") movieSourceNeedsRefresh=true;
         });
 
         hls.loadSource(source);
@@ -6046,7 +5986,6 @@ function hidePlayerLoading(){
 function setPlayerMode(mode,autoPlay=true){
     closeSettings();
     currentMode=mode;
-    if(mode!=="movie") hideMovieRetryState();
     const isTrailer=mode==="trailer";
     const source=QUALITY_SOURCES[mode]?.[currentQuality] || (isTrailer ? TRAILER_DEMO_URL : MOVIE_DEMO_URL);
 
@@ -6084,12 +6023,8 @@ function setPlayerMode(mode,autoPlay=true){
 
     if(!source){
         initialPoster.classList.remove("hidden");
-        if(isTrailer){
-            hidePlayerLoading();
-            centerPlay.style.display="grid";
-        }else{
-            showMovieRetryState("No playable movie link was found. Try updating the link.");
-        }
+        hidePlayerLoading();
+        centerPlay.style.display="grid";
         return;
     }
 
@@ -6531,30 +6466,15 @@ vastAdClick?.addEventListener("click",e=>{
    Example:
    const CINEFLIX_AUTO_PROXY_URL = "https://abc.trycloudflare.com";
    ========================================================= */
-const CINEFLIX_AUTO_PROXY_URL = "https://trent-tracks-hml-frozen.trycloudflare.com";
+const CINEFLIX_AUTO_PROXY_URL = "https://carry-tickets-holders-friends.trycloudflare.com";
 
 function cineflixAutoProxyUrl(path){
     const base = String(CINEFLIX_AUTO_PROXY_URL || "").trim().replace(/\/$/,"");
-    if(base && !/PASTE_YOUR_CLOUDFLARE_TUNNEL_URL_HERE/i.test(base)){
+    if(base && !/https://carry-tickets-holders-friends.trycloudflare.com/i.test(base)){
         return base + path;
     }
     // Local fallback when movie.html is being tested from localhost.
     return path;
-}
-
-function showMovieRetryState(message="Video source unavailable. The link may be old or expired."){
-    if(currentMode!=="movie") return;
-    movieSourceNeedsRefresh=true;
-    hidePlayerLoading();
-    playerEmpty.classList.remove("hidden");
-    if(playerEmptySub) playerEmptySub.textContent=message;
-    if(movieRetryBtn) movieRetryBtn.classList.add("show");
-    centerPlay.style.display="none";
-}
-
-function hideMovieRetryState(){
-    if(movieRetryBtn) movieRetryBtn.classList.remove("show");
-    if(playerEmptySub) playerEmptySub.textContent="Video source will appear here";
 }
 
 async function refreshCurrentMovieSource(){
@@ -6568,7 +6488,6 @@ async function refreshCurrentMovieSource(){
     }
 
     movieSourceRefreshRunning=true;
-    hideMovieRetryState();
     showPlayerLoading();
 
     try{
@@ -6597,27 +6516,20 @@ async function refreshCurrentMovieSource(){
         }
 
         movieSourceNeedsRefresh=false;
-        hideMovieRetryState();
         hlsNetworkRetryCount=0;
         nativeRetryCount=0;
         return true;
     }catch(e){
         console.error("CINEFLIX MOVIE AUTO UPDATE ERROR:",e);
-        showMovieRetryState(e?.message || "Movie link update failed. Try again.");
+        hidePlayerLoading();
+        playerEmpty.classList.remove("hidden");
+        centerPlay.style.display="grid";
         showToast(e?.message || "Movie link update failed.");
         return false;
     }finally{
         movieSourceRefreshRunning=false;
     }
 }
-
-movieRetryBtn?.addEventListener("click",async(e)=>{
-    e.stopPropagation();
-    if(currentMode!=="movie" || movieSourceRefreshRunning) return;
-    movieSourceNeedsRefresh=true;
-    await togglePlay();
-    updateCenterPlayPause();
-});
 
 async function togglePlay(){
     if(vastAdActive || vastAdLoading || movieSourceRefreshRunning) return;
@@ -6765,15 +6677,12 @@ video.addEventListener("progress",()=>{
 video.addEventListener("seeking",()=>{ if(!video.paused) showPlayerLoading(); });
 video.addEventListener("canplay",()=>{ /* keep loader until actual playback */ });
 video.addEventListener("loadeddata",()=>{
-    hideMovieRetryState();
     playerEmpty.classList.add("hidden");
     video.style.visibility="visible";
     video.style.opacity="1";
     video.style.zIndex="2";
 });
 video.addEventListener("playing",()=>{
-    hideMovieRetryState();
-    movieSourceNeedsRefresh=false;
     playerEmpty.classList.add("hidden");
     video.style.visibility="visible";
     video.style.opacity="1";
@@ -6784,12 +6693,10 @@ video.addEventListener("playing",()=>{
 video.addEventListener("error",()=>{
     if(typeof Hls!=="undefined" && hls) return;
     if(!video.src || nativeRetryCount >= MAX_STREAM_RETRIES){
-        if(currentMode==="movie") showMovieRetryState();
-        else{
-            hidePlayerLoading();
-            playerEmpty.classList.remove("hidden");
-            centerPlay.style.display="grid";
-        }
+        hidePlayerLoading();
+        playerEmpty.classList.remove("hidden");
+        centerPlay.style.display="grid";
+        if(currentMode==="movie") movieSourceNeedsRefresh=true;
         return;
     }
 
