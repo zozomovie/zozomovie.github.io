@@ -5473,26 +5473,32 @@ let cineflixServerDropdownOpen = false;
 
 function cineflixSyncServerBadgeWithControls(forceVisible=false){
     if(!cineflixServerSwitch) return;
-    /* Keep the SERVER badge visible while the native server dropdown is open.
-       It must not disappear just because the normal controls auto-hide.
-       The badge is allowed to change state only after a server is selected. */
-    if(cineflixServerDropdownOpen){
-        cineflixServerSwitch.classList.remove("server-badge-hidden");
+    /* No Server 2 source = no SERVER badge/dropdown anywhere. */
+    if(!cineflixGetServer2Source()){
+        cineflixServerSwitch.classList.add("hidden-switch");
+        cineflixServerSwitch.classList.add("server-badge-hidden");
         return;
     }
-    /* During an explicit server switch the badge stays visible together with
-       the Changing Server animation until the selected source starts playing. */
+    cineflixServerSwitch.classList.remove("hidden-switch");
+
+    /* The SERVER badge can never appear before the movie has genuinely
+       started once. Opening the dropdown after playback may keep it visible
+       even when normal controls are temporarily hidden. */
+    if(!cineflixHasStartedPlaying){
+        cineflixServerSwitch.classList.add("server-badge-hidden");
+        return;
+    }
     if(cineflixServerSwitchActive){
-        cineflixServerSwitch.classList.remove("server-badge-hidden");
+        /* Once a new server is selected, hide the badge immediately. */
+        cineflixServerSwitch.classList.add("server-badge-hidden");
         return;
     }
-    if(forceVisible || cineflixPlaybackWaitingForPlay || !playerControls.classList.contains("auto-hidden")){
+    if(cineflixServerDropdownOpen || forceVisible || !playerControls.classList.contains("auto-hidden")){
         cineflixServerSwitch.classList.remove("server-badge-hidden");
     }else{
         cineflixServerSwitch.classList.add("server-badge-hidden");
     }
 }
-
 function showPlayerControls(resetTimer=true){
     if(cineflixPlaybackWaitingForPlay){
         playerControls.classList.add("auto-hidden");
@@ -5612,6 +5618,8 @@ let cineflixServerRetryPlaying = false;
    PLAYING state, controls stay hidden. It is released only by the real
    playing event (or by an explicit pause/error state). */
 let cineflixPlaybackWaitingForPlay = false;
+/* SERVER badge is never visible before the first real PLAYING event. */
+let cineflixHasStartedPlaying = false;
 let currentQuality = "1080";
 let currentQualityChoice = "auto";
 let hls = null;
@@ -6024,8 +6032,8 @@ function cineflixShowNetworkError(){
 function cineflixShowServerChanging(){
     cineflixHideNetworkError();
     cineflixPlaybackWaitingForPlay = true;
-    /* Keep the SERVER badge visible during an explicit server switch. */
-    if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
+    /* After a server is selected, hide the SERVER badge immediately. */
+    if(cineflixServerSwitch) cineflixServerSwitch.classList.add("server-badge-hidden");
     if(cineflixServerChange){
         cineflixServerChange.classList.add("show");
         cineflixServerChange.setAttribute("aria-hidden","false");
@@ -6126,12 +6134,16 @@ if(cineflixServerSelect){
        commits the new server and starts the switch animation. */
     cineflixServerSelect.addEventListener("pointerdown",()=>{
         cineflixServerDropdownOpen=true;
-        if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
+        if(cineflixHasStartedPlaying && cineflixGetServer2Source() && cineflixServerSwitch){
+            cineflixServerSwitch.classList.remove("server-badge-hidden");
+        }
     });
     cineflixServerSelect.addEventListener("focus",()=>{
         if(!cineflixServerSelect.disabled){
             cineflixServerDropdownOpen=true;
-            if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
+            if(cineflixHasStartedPlaying && cineflixGetServer2Source() && cineflixServerSwitch){
+                cineflixServerSwitch.classList.remove("server-badge-hidden");
+            }
         }
     });
     cineflixServerSelect.addEventListener("change",()=>{
@@ -6139,6 +6151,9 @@ if(cineflixServerSelect){
            Keep the badge visible while cineflixSwitchServer() shows Changing
            Server, then let the normal controls/badge sync take over. */
         cineflixServerDropdownOpen=false;
+        /* Selection commits immediately: hide the badge before the switch
+           animation starts. */
+        if(cineflixServerSwitch) cineflixServerSwitch.classList.add("server-badge-hidden");
         cineflixSwitchServer(cineflixServerSelect.value);
     });
 }
@@ -7130,6 +7145,7 @@ video.addEventListener("loadeddata",()=>{
     video.style.zIndex="2";
 });
 video.addEventListener("playing",()=>{
+    cineflixHasStartedPlaying = true;
     cineflixPlaybackWaitingForPlay = false;
     if(cineflixServerSwitchActive){
         cineflixServerRetryPlaying=true;
@@ -8025,6 +8041,10 @@ document.addEventListener("fullscreenchange",()=>{
             cineflixServerSelect.value="1";
             cineflixServerSelect.disabled=!cineflixServer2Url;
         }
+        if(cineflixServerSwitch){
+            cineflixServerSwitch.classList.toggle("hidden-switch", !cineflixServer2Url);
+            cineflixServerSwitch.classList.add("server-badge-hidden");
+        }
         cineflixActiveServer=1;
         cineflixServerSwitchActive=false;
         cineflixHideNetworkError();
@@ -8273,13 +8293,20 @@ window.addEventListener("beforeunload",()=>{
             "";
 
         QUALITY_SOURCES.movie = nextSources;
-        cineflixServer2Url = String(movie.video_server_2 || cineflixServer2Url || "").trim();
+        cineflixServer2Url = String(movie.video_server_2 || "").trim();
         if(cineflixServerSelect){
             cineflixServerSelect.disabled=!cineflixServer2Url;
             if(cineflixActiveServer===2 && !cineflixServer2Url){
                 cineflixActiveServer=1;
                 cineflixServerSelect.value="1";
             }
+        }
+        if(cineflixServerSwitch){
+            cineflixServerSwitch.classList.toggle("hidden-switch", !cineflixServer2Url);
+            if(!cineflixServer2Url) cineflixServerSwitch.classList.add("server-badge-hidden");
+        }
+        if(cineflixServer2Url && cineflixHasStartedPlaying && !cineflixServerSwitchActive && !playerControls.classList.contains("auto-hidden")){
+            cineflixSyncServerBadgeWithControls(true);
         }
         MOVIE_DEMO_URL =
             nextSources["1080"] ||
