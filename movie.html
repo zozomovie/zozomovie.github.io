@@ -5400,6 +5400,13 @@ const CINEFLIX_UPDATE_API_BASE =
     "https://villages-hampton-assessment-handmade.trycloudflare.com";
 
 let cineflixAutoRefreshTriggeredForCurrentSource = false;
+
+/* Background current-movie health check state. The movie page uses these
+   window properties so the player handlers can safely wait for the silent
+   check running in the movie-data IIFE below. */
+window.__CINEFLIX_BG_HEALTH_PROMISE = null;
+window.__CINEFLIX_BG_HEALTH_FINISHED = true;
+
 let pendingAutoPlay = false;
 let pendingStartTime = 0;
 
@@ -5890,13 +5897,13 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                     setTimeout(()=>{
                         if(currentMode!=="movie") return;
                         if(!video.paused && video.readyState>=2) return;
-                        void cineflixRefreshCurrentMovieAndRetry(true,true);
+                        void window.cineflixRefreshCurrentMovieAndRetry(true,true);
                     },1200);
                     return;
                 }
 
                 /* Network / manifest / level failure -> refresh immediately. */
-                void cineflixRefreshCurrentMovieAndRetry(true,true);
+                void window.cineflixRefreshCurrentMovieAndRetry(true,true);
                 return;
             }
 
@@ -6457,13 +6464,13 @@ async function togglePlay(){
        in its loader state while it decides whether the saved link is valid.
        This prevents a dead old link from ever flashing the thumbnail/Play
        button again and avoids a second Play click. */
-    if(currentMode === "movie" && cineflixBackgroundHealthCheckPromise && !cineflixBackgroundHealthCheckFinished){
+    if(currentMode === "movie" && window.__CINEFLIX_BG_HEALTH_PROMISE && !window.__CINEFLIX_BG_HEALTH_FINISHED){
         initialPoster.classList.add("hidden");
         initialPoster.setAttribute("aria-hidden","true");
         showPlayerLoading();
         playerEmpty.classList.add("hidden");
         centerPlay.style.display="none";
-        try{ await cineflixBackgroundHealthCheckPromise; }catch(_){ }
+        try{ await window.__CINEFLIX_BG_HEALTH_PROMISE; }catch(_){ }
     }
 
     if(!hlsReady && !video.src){
@@ -6482,7 +6489,7 @@ async function togglePlay(){
 
         if(currentMode==="movie" && !movieSource){
             cineflixAutoRefreshTriggeredForCurrentSource=true;
-            const refreshed=await cineflixRefreshCurrentMovieAndRetry(true,true);
+            const refreshed=await window.cineflixRefreshCurrentMovieAndRetry(true,true);
             if(!refreshed){
                 hidePlayerLoading();
                 playerEmpty.classList.remove("hidden");
@@ -6503,7 +6510,7 @@ async function togglePlay(){
             loadHlsSource(sourceAfterRefresh,true,video.currentTime||0);
         }else if(currentMode==="movie"){
             cineflixAutoRefreshTriggeredForCurrentSource=false;
-            const refreshed=await cineflixRefreshCurrentMovieAndRetry(true,true);
+            const refreshed=await window.cineflixRefreshCurrentMovieAndRetry(true,true);
             if(!refreshed){
                 hidePlayerLoading();
                 playerEmpty.classList.remove("hidden");
@@ -6655,7 +6662,7 @@ video.addEventListener("error",()=>{
     /* Native HLS failure -> refresh the CURRENT movie immediately. */
     if(currentMode==="movie" && !cineflixAutoRefreshTriggeredForCurrentSource){
         cineflixAutoRefreshTriggeredForCurrentSource=true;
-        void cineflixRefreshCurrentMovieAndRetry(true,true);
+        void window.cineflixRefreshCurrentMovieAndRetry(true,true);
         return;
     }
 
@@ -7495,14 +7502,18 @@ document.addEventListener("fullscreenchange",()=>{
             "1080": TRAILER_DEMO_URL
         };
 
+        /* Do not load the saved HLS into the player on page open.
+           The saved link is checked silently in the background. The player
+           is only attached when the user presses Play, or when a pending
+           Play is waiting for the background repair to finish. */
         if(MOVIE_DEMO_URL){
             destroyHls();
             video.removeAttribute("src");
             video.load();
             initialPoster.classList.remove("hidden");
             hidePlayerLoading();
+            playerEmpty.classList.add("hidden");
             centerPlay.style.display="grid";
-            setPlayerMode("movie",false);
             video.pause();
         }
 
@@ -7840,6 +7851,7 @@ window.addEventListener("beforeunload",()=>{
     /* Keep the repair function reachable from every player handler, even if
        another script invokes it through window. */
     window.cineflixRefreshCurrentMovieAndRetry = cineflixRefreshCurrentMovieAndRetry;
+    window.__CINEFLIX_BG_HEALTH_FINISHED = true;
 
     /*
        BACKGROUND MOVIE LINK HEALTH CHECK
@@ -7874,52 +7886,20 @@ window.addEventListener("beforeunload",()=>{
     async function cineflixCheckHlsManifestSilently(source){
         if(!source || !/^https?:\/\//i.test(String(source))) return false;
 
-        const hasHls=await cineflixWaitForHls(5000);
-        if(hasHls && typeof Hls !== "undefined" && Hls.isSupported()){
-            return await new Promise(resolve=>{
-                let settled=false;
-                let tester=null;
-                const finish=(ok)=>{
-                    if(settled) return;
-                    settled=true;
-                    clearTimeout(timeout);
-                    try{ if(tester) tester.destroy(); }catch(_){}
-                    resolve(ok);
-                };
-                const timeout=setTimeout(()=>finish(false),7000);
-                try{
-                    tester=new Hls({
-                        ...getHlsConfig(),
-                        autoStartLoad:false,
-                        startFragPrefetch:false,
-                        manifestLoadingMaxRetry:0,
-                        levelLoadingMaxRetry:0,
-                        fragLoadingMaxRetry:0
-                    });
-                    tester.on(Hls.Events.MANIFEST_PARSED,()=>finish(true));
-                    tester.on(Hls.Events.ERROR,(event,data)=>{
-                        if(data?.fatal) finish(false);
-                    });
-                    tester.loadSource(source);
-                }catch(_){
-                    finish(false);
-                }
-            });
-        }
-
-        /* Native-HLS fallback: use a short manifest request only where the
-           browser exposes native HLS support. */
+        /* Fast silent health check. We read only the playlist, without
+           attaching anything to the visible player. If the playlist is
+           reachable and is a real HLS manifest, keep the existing link. */
         try{
             const controller=new AbortController();
-            const timer=setTimeout(()=>controller.abort(),5000);
+            const timeout=setTimeout(()=>controller.abort(),4500);
             const response=await fetch(source,{
                 method:"GET",
                 cache:"no-store",
                 credentials:"omit",
                 signal:controller.signal,
-                headers:{"Range":"bytes=0-4095"}
+                headers:{"Range":"bytes=0-8191","Cache-Control":"no-cache"}
             });
-            clearTimeout(timer);
+            clearTimeout(timeout);
             if(!response.ok) return false;
             const text=await response.text();
             return /#EXTM3U/i.test(text);
@@ -7929,12 +7909,13 @@ window.addEventListener("beforeunload",()=>{
     }
 
     async function cineflixBackgroundCheckAndRepair(movie){
-        if(cineflixBackgroundHealthCheckPromise) return cineflixBackgroundHealthCheckPromise;
+        if(window.__CINEFLIX_BG_HEALTH_PROMISE) return window.__CINEFLIX_BG_HEALTH_PROMISE;
         if(!movie || currentMode !== "movie") return true;
 
         cineflixBackgroundHealthCheckStarted=true;
+        window.__CINEFLIX_BG_HEALTH_FINISHED=false;
 
-        cineflixBackgroundHealthCheckPromise=(async()=>{
+        window.__CINEFLIX_BG_HEALTH_PROMISE=(async()=>{
         try{
             const source=movie.video_1080 || movie.video_720 || movie.video_480 || "";
 
@@ -8155,7 +8136,7 @@ window.addEventListener("beforeunload",()=>{
             /* Start a silent health check immediately after the real movie
                data is on screen. Valid links are left completely untouched;
                only a dead/expired HLS link triggers a background repair. */
-            cineflixBackgroundHealthCheckPromise = cineflixBackgroundCheckAndRepair(movie);
+            window.__CINEFLIX_BG_HEALTH_PROMISE = cineflixBackgroundCheckAndRepair(movie);
 
             /* IMPORTANT:
                Remove the custom loading image at the EXACT same moment as
