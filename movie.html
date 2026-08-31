@@ -5428,13 +5428,6 @@ video.addEventListener("play",()=>{
     updateCenterPlayPause();
 });
 video.addEventListener("pause",()=>{
-    if(cineflixNetworkError && cineflixNetworkError.classList.contains("show")){
-        if(centerPlayPause){
-            centerPlayPause.classList.remove("show");
-            centerPlayPause.style.display="none";
-        }
-        return;
-    }
     if(cineflixServerSwitchActive){
         /* A switch internally pauses the video. Never expose the normal
            pause/play SVG or controls during the Changing Server state. */
@@ -5461,15 +5454,6 @@ video.addEventListener("ended",()=>{
 
 function syncCenterPlayPauseWithControls(){
     if(!playerSurface || !centerPlayPause || !playerControls) return;
-    /* Never show the center Play/Pause SVG during a server switch or retry.
-       Internal video.pause() events are part of the switch and must not leak
-       the normal pause icon into the Changing Server UI. */
-    if(cineflixServerSwitchActive || (playerSurface && playerSurface.classList.contains("cineflix-server-switching-controls")) || cineflixPlaybackWaitingForPlay){
-        centerPlayPause.classList.remove("show");
-        centerPlayPause.style.display="none";
-        return;
-    }
-    centerPlayPause.style.display="";
     const hidden=playerControls.classList.contains("auto-hidden");
     if(hidden){
         playerSurface.classList.remove("controls-visible");
@@ -5504,11 +5488,9 @@ function cineflixSyncServerBadgeWithControls(forceVisible=false){
         cineflixServerSwitch.classList.add("server-badge-hidden");
         return;
     }
-    if(cineflixServerRetryMode || cineflixServerSwitchActive || (playerSurface && playerSurface.classList.contains("cineflix-server-switching-controls"))){
-        /* During Retry / Network Error and Changing Server, the SERVER badge
-           stays visible (after the movie has genuinely started), while the
-           normal controls remain locked by the player state. */
-        cineflixServerSwitch.classList.remove("server-badge-hidden");
+    if(cineflixServerSwitchActive){
+        /* Once a new server is selected, hide the badge immediately. */
+        cineflixServerSwitch.classList.add("server-badge-hidden");
         return;
     }
     if(cineflixServerDropdownOpen || forceVisible || !playerControls.classList.contains("auto-hidden")){
@@ -5518,17 +5500,6 @@ function cineflixSyncServerBadgeWithControls(forceVisible=false){
     }
 }
 function showPlayerControls(resetTimer=true){
-    /* Hard lock: during an explicit server change NEVER allow normal player
-       controls to reappear, even if a pointer/tap/gesture calls this function. */
-    if(cineflixServerSwitchActive || (playerSurface && playerSurface.classList.contains("cineflix-server-switching-controls"))){
-        playerControls.classList.add("auto-hidden");
-        playerTop.classList.add("auto-hidden");
-        playerTop.style.display="none";
-        if(playerModeBadge) playerModeBadge.classList.remove("show");
-        syncCenterPlayPauseWithControls();
-        cineflixSyncServerBadgeWithControls(true);
-        return;
-    }
     if(cineflixPlaybackWaitingForPlay){
         playerControls.classList.add("auto-hidden");
         playerTop.classList.add("auto-hidden");
@@ -5643,9 +5614,6 @@ let cineflixServerRetryStartedAt = 0;
 let cineflixServerRetrySource = "";
 let cineflixServerRetryTime = 0;
 let cineflixServerRetryPlaying = false;
-/* Keeps the SERVER badge visible during the Retry / Network Error state
-   after playback has already started. */
-let cineflixServerRetryMode = false;
 /* Player-only startup lock: while a movie is waiting to genuinely enter
    PLAYING state, controls stay hidden. It is released only by the real
    playing event (or by an explicit pause/error state). */
@@ -5671,7 +5639,7 @@ const MAX_AUTO_REFRESH_ATTEMPTS = 3;
 
 /* Public backend for GitHub Pages. */
 const CINEFLIX_UPDATE_API_BASE =
-    "https://condition-otherwise-population-thrown.trycloudflare.com";
+    "https://seventh-michel-modems-models.trycloudflare.com";
 
 let cineflixAutoRefreshTriggeredForCurrentSource = false;
 
@@ -6049,24 +6017,9 @@ function cineflixHideNetworkError(){
     if(!cineflixNetworkError) return;
     cineflixNetworkError.classList.remove("show");
     cineflixNetworkError.setAttribute("aria-hidden","true");
-    if(playerSurface && !cineflixServerSwitchActive){
-        playerSurface.classList.remove("cineflix-server-switching-controls");
-    }
 }
 function cineflixShowNetworkError(){
     if(cineflixServerChange) cineflixServerChange.classList.remove("show");
-
-    /* NETWORK ERROR must never expose the normal Play/Pause SVG. A failed
-       server switch can fire the video's internal pause event just before
-       the error UI is shown, so explicitly lock both center play layers here. */
-    if(centerPlayPause){
-        centerPlayPause.classList.remove("show");
-        centerPlayPause.style.display="none";
-    }
-    if(centerPlay){
-        centerPlay.style.display="none";
-    }
-
     if(cineflixNetworkError){
         cineflixNetworkError.classList.add("show");
         cineflixNetworkError.setAttribute("aria-hidden","false");
@@ -6075,23 +6028,12 @@ function cineflixShowNetworkError(){
         playerControls.classList.add("auto-hidden");
         playerControls.style.pointerEvents="none";
     }
-    if(playerTop) playerTop.classList.add("auto-hidden");
-    if(playerSurface) playerSurface.classList.add("cineflix-server-switching-controls");
 }
 function cineflixShowServerChanging(){
     cineflixHideNetworkError();
     cineflixPlaybackWaitingForPlay = true;
-    /* Changing Server must be the only player animation visible. Hide the
-       normal center Play/Pause SVG immediately, before the internal pause(). */
-    if(centerPlayPause){
-        centerPlayPause.classList.remove("show");
-        centerPlayPause.style.display="none";
-    }
-    /* During Changing Server keep the SERVER badge visible, but lock the
-       normal player controls below. */
-    if(cineflixServerSwitch && cineflixHasStartedPlaying){
-        cineflixServerSwitch.classList.remove("server-badge-hidden");
-    }
+    /* After a server is selected, hide the SERVER badge immediately. */
+    if(cineflixServerSwitch) cineflixServerSwitch.classList.add("server-badge-hidden");
     if(cineflixServerChange){
         cineflixServerChange.classList.add("show");
         cineflixServerChange.setAttribute("aria-hidden","false");
@@ -6110,18 +6052,26 @@ function cineflixFinishServerTransition(){
     }
     if(playerSurface) playerSurface.classList.remove("cineflix-server-switching-controls");
     if(playerControls) playerControls.style.pointerEvents="";
-    if(centerPlayPause) centerPlayPause.style.display="";
     cineflixSyncServerBadgeWithControls(cineflixPlaybackWaitingForPlay);
-    syncCenterPlayPauseWithControls();
 }
 function cineflixGetServer2Source(){
     return String(cineflixServer2Url||"").trim();
+}
+
+/* Server 2 streams can be hosted on origins that do not send CORS headers.
+   Only Server 2 is routed through the existing local HLS proxy; Server 1
+   keeps its original source and loading path completely unchanged. */
+function cineflixGetServer2PlayableSource(source){
+    const raw=String(source||"").trim();
+    if(!raw) return raw;
+    if(cineflixActiveServer!==2) return raw;
+    if(raw.includes("/proxy-stream?url=")) return raw;
+    return `http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
 }
 function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
     cineflixServerRetryStartedAt=Date.now();
     cineflixServerRetryPlaying=false;
-    cineflixServerRetryMode=!showChanging;
     cineflixPlaybackWaitingForPlay=true;
     cineflixHideNetworkError();
 
@@ -6149,7 +6099,7 @@ function cineflixBeginServerRetry(showChanging=true){
         return;
     }
 
-    loadHlsSource(source,true,savedTime);
+    loadHlsSource(cineflixActiveServer===2 ? cineflixGetServer2PlayableSource(source) : source,true,savedTime);
 
     /* Switching: the red loader remains hidden. Retry: the red loader remains visible. */
     if(showChanging) hidePlayerLoading();
@@ -6159,9 +6109,6 @@ function cineflixBeginServerRetry(showChanging=true){
     clearTimeout(cineflixServerRetryTimer);
     cineflixServerRetryTimer=setTimeout(()=>{
         if(token!==cineflixServerSwitchToken || cineflixServerRetryPlaying) return;
-        /* Failed server-change attempt now becomes the Retry/Network Error
-           state, where the SERVER badge must remain visible. */
-        cineflixServerRetryMode=true;
         cineflixFinishServerTransition();
         try{ destroyHls(); }catch(e){}
         hidePlayerLoading();
@@ -6215,11 +6162,9 @@ if(cineflixServerSelect){
            Keep the badge visible while cineflixSwitchServer() shows Changing
            Server, then let the normal controls/badge sync take over. */
         cineflixServerDropdownOpen=false;
-        /* Selection commits immediately. Changing Server keeps the SERVER
-           badge visible while normal controls are locked. */
-        if(cineflixServerSwitch && cineflixHasStartedPlaying){
-            cineflixServerSwitch.classList.remove("server-badge-hidden");
-        }
+        /* Selection commits immediately: hide the badge before the switch
+           animation starts. */
+        if(cineflixServerSwitch) cineflixServerSwitch.classList.add("server-badge-hidden");
         cineflixSwitchServer(cineflixServerSelect.value);
     });
 }
@@ -6236,6 +6181,9 @@ if(cineflixNetworkRetry){
 
 function loadHlsSource(source,autoPlay=true,savedTime=0){
     cineflixAutoRefreshTriggeredForCurrentSource=false;
+    const cineflixResolvedSource = (cineflixActiveServer===2)
+        ? cineflixGetServer2PlayableSource(source)
+        : source;
     pendingAutoPlay=autoPlay;
     pendingStartTime=savedTime||0;
     hlsReady=false;
@@ -6365,7 +6313,6 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                the user has explicitly switched servers. */
             if(currentMode==="movie" && cineflixServerSwitchActive){
                 cineflixServerRetryPlaying=false;
-                cineflixServerRetryMode=true;
                 cineflixServerRetrySource = cineflixActiveServer===2
                     ? cineflixGetServer2Source()
                     : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
@@ -6452,7 +6399,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             centerPlay.style.display="grid";
        });
 
-        hls.loadSource(source);
+        hls.loadSource(cineflixResolvedSource);
         hls.attachMedia(video);
         return;
     }
@@ -6460,7 +6407,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
     /* Safari/iOS can play HLS natively. */
     if(video.canPlayType("application/vnd.apple.mpegurl")){
         showPlayerLoading();
-        video.src=source;
+        video.src=cineflixResolvedSource;
         video.load();
         const ready=()=>{
             video.removeEventListener("loadedmetadata",ready);
@@ -7214,7 +7161,6 @@ video.addEventListener("loadeddata",()=>{
 video.addEventListener("playing",()=>{
     cineflixHasStartedPlaying = true;
     cineflixPlaybackWaitingForPlay = false;
-    cineflixServerRetryMode = false;
     if(cineflixServerSwitchActive){
         cineflixServerRetryPlaying=true;
         clearTimeout(cineflixServerRetryTimer);
@@ -7234,7 +7180,6 @@ video.addEventListener("playing",()=>{
     video.style.opacity="1";
     video.style.zIndex="2";
     hidePlayerLoading();
-    if(centerPlayPause) centerPlayPause.style.display="";
     showPlayerControls(true);
 });
 video.addEventListener("error",()=>{
