@@ -3653,6 +3653,16 @@ body.cineflix-db-error .cineflix-db-message{
 @keyframes serverSwitchSpin{to{transform:rotate(360deg)}}
 @keyframes serverSwitchDash{0%,100%{stroke-dashoffset:52}50%{stroke-dashoffset:10}}
 @media(max-width:520px){.server-select{min-width:76px;height:26px;font-size:9px;padding-left:8px;padding-right:20px}.server-select-wrap::after{right:8px;top:9px}.server-switch-card{min-width:170px;padding:15px 17px}}
+.network-error-overlay{position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;background:rgba(0,0,0,.08)}
+.network-error-overlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.network-error-card{min-width:205px;max-width:calc(100% - 32px);padding:18px 20px 17px;border:1px solid rgba(255,255,255,.13);border-radius:16px;background:rgba(8,8,11,.86);box-shadow:0 18px 55px rgba(0,0,0,.55);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);text-align:center;transform:translateY(7px) scale(.96);transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.network-error-overlay.show .network-error-card{transform:translateY(0) scale(1)}
+.network-error-icon{width:38px;height:38px;margin:0 auto 8px;color:#fff;display:block;opacity:.92}
+.network-error-title{font-size:13px;font-weight:900;color:#fff}
+.network-error-sub{margin-top:4px;font-size:9px;line-height:1.45;font-weight:700;color:#9b9ba3}
+.network-error-retry{margin-top:13px;min-width:78px;height:30px;padding:0 16px;border:1px solid rgba(255,255,255,.18);border-radius:7px;background:#fff;color:#08080a;font:800 10px Inter,Arial,sans-serif;cursor:pointer;transition:transform .16s ease,opacity .16s ease,background .16s ease}
+.network-error-retry:hover{transform:translateY(-1px);background:#f0f0f0}
+.network-error-retry:disabled{opacity:.55;cursor:not-allowed;transform:none}
 </style>
 </head>
 <body class="cineflix-db-loading">
@@ -3862,6 +3872,18 @@ body.cineflix-db-error .cineflix-db-message{
         </svg>
         <div class="server-switch-title" id="serverSwitchTitle">Changing Server</div>
         <div class="server-switch-sub" id="serverSwitchSub">Connecting to Server 2…</div>
+    </div>
+</div>
+
+<div class="network-error-overlay" id="networkErrorOverlay" aria-hidden="true">
+    <div class="network-error-card">
+        <svg class="network-error-icon" viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="2"/>
+            <path d="M15 15l18 18M33 15L15 33" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="network-error-title">Network error</div>
+        <div class="network-error-sub" id="networkErrorSub">Unable to connect to this server.</div>
+        <button class="network-error-retry" id="networkErrorRetry" type="button">Retry</button>
     </div>
 </div>
 
@@ -4751,6 +4773,9 @@ const playerModeBadge =
 const serverSelect = document.getElementById("serverSelect");
 const serverSelectWrap = document.getElementById("serverSelectWrap");
 const serverSwitchOverlay = document.getElementById("serverSwitchOverlay");
+const networkErrorOverlay = document.getElementById("networkErrorOverlay");
+const networkErrorSub = document.getElementById("networkErrorSub");
+const networkErrorRetry = document.getElementById("networkErrorRetry");
 const serverSwitchTitle = document.getElementById("serverSwitchTitle");
 const serverSwitchSub = document.getElementById("serverSwitchSub");
 
@@ -5425,6 +5450,14 @@ let TRAILER_DEMO_URL = "";
 let currentServer = "1";
 let serverSwitchTimer = null;
 
+/* Server retry state: never reset the user's current playback position. */
+let serverRetrySource = "";
+let serverRetryServer = "1";
+let serverRetryTime = 0;
+let serverRetryWasPlaying = false;
+let serverRetryDeadline = 0;
+let serverRetryTimer = null;
+let serverRetryBusy = false;
 
 
 let currentMode = "movie";
@@ -5968,8 +6001,12 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             }
 
             if(currentMode==="movie" && currentServer==="2" && data.fatal){
-                hideServerSwitch();
-                showToast("Server 2 stream error.");
+                serverRetrySource=source;
+                serverRetryServer=currentServer;
+                serverRetryTime=Number.isFinite(video.currentTime) ? video.currentTime : pendingStartTime || 0;
+                serverRetryWasPlaying=!video.paused || pendingAutoPlay;
+                showNetworkError("Server 2 is unavailable. Try again.");
+                return;
             }
 
             if((data.type===Hls.ErrorTypes.NETWORK_ERROR || data.details) && hlsNetworkRetryCount < MAX_STREAM_RETRIES){
@@ -6037,6 +6074,97 @@ function hidePlayerLoading(){
     playerEmpty.classList.add("hidden");
 }
 
+function hideNetworkError(){
+    if(!networkErrorOverlay) return;
+    if(serverRetryTimer){ clearInterval(serverRetryTimer); serverRetryTimer=null; }
+    serverRetryBusy=false;
+    networkErrorOverlay.classList.remove("show");
+    networkErrorOverlay.setAttribute("aria-hidden","true");
+    if(networkErrorRetry){ networkErrorRetry.disabled=false; networkErrorRetry.textContent="Retry"; }
+}
+
+function showNetworkError(message="Unable to connect to this server."){
+    hideServerSwitch();
+    if(!networkErrorOverlay) return;
+    if(networkErrorSub) networkErrorSub.textContent=message;
+    if(networkErrorRetry){ networkErrorRetry.disabled=false; networkErrorRetry.textContent="Retry"; }
+    networkErrorOverlay.classList.add("show");
+    networkErrorOverlay.setAttribute("aria-hidden","false");
+    hidePlayerLoading();
+    centerPlay.style.display="none";
+    if(playerControls) playerControls.classList.add("auto-hidden");
+    if(playerTop) playerTop.classList.add("auto-hidden");
+}
+
+async function retryCurrentServer(){
+    if(serverRetryBusy || !serverRetrySource) return;
+    serverRetryBusy=true;
+    if(serverRetryTimer){ clearInterval(serverRetryTimer); serverRetryTimer=null; }
+    if(networkErrorRetry){ networkErrorRetry.disabled=true; networkErrorRetry.textContent="Retrying…"; }
+    networkErrorOverlay?.classList.remove("show");
+    networkErrorOverlay?.setAttribute("aria-hidden","true");
+    hideServerSwitch();
+    showPlayerLoading();
+    if(playerControls) playerControls.classList.add("auto-hidden");
+    if(playerTop) playerTop.classList.add("auto-hidden");
+
+    const source=serverRetrySource;
+    const server=serverRetryServer;
+    const startTime=serverRetryTime;
+    const wasPlaying=serverRetryWasPlaying;
+    const deadline=Date.now()+15000;
+
+    try{
+        currentServer=server;
+        cineflixAutoRefreshTriggeredForCurrentSource=true;
+        pendingAutoPlay=wasPlaying;
+        pendingStartTime=startTime;
+        destroyHls();
+        video.removeAttribute("src");
+        video.load();
+        loadHlsSource(source,wasPlaying,startTime);
+
+        // loadHlsSource has the real playing/error handlers. Keep a strict
+        // 15-second retry window without resetting the saved position.
+        await new Promise(resolve=>{
+            serverRetryDeadline=deadline;
+            const timer=setInterval(()=>{
+                if(Date.now()>=deadline){
+                    clearInterval(timer);
+                    resolve();
+                }
+                if(!serverRetryBusy){
+                    clearInterval(timer);
+                    resolve();
+                }
+                if(!video.paused && video.readyState>=3){
+                    clearInterval(timer);
+                    resolve();
+                }
+            },250);
+            serverRetryTimer=timer;
+        });
+
+        if(Date.now()>=deadline && (video.paused || video.readyState<3)){
+            showNetworkError("Server ${server} is unavailable. Try again.");
+        }
+    }catch(e){
+        showNetworkError("Server ${server} is unavailable. Try again.");
+    }finally{
+        serverRetryBusy=false;
+        serverRetryDeadline=0;
+        if(serverRetryTimer){ clearInterval(serverRetryTimer); serverRetryTimer=null; }
+        if(networkErrorOverlay?.classList.contains("show") && networkErrorRetry){
+            networkErrorRetry.disabled=false;
+            networkErrorRetry.textContent="Retry";
+        }
+    }
+}
+
+if(networkErrorRetry){
+    networkErrorRetry.addEventListener("click",()=>retryCurrentServer());
+}
+
 function getCurrentMovieSource(){
     if(currentServer === "2") return MOVIE_SERVER_2_URL || "";
     return QUALITY_SOURCES.movie?.[currentQuality] ||
@@ -6083,11 +6211,17 @@ function switchMovieServer(server){
     const wasPlaying=!video.paused && !video.ended;
     currentServer=server;
     syncServerUI();
+    hideNetworkError();
     showServerSwitch(server);
     // Server changes are movie-only and preserve the exact playback position.
+    serverRetrySource=server==="2" ? MOVIE_SERVER_2_URL : getCurrentMovieSource();
+    serverRetryServer=server;
+    serverRetryTime=savedTime;
+    serverRetryWasPlaying=wasPlaying;
     cineflixAutoRefreshTriggeredForCurrentSource=true;
+    if(playerControls) playerControls.classList.add("auto-hidden");
+    if(playerTop) playerTop.classList.add("auto-hidden");
     setPlayerMode("movie",wasPlaying,savedTime);
-    showPlayerControls(true);
 }
 
 if(serverSelect){
@@ -6764,6 +6898,7 @@ video.addEventListener("loadeddata",()=>{
 });
 video.addEventListener("playing",()=>{
     hideServerSwitch();
+    hideNetworkError();
     cineflixAutoRefreshAttempts=0;
     cineflixAutoRefreshTriggeredForCurrentSource=false;
     playerEmpty.classList.add("hidden");
@@ -6774,12 +6909,15 @@ video.addEventListener("playing",()=>{
     showPlayerControls(true);
 });
 video.addEventListener("error",()=>{
-    if(currentMode==="movie" && currentServer==="2"){
-        hideServerSwitch();
-        if(serverSelect) serverSelect.value="2";
-        showToast("Server 2 could not be loaded.");
-    }
     if(typeof Hls!=="undefined" && hls) return;
+    if(currentMode==="movie" && currentServer==="2"){
+        serverRetrySource=getCurrentMovieSource();
+        serverRetryServer="2";
+        serverRetryTime=Number.isFinite(video.currentTime) ? video.currentTime : pendingStartTime || 0;
+        serverRetryWasPlaying=!video.paused || pendingAutoPlay;
+        showNetworkError("Server 2 is unavailable. Try again.");
+        return;
+    }
 
     /* Native HLS failure -> refresh the CURRENT movie immediately. */
     if(currentMode==="movie" && !cineflixAutoRefreshTriggeredForCurrentSource){
