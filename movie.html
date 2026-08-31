@@ -5530,6 +5530,7 @@ let cineflixServerRetryStartedAt = 0;
 let cineflixServerRetrySource = "";
 let cineflixServerRetryTime = 0;
 let cineflixServerRetryPlaying = false;
+let cineflixServerAttemptMode = "none"; // none | switch | retry
 let currentQuality = "1080";
 let currentQualityChoice = "auto";
 let hls = null;
@@ -5738,18 +5739,18 @@ function getHlsConfig(){
     return {
         /* Adaptive bitrate: HLS.js automatically chooses the quality that
            fits the measured network speed and available buffer. */
-        maxBufferLength:60,
-        maxMaxBufferLength:120,
+        maxBufferLength:90,
+        maxMaxBufferLength:180,
         maxBufferSize:0,
         enableWorker:true,
         startLevel:-1,
         autoStartLoad:true,
         startPosition:0,
-        abrEwmaDefaultEstimate:450000,
-        abrEwmaFastLive:3,
-        abrEwmaSlowLive:9,
-        abrBandWidthFactor:0.78,
-        abrBandWidthUpFactor:0.55,
+        abrEwmaDefaultEstimate:900000,
+        abrEwmaFastLive:4,
+        abrEwmaSlowLive:10,
+        abrBandWidthFactor:0.82,
+        abrBandWidthUpFactor:0.60,
         abrMaxWithRealBitrate:true,
         capLevelToPlayerSize:true,
         capLevelOnFPSDrop:true,
@@ -5941,6 +5942,10 @@ function cineflixShowNetworkError(){
 }
 function cineflixShowServerChanging(){
     cineflixHideNetworkError();
+    /* During an explicit server switch, show ONLY the server-change UI.
+       The existing red player loader must stay hidden until actual playback. */
+    cineflixServerAttemptMode="switch";
+    hidePlayerLoading();
     if(cineflixServerChange){
         cineflixServerChange.classList.add("show");
         cineflixServerChange.setAttribute("aria-hidden","false");
@@ -5950,6 +5955,7 @@ function cineflixShowServerChanging(){
         playerControls.style.pointerEvents="none";
     }
     if(playerTop) playerTop.classList.add("auto-hidden");
+    if(centerPlay) centerPlay.style.display="none";
     if(playerSurface) playerSurface.classList.add("cineflix-server-switching-controls");
 }
 function cineflixFinishServerTransition(){
@@ -5968,14 +5974,22 @@ function cineflixBeginServerRetry(){
     cineflixServerRetryStartedAt=Date.now();
     cineflixServerRetryPlaying=false;
     cineflixHideNetworkError();
-    cineflixShowServerChanging();
+    /* Retry uses the normal player loader for up to 15 seconds. */
+    cineflixServerAttemptMode="retry";
+    cineflixFinishServerTransition();
     showPlayerLoading();
+    if(playerControls){
+        playerControls.classList.add("auto-hidden");
+        playerControls.style.pointerEvents="none";
+    }
+    if(playerTop) playerTop.classList.add("auto-hidden");
     try{ video.pause(); }catch(e){}
     try{ destroyHls(); }catch(e){}
     const source=cineflixServerRetrySource;
     const savedTime=cineflixServerRetryTime;
     if(!source){
         cineflixFinishServerTransition();
+        cineflixServerAttemptMode="none";
         cineflixShowNetworkError();
         return;
     }
@@ -5988,6 +6002,7 @@ function cineflixBeginServerRetry(){
         const elapsed=Date.now()-cineflixServerRetryStartedAt;
         if(elapsed>=15000){
             cineflixFinishServerTransition();
+            cineflixServerAttemptMode="none";
             try{ destroyHls(); }catch(e){}
             hidePlayerLoading();
             cineflixShowNetworkError();
@@ -6005,10 +6020,12 @@ function cineflixSwitchServer(server){
     cineflixServerRetrySource = next===2 ? cineflixGetServer2Source() : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
     cineflixServerRetryTime = Number.isFinite(video.currentTime) ? video.currentTime : 0;
     cineflixServerRetryPlaying = false;
+    cineflixServerAttemptMode = "switch";
     cineflixShowServerChanging();
 
     if(!cineflixServerRetrySource){
         cineflixFinishServerTransition();
+        cineflixServerAttemptMode="none";
         hidePlayerLoading();
         cineflixShowNetworkError();
         return;
@@ -6156,6 +6173,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                     ? video.currentTime
                     : cineflixServerRetryTime;
                 cineflixFinishServerTransition();
+                cineflixServerAttemptMode="none";
                 hidePlayerLoading();
                 cineflixShowNetworkError();
                 clearTimeout(cineflixServerRetryTimer);
@@ -6248,6 +6266,9 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
 }
 
 function showPlayerLoading(){
+    /* Explicit Server 1 <-> Server 2 switching has its own visual state.
+       Do not expose the existing red loader over it. */
+    if(cineflixServerAttemptMode==="switch") return;
     playerLoading.classList.add("show");
     playerLoading.setAttribute("aria-hidden","false");
     playerEmpty.classList.add("hidden");
@@ -6864,11 +6885,12 @@ video.addEventListener("loadstart",()=>{
 ========================================================= */
 let adaptiveRecoveryTimer=null;
 let adaptiveRecoveryLevel=-1;
+let cineflixStallRecoveryAt=0;
 
 function protectAdaptivePlayback(){
     if(currentQualityChoice!=="auto" || !hls || !hls.levels?.length) return;
     const ahead=getBufferedAheadSeconds();
-    if(ahead<=2){
+    if(ahead<=1){
         const current=Number.isFinite(hls.currentLevel) ? hls.currentLevel : -1;
         const active=current>=0 ? current : Number(hls.nextAutoLevel);
         const lower=Math.max(0,(Number.isFinite(active)&&active>=0?active:1)-1);
@@ -6881,8 +6903,8 @@ function protectAdaptivePlayback(){
                 try{ hls.nextAutoLevel=-1; }catch(e){}
                 adaptiveRecoveryLevel=-1;
             }
-        },5000);
-    }else if(ahead>8 && adaptiveRecoveryLevel>=0){
+        },7000);
+    }else if(ahead>10 && adaptiveRecoveryLevel>=0){
         try{ hls.nextAutoLevel=-1; }catch(e){}
         adaptiveRecoveryLevel=-1;
     }
@@ -6890,19 +6912,33 @@ function protectAdaptivePlayback(){
 
 video.addEventListener("waiting",()=>{
     protectAdaptivePlayback();
-    /*
-       If playback has real buffered media at the current point, do not
-       flash the loader. Only show it when there is genuinely nothing
-       usable left to play.
-    */
     if(!video.paused && getBufferedAheadSeconds()<=0.15){
         showPlayerLoading();
+        /* Recover a genuinely exhausted HLS buffer without resetting playback.
+           Keep the current timestamp and let ABR move down for the next segment. */
+        const now=Date.now();
+        if(hls && now-cineflixStallRecoveryAt>1800){
+            cineflixStallRecoveryAt=now;
+            try{
+                if(currentQualityChoice==="auto" && hls.levels?.length){
+                    const active=Number.isFinite(hls.currentLevel) ? hls.currentLevel : Number(hls.nextAutoLevel);
+                    const lower=Math.max(0,(Number.isFinite(active)&&active>=0?active:1)-1);
+                    hls.nextAutoLevel=lower;
+                }
+                hls.startLoad(-1);
+            }catch(e){}
+        }
     }
 });
 
 video.addEventListener("stalled",()=>{
     if(!video.paused && getBufferedAheadSeconds()<=0.15){
         showPlayerLoading();
+        const now=Date.now();
+        if(hls && now-cineflixStallRecoveryAt>1800){
+            cineflixStallRecoveryAt=now;
+            try{ hls.startLoad(-1); }catch(e){}
+        }
     }
 });
 
@@ -6935,6 +6971,7 @@ video.addEventListener("playing",()=>{
         cineflixServerRetryPlaying=true;
         clearTimeout(cineflixServerRetryTimer);
         cineflixFinishServerTransition();
+        cineflixServerAttemptMode="none";
         cineflixHideNetworkError();
         hidePlayerLoading();
         /* The newly selected server is now genuinely playing. */
