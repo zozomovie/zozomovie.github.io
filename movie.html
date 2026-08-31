@@ -7932,7 +7932,47 @@ window.addEventListener("beforeunload",()=>{
         setDataSkeletonState(true);
 
         try{
-            const movie=await getMovie();
+            let movie=await getMovie();
+
+            /* =========================================================
+               FRESH CURRENT-MOVIE BOOTSTRAP
+               Never initialize the player from a stale movies.video_* value
+               when the public backend can refresh this movie immediately.
+               The backend returns the newly generated HLS link and saves it
+               to Supabase before we render the movie player.
+               ========================================================= */
+            if(currentMode === "movie") {
+                try{
+                    const params = new URLSearchParams(window.location.search);
+                    const movieId = params.get("id");
+                    const apiBase = String(
+                        window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
+                    ).replace(/\/$/,"");
+
+                    if(movieId && apiBase){
+                        const response = await fetch(
+                            apiBase + "/update_movie_link?_=" + Date.now(),
+                            {
+                                method:"POST",
+                                headers:{"Content-Type":"application/json"},
+                                body:JSON.stringify({movie_id:movieId}),
+                                cache:"no-store"
+                            }
+                        );
+
+                        const fresh = await response.json().catch(()=>null);
+                        if(response.ok && fresh?.success && fresh?.movie){
+                            movie = fresh.movie;
+                            console.log("CINEFLIX current movie: fresh HLS loaded before player init");
+                        }else{
+                            console.warn("CINEFLIX fresh bootstrap skipped:", fresh?.message || response.status);
+                        }
+                    }
+                }catch(refreshError){
+                    console.warn("CINEFLIX fresh bootstrap request failed; using cached DB movie:", refreshError);
+                }
+            }
+
             cineflixLastMovieSnapshot = cineflixMovieSnapshot(movie);
             renderMovieDetails(movie);
             startCineflixMovieRealtime(movie);
@@ -7949,17 +7989,6 @@ window.addEventListener("beforeunload",()=>{
                 initialPoster.setAttribute("aria-hidden","false");
             }
             setDataSkeletonState(false);
-
-            /* INSTANT CURRENT-MOVIE REFRESH:
-               Do not wait for Play, HLS errors, retries, or Admin -> Update All.
-               Every time a movie page opens, refresh ONLY this movie in the
-               background from the public Node backend and immediately apply
-               the fresh HLS link returned by Supabase. If the existing link is
-               already valid, the page remains usable while the refresh runs. */
-            if(currentMode === "movie" && !cineflixAutoRefreshInFlight){
-                cineflixAutoRefreshTriggeredForCurrentSource = true;
-                void cineflixRefreshCurrentMovieAndRetry(false,true);
-            }
 
             const pageSkeleton=document.getElementById("moviePageSkeleton");
             if(pageSkeleton){
