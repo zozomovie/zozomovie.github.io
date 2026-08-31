@@ -3380,6 +3380,9 @@ body.cineflix-db-error .cineflix-db-message{
 .cineflix-network-error button:hover{background:rgba(255,255,255,.16);transform:translateY(-1px);}
 .cineflix-server-switching-controls .player-controls,
 .cineflix-server-switching-controls .player-top{visibility:hidden!important;pointer-events:none!important;}
+/* During an explicit server change ONLY the Changing Server layer is visible.
+   The normal red player loader must stay completely hidden underneath it. */
+.cineflix-server-switching-controls .player-loading{display:none!important;visibility:hidden!important;opacity:0!important;}
 
 </style>
 <style>
@@ -5977,38 +5980,52 @@ function cineflixFinishServerTransition(){
 function cineflixGetServer2Source(){
     return String(cineflixServer2Url||"").trim();
 }
-function cineflixBeginServerRetry(){
+function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
     cineflixServerRetryStartedAt=Date.now();
     cineflixServerRetryPlaying=false;
+    cineflixPlaybackWaitingForPlay=true;
     cineflixHideNetworkError();
-    cineflixShowServerChanging();
-    /* Server switching intentionally shows ONLY the Changing Server layer.
-       The red player loader is reserved for normal Play/Retry startup. */
-    hidePlayerLoading();
+
+    /* Explicit SERVER SWITCH: show ONLY Changing Server. */
+    if(showChanging){
+        cineflixShowServerChanging();
+        hidePlayerLoading();
+    }else{
+        /* RETRY: show only the normal red player loader.
+           No Changing Server animation is shown for Retry. */
+        cineflixFinishServerTransition();
+        hidePlayerControls();
+        if(playerTop) playerTop.classList.add("auto-hidden");
+        showPlayerLoading();
+    }
+
     try{ video.pause(); }catch(e){}
     try{ destroyHls(); }catch(e){}
     const source=cineflixServerRetrySource;
     const savedTime=cineflixServerRetryTime;
     if(!source){
         cineflixFinishServerTransition();
+        hidePlayerLoading();
         cineflixShowNetworkError();
         return;
     }
+
     loadHlsSource(source,true,savedTime);
-    if(cineflixServerSwitchActive) hidePlayerLoading();
-    /* One retry attempt gets a full 15 seconds. If playback has not actually
-       started by then, return to Network error + Retry without resetting time. */
+
+    /* Switching: the red loader remains hidden. Retry: the red loader remains visible. */
+    if(showChanging) hidePlayerLoading();
+
+    /* Every Retry attempt gets a full 15 seconds. If actual PLAYING has not
+       happened, return to Network error + Retry without resetting the time. */
     clearTimeout(cineflixServerRetryTimer);
     cineflixServerRetryTimer=setTimeout(()=>{
         if(token!==cineflixServerSwitchToken || cineflixServerRetryPlaying) return;
-        const elapsed=Date.now()-cineflixServerRetryStartedAt;
-        if(elapsed>=15000){
-            cineflixFinishServerTransition();
-            try{ destroyHls(); }catch(e){}
-            hidePlayerLoading();
-            cineflixShowNetworkError();
-        }
+        cineflixFinishServerTransition();
+        try{ destroyHls(); }catch(e){}
+        hidePlayerLoading();
+        cineflixPlaybackWaitingForPlay=true;
+        cineflixShowNetworkError();
     },15000);
 }
 function cineflixSwitchServer(server){
@@ -6044,7 +6061,7 @@ if(cineflixNetworkRetry){
             ? cineflixGetServer2Source()
             : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
         cineflixServerRetryTime = Number.isFinite(video.currentTime) ? video.currentTime : cineflixServerRetryTime;
-        cineflixBeginServerRetry();
+        cineflixBeginServerRetry(false);
     });
 }
 
@@ -6106,8 +6123,15 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                 if(cineflixServerSwitchActive) hidePlayerLoading();
                 void cineflixPlayWithAutoplayFallback().then(ok=>{
                     if(!ok){
-                        if(cineflixServerSwitchActive){
+                        if(cineflixServerSwitchActive || cineflixPlaybackWaitingForPlay){
+                            cineflixServerRetrySource = cineflixActiveServer===2
+                                ? cineflixGetServer2Source()
+                                : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
+                            cineflixServerRetryTime = Number.isFinite(video.currentTime)
+                                ? video.currentTime
+                                : cineflixServerRetryTime;
                             cineflixFinishServerTransition();
+                            hidePlayerLoading();
                             cineflixShowNetworkError();
                         }else{
                             hidePlayerLoading();
@@ -6185,6 +6209,25 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                 return;
             }
 
+            /* Normal Play startup: a genuine fatal stream failure goes to
+               Network error + Retry. Do not auto-refresh the page/source here. */
+            if(currentMode==="movie" && cineflixPlaybackWaitingForPlay){
+                cineflixServerRetryPlaying=false;
+                cineflixServerRetrySource = cineflixActiveServer===2
+                    ? cineflixGetServer2Source()
+                    : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
+                cineflixServerRetryTime = Number.isFinite(video.currentTime)
+                    ? video.currentTime
+                    : cineflixServerRetryTime;
+                clearTimeout(cineflixServerRetryTimer);
+                try{ hls.destroy(); }catch(e){}
+                hls=null;
+                hlsReady=false;
+                hidePlayerLoading();
+                cineflixShowNetworkError();
+                return;
+            }
+
             /* CURRENT MOVIE AUTO-REFRESH:
                Do not wait for the old 8-retry cycle. A fatal HLS failure
                immediately asks the backend for a fresh link for this movie. */
@@ -6257,8 +6300,15 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             if(pendingAutoPlay){
                 void cineflixPlayWithAutoplayFallback().then(ok=>{
                     if(!ok){
-                        if(cineflixServerSwitchActive){
+                        if(cineflixServerSwitchActive || cineflixPlaybackWaitingForPlay){
+                            cineflixServerRetrySource = cineflixActiveServer===2
+                                ? cineflixGetServer2Source()
+                                : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
+                            cineflixServerRetryTime = Number.isFinite(video.currentTime)
+                                ? video.currentTime
+                                : cineflixServerRetryTime;
                             cineflixFinishServerTransition();
+                            hidePlayerLoading();
                             cineflixShowNetworkError();
                         }else{
                             centerPlay.style.display="grid";
@@ -6999,7 +7049,11 @@ video.addEventListener("playing",()=>{
         cineflixFinishServerTransition();
         cineflixHideNetworkError();
         hidePlayerLoading();
+        cineflixServerSwitchActive=false;
         /* The newly selected server is now genuinely playing. */
+    }else{
+        clearTimeout(cineflixServerRetryTimer);
+        cineflixHideNetworkError();
     }
     cineflixAutoRefreshAttempts=0;
     cineflixAutoRefreshTriggeredForCurrentSource=false;
@@ -7026,6 +7080,22 @@ video.addEventListener("error",()=>{
         hidePlayerLoading();
         cineflixShowNetworkError();
         clearTimeout(cineflixServerRetryTimer);
+        return;
+    }
+
+    /* Normal Play startup: a genuine native-stream failure goes to
+       Network error + Retry, with the current timestamp preserved. */
+    if(currentMode==="movie" && cineflixPlaybackWaitingForPlay){
+        cineflixServerRetryPlaying=false;
+        cineflixServerRetrySource = cineflixActiveServer===2
+            ? cineflixGetServer2Source()
+            : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
+        cineflixServerRetryTime = Number.isFinite(video.currentTime)
+            ? video.currentTime
+            : cineflixServerRetryTime;
+        clearTimeout(cineflixServerRetryTimer);
+        hidePlayerLoading();
+        cineflixShowNetworkError();
         return;
     }
 
