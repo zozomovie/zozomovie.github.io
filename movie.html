@@ -7613,6 +7613,13 @@ document.addEventListener("fullscreenchange",()=>{
         MOVIE_DEMO_URL = movie.video_1080 || movie.video_720 || movie.video_480 || "";
         MOVIE_SERVER_2_URL = movie.video_server_2 || "";
         currentServer = "1";
+        serverRetrySource = MOVIE_DEMO_URL;
+        serverRetryServer = "1";
+        serverRetryTime = 0;
+        serverRetryWasPlaying = true;
+        serverRetryDeadline = 0;
+        hideNetworkError();
+        hideServerSwitch();
         TRAILER_DEMO_URL = normalizeTrailerUrl(movie.trailer_url || "");
 
         QUALITY_SOURCES.movie = {
