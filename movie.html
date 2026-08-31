@@ -7447,29 +7447,19 @@ document.addEventListener("fullscreenchange",()=>{
             "1080": TRAILER_DEMO_URL
         };
 
-        if(MOVIE_DEMO_URL){
-            destroyHls();
-            video.removeAttribute("src");
-            video.load();
-            initialPoster.classList.remove("hidden");
-            hidePlayerLoading();
-            centerPlay.style.display="grid";
-            setPlayerMode("movie",false);
-            video.pause();
-        }
+        /* Player-only initialization: keep the page and poster visible, but
+           do not load the saved HLS until the user presses Play. This means
+           a page refresh never starts playing/testing an old link. */
+        try{ destroyHls(); }catch(e){}
+        video.removeAttribute("src");
+        video.load();
+        initialPoster.classList.remove("hidden");
+        hidePlayerLoading();
+        playerEmpty.classList.add("hidden");
+        centerPlay.style.display="grid";
+        video.pause();
 
         window.CINEFLIX_MOVIE=movie;
-
-        /* IMPORTANT: If Admin has not generated an HLS link for this movie,
-           fetch/generate ONLY this movie automatically. No Update All click. */
-        if(!MOVIE_DEMO_URL && currentMode==="movie"){
-            setTimeout(()=>{
-                if(!MOVIE_DEMO_URL && !cineflixAutoRefreshInFlight){
-                    cineflixAutoRefreshTriggeredForCurrentSource=true;
-                    void cineflixRefreshCurrentMovieAndRetry(false,true);
-                }
-            },0);
-        }
 
 /* =========================================================
    CONTINUE WATCHING — ADD-ONLY LOGIC
@@ -7767,6 +7757,7 @@ window.addEventListener("beforeunload",()=>{
            const freshMovie = data.movie;
            window.CINEFLIX_MOVIE = freshMovie;
            cineflixLastMovieSnapshot = "";
+           cineflixAutoRefreshTriggeredForCurrentSource = false;
 
            const retryTime =
                Number.isFinite(video.currentTime) ? video.currentTime : 0;
@@ -7934,44 +7925,10 @@ window.addEventListener("beforeunload",()=>{
         try{
             let movie=await getMovie();
 
-            /* =========================================================
-               FRESH CURRENT-MOVIE BOOTSTRAP
-               Never initialize the player from a stale movies.video_* value
-               when the public backend can refresh this movie immediately.
-               The backend returns the newly generated HLS link and saves it
-               to Supabase before we render the movie player.
-               ========================================================= */
-            if(currentMode === "movie") {
-                try{
-                    const params = new URLSearchParams(window.location.search);
-                    const movieId = params.get("id");
-                    const apiBase = String(
-                        window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
-                    ).replace(/\/$/,"");
-
-                    if(movieId && apiBase){
-                        const response = await fetch(
-                            apiBase + "/update_movie_link?_=" + Date.now(),
-                            {
-                                method:"POST",
-                                headers:{"Content-Type":"application/json"},
-                                body:JSON.stringify({movie_id:movieId}),
-                                cache:"no-store"
-                            }
-                        );
-
-                        const fresh = await response.json().catch(()=>null);
-                        if(response.ok && fresh?.success && fresh?.movie){
-                            movie = fresh.movie;
-                            console.log("CINEFLIX current movie: fresh HLS loaded before player init");
-                        }else{
-                            console.warn("CINEFLIX fresh bootstrap skipped:", fresh?.message || response.status);
-                        }
-                    }
-                }catch(refreshError){
-                    console.warn("CINEFLIX fresh bootstrap request failed; using cached DB movie:", refreshError);
-                }
-            }
+            /* Do not refresh/regenerate on page load. Only load movie data.
+               The player checks the saved HLS when Play is clicked. If that
+               source is dead/expired, the player error handler refreshes only
+               this movie and automatically retries the fresh source. */
 
             cineflixLastMovieSnapshot = cineflixMovieSnapshot(movie);
             renderMovieDetails(movie);
