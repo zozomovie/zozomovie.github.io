@@ -5890,13 +5890,13 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                     setTimeout(()=>{
                         if(currentMode!=="movie") return;
                         if(!video.paused && video.readyState>=2) return;
-                        void window.cineflixRefreshCurrentMovieAndRetry(true,true);
+                        void cineflixRefreshCurrentMovieAndRetry(true,true);
                     },1200);
                     return;
                 }
 
                 /* Network / manifest / level failure -> refresh immediately. */
-                void window.cineflixRefreshCurrentMovieAndRetry(true,true);
+                void cineflixRefreshCurrentMovieAndRetry(true,true);
                 return;
             }
 
@@ -6453,6 +6453,19 @@ vastAdClick?.addEventListener("click",e=>{
 async function togglePlay(){
     if(vastAdActive || vastAdLoading) return;
 
+    /* If the silent background health check is still running, keep the player
+       in its loader state while it decides whether the saved link is valid.
+       This prevents a dead old link from ever flashing the thumbnail/Play
+       button again and avoids a second Play click. */
+    if(currentMode === "movie" && cineflixBackgroundHealthCheckPromise && !cineflixBackgroundHealthCheckFinished){
+        initialPoster.classList.add("hidden");
+        initialPoster.setAttribute("aria-hidden","true");
+        showPlayerLoading();
+        playerEmpty.classList.add("hidden");
+        centerPlay.style.display="none";
+        try{ await cineflixBackgroundHealthCheckPromise; }catch(_){ }
+    }
+
     if(!hlsReady && !video.src){
         initialPoster.classList.add("hidden");
         showPlayerLoading();
@@ -6469,7 +6482,7 @@ async function togglePlay(){
 
         if(currentMode==="movie" && !movieSource){
             cineflixAutoRefreshTriggeredForCurrentSource=true;
-            const refreshed=await window.cineflixRefreshCurrentMovieAndRetry(true,true);
+            const refreshed=await cineflixRefreshCurrentMovieAndRetry(true,true);
             if(!refreshed){
                 hidePlayerLoading();
                 playerEmpty.classList.remove("hidden");
@@ -6490,7 +6503,7 @@ async function togglePlay(){
             loadHlsSource(sourceAfterRefresh,true,video.currentTime||0);
         }else if(currentMode==="movie"){
             cineflixAutoRefreshTriggeredForCurrentSource=false;
-            const refreshed=await window.cineflixRefreshCurrentMovieAndRetry(true,true);
+            const refreshed=await cineflixRefreshCurrentMovieAndRetry(true,true);
             if(!refreshed){
                 hidePlayerLoading();
                 playerEmpty.classList.remove("hidden");
@@ -6642,7 +6655,7 @@ video.addEventListener("error",()=>{
     /* Native HLS failure -> refresh the CURRENT movie immediately. */
     if(currentMode==="movie" && !cineflixAutoRefreshTriggeredForCurrentSource){
         cineflixAutoRefreshTriggeredForCurrentSource=true;
-        void window.cineflixRefreshCurrentMovieAndRetry(true,true);
+        void cineflixRefreshCurrentMovieAndRetry(true,true);
         return;
     }
 
@@ -7767,7 +7780,7 @@ window.addEventListener("beforeunload",()=>{
         }
     }
 
-     window.cineflixRefreshCurrentMovieAndRetry = async function(shouldPlay=true, forceReload=true){
+     async function cineflixRefreshCurrentMovieAndRetry(shouldPlay=true, forceReload=true){
        if(cineflixAutoRefreshInFlight) return false;
        if(cineflixAutoRefreshAttempts >= MAX_AUTO_REFRESH_ATTEMPTS) return false;
 
@@ -7815,23 +7828,6 @@ window.addEventListener("beforeunload",()=>{
                !!shouldPlay
            );
 
-           /* Keep the player in loading state and immediately attach the
-              freshly returned HLS source. Do not require a second Play click. */
-           const freshSource =
-               freshMovie.video_1080 ||
-               freshMovie.video_720 ||
-               freshMovie.video_480 ||
-               "";
-
-           if(freshSource && shouldPlay){
-               initialPoster.classList.add("hidden");
-               initialPoster.setAttribute("aria-hidden","true");
-               playerEmpty.classList.add("hidden");
-               centerPlay.style.display="none";
-               showPlayerLoading();
-               loadHlsSource(freshSource,true,pendingStartTime||0);
-           }
-
            return true;
        }catch(e){
            console.warn("CINEFLIX current movie auto-update failed:",e);
@@ -7840,6 +7836,169 @@ window.addEventListener("beforeunload",()=>{
            cineflixAutoRefreshInFlight = false;
        }
     }
+
+    /* Keep the repair function reachable from every player handler, even if
+       another script invokes it through window. */
+    window.cineflixRefreshCurrentMovieAndRetry = cineflixRefreshCurrentMovieAndRetry;
+
+    /*
+       BACKGROUND MOVIE LINK HEALTH CHECK
+       ----------------------------------
+       Runs once after the movie data is rendered. It does NOT load the player,
+       does NOT show a loader, and does NOT touch the page when the saved HLS
+       manifest is healthy. If the saved manifest is dead/expired, only the
+       current movie is repaired through the existing backend endpoint.
+    */
+    let cineflixBackgroundHealthCheckStarted = false;
+    let cineflixBackgroundRepairDone = false;
+    let cineflixBackgroundHealthCheckPromise = null;
+    let cineflixBackgroundHealthCheckFinished = false;
+
+    function cineflixWaitForHls(timeout=5000){
+        return new Promise(resolve=>{
+            const started=Date.now();
+            const timer=setInterval(()=>{
+                if(typeof Hls !== "undefined"){
+                    clearInterval(timer);
+                    resolve(true);
+                    return;
+                }
+                if(Date.now()-started>=timeout){
+                    clearInterval(timer);
+                    resolve(false);
+                }
+            },50);
+        });
+    }
+
+    async function cineflixCheckHlsManifestSilently(source){
+        if(!source || !/^https?:\/\//i.test(String(source))) return false;
+
+        const hasHls=await cineflixWaitForHls(5000);
+        if(hasHls && typeof Hls !== "undefined" && Hls.isSupported()){
+            return await new Promise(resolve=>{
+                let settled=false;
+                let tester=null;
+                const finish=(ok)=>{
+                    if(settled) return;
+                    settled=true;
+                    clearTimeout(timeout);
+                    try{ if(tester) tester.destroy(); }catch(_){}
+                    resolve(ok);
+                };
+                const timeout=setTimeout(()=>finish(false),7000);
+                try{
+                    tester=new Hls({
+                        ...getHlsConfig(),
+                        autoStartLoad:false,
+                        startFragPrefetch:false,
+                        manifestLoadingMaxRetry:0,
+                        levelLoadingMaxRetry:0,
+                        fragLoadingMaxRetry:0
+                    });
+                    tester.on(Hls.Events.MANIFEST_PARSED,()=>finish(true));
+                    tester.on(Hls.Events.ERROR,(event,data)=>{
+                        if(data?.fatal) finish(false);
+                    });
+                    tester.loadSource(source);
+                }catch(_){
+                    finish(false);
+                }
+            });
+        }
+
+        /* Native-HLS fallback: use a short manifest request only where the
+           browser exposes native HLS support. */
+        try{
+            const controller=new AbortController();
+            const timer=setTimeout(()=>controller.abort(),5000);
+            const response=await fetch(source,{
+                method:"GET",
+                cache:"no-store",
+                credentials:"omit",
+                signal:controller.signal,
+                headers:{"Range":"bytes=0-4095"}
+            });
+            clearTimeout(timer);
+            if(!response.ok) return false;
+            const text=await response.text();
+            return /#EXTM3U/i.test(text);
+        }catch(_){
+            return false;
+        }
+    }
+
+    async function cineflixBackgroundCheckAndRepair(movie){
+        if(cineflixBackgroundHealthCheckPromise) return cineflixBackgroundHealthCheckPromise;
+        if(!movie || currentMode !== "movie") return true;
+
+        cineflixBackgroundHealthCheckStarted=true;
+
+        cineflixBackgroundHealthCheckPromise=(async()=>{
+        try{
+            const source=movie.video_1080 || movie.video_720 || movie.video_480 || "";
+
+            /* No saved link means there is nothing to validate, so repair it
+               quietly in the background before the user needs playback. */
+            let healthy=false;
+            if(source){
+                healthy=await cineflixCheckHlsManifestSilently(source);
+            }
+
+            if(healthy){
+                console.log("CINEFLIX background HLS check: valid — no update needed");
+                return;
+            }
+
+            cineflixBackgroundRepairDone=true;
+            console.log("CINEFLIX background HLS check: expired/dead — repairing current movie");
+
+            const params=new URLSearchParams(window.location.search);
+            const movieId=params.get("id");
+            if(!movieId) return;
+
+            const apiBase=String(
+                window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
+            ).replace(/\/$/,"");
+
+            const response=await fetch(apiBase + "/update_movie_link",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({movie_id:movieId}),
+                cache:"no-store"
+            });
+
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok || !data.success || !data.movie){
+                throw new Error(data.message || "Background movie link update failed");
+            }
+
+            const freshMovie=data.movie;
+            window.CINEFLIX_MOVIE=freshMovie;
+            cineflixLastMovieSnapshot=cineflixMovieSnapshot(freshMovie);
+
+            /* Update only the in-memory source map. Do NOT call
+               cineflixApplyLiveMovieSource() here because the user should see
+               no thumbnail/player reset while the silent repair is happening.
+               The new link is ready for the next Play click. */
+            MOVIE_DEMO_URL=freshMovie.video_1080 || freshMovie.video_720 || freshMovie.video_480 || "";
+            QUALITY_SOURCES.movie={
+                "480":freshMovie.video_480 || "",
+                "720":freshMovie.video_720 || "",
+                "1080":freshMovie.video_1080 || ""
+            };
+
+            console.log("CINEFLIX background movie link repaired");
+        }catch(error){
+            console.warn("CINEFLIX background HLS check failed:",error);
+        }finally{
+            cineflixBackgroundHealthCheckFinished=true;
+        }
+        })();
+
+        return cineflixBackgroundHealthCheckPromise;
+    }
+
    async function cineflixFetchLatestMovie(){
         const params = new URLSearchParams(window.location.search);
         const movieId = params.get("id");
@@ -7992,6 +8151,11 @@ window.addEventListener("beforeunload",()=>{
             cineflixLastMovieSnapshot = cineflixMovieSnapshot(movie);
             renderMovieDetails(movie);
             startCineflixMovieRealtime(movie);
+
+            /* Start a silent health check immediately after the real movie
+               data is on screen. Valid links are left completely untouched;
+               only a dead/expired HLS link triggers a background repair. */
+            cineflixBackgroundHealthCheckPromise = cineflixBackgroundCheckAndRepair(movie);
 
             /* IMPORTANT:
                Remove the custom loading image at the EXACT same moment as
