@@ -6209,12 +6209,26 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             const BaseLoader=baseHlsConfig.loader || Hls.DefaultConfig.loader;
             baseHlsConfig.loader=class CineflixServer2ProxyLoader extends BaseLoader{
                 load(context, config, callbacks){
-                    const raw=String(context.url||'');
-                    if(raw && !raw.includes('localhost:3001/proxy-stream?url=')){
+                    const raw=String(context.url||'').trim();
+                    /* Server 2 ONLY: every non-local HLS resource is forced
+                       through the local proxy. Already-proxied URLs are left
+                       untouched so the proxy never gets wrapped recursively. */
+                    if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
                         context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
                     }
                     super.load(context, config, callbacks);
                 }
+            };
+            /* Keep fetchSetup consistent with the loader. This also catches
+               HLS.js requests that use the fetch path instead of XHR. */
+            baseHlsConfig.fetchSetup=function(context, initParams){
+                const raw=String(context.url||'').trim();
+                if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
+                    context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
+                }
+                initParams.mode="cors";
+                initParams.credentials="omit";
+                return new Request(context.url,initParams);
             };
             hls=new Hls(baseHlsConfig);
         }else{
