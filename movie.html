@@ -6200,7 +6200,26 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         destroyHls();
         showPlayerLoading();
 
-        hls=new Hls(getHlsConfig());
+        /* SERVER 2 ONLY: some HLS manifests expose absolute media URLs on an
+           origin that does not send CORS headers. Route every HLS.js request
+           for Server 2 through the existing local proxy. Server 1 keeps the
+           original HLS.js configuration unchanged. */
+        if(cineflixActiveServer===2){
+            const baseHlsConfig=getHlsConfig();
+            const BaseLoader=baseHlsConfig.loader || Hls.DefaultConfig.loader;
+            baseHlsConfig.loader=class CineflixServer2ProxyLoader extends BaseLoader{
+                load(context, config, callbacks){
+                    const raw=String(context.url||'');
+                    if(raw && !raw.includes('localhost:3001/proxy-stream?url=')){
+                        context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
+                    }
+                    super.load(context, config, callbacks);
+                }
+            };
+            hls=new Hls(baseHlsConfig);
+        }else{
+            hls=new Hls(getHlsConfig());
+        }
 
         hls.on(Hls.Events.MANIFEST_PARSED,(event,data)=>{
             hlsReady=true;
