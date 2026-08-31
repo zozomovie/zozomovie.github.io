@@ -3379,10 +3379,23 @@ body.cineflix-db-error .cineflix-db-message{
 }
 .cineflix-network-error button:hover{background:rgba(255,255,255,.16);transform:translateY(-1px);}
 .cineflix-server-switching-controls .player-controls,
-.cineflix-server-switching-controls .player-top{visibility:hidden!important;pointer-events:none!important;}
+.cineflix-server-switching-controls .player-top,
+.cineflix-server-switching-controls .center-play-pause,
+.cineflix-server-switching-controls .cineflix-server-switch{visibility:visible!important;pointer-events:none!important;opacity:1!important;}
 /* During an explicit server change ONLY the Changing Server layer is visible.
-   The normal red player loader must stay completely hidden underneath it. */
+   The normal red player loader, center play/pause SVG, controls and server badge
+   must stay completely hidden underneath it. */
 .cineflix-server-switching-controls .player-loading{display:none!important;visibility:hidden!important;opacity:0!important;}
+
+/* Server badge follows the normal player controls after playback starts.
+   During startup it is kept visible; after controls auto-hide it disappears too. */
+.cineflix-server-switch.server-badge-hidden{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    transform:translateY(-3px);
+}
+.cineflix-server-switch.server-badge-hidden select{pointer-events:none!important;}
 
 </style>
 <style>
@@ -5431,6 +5444,21 @@ function syncCenterPlayPauseWithControls(){
     }
 }
 
+function cineflixSyncServerBadgeWithControls(forceVisible=false){
+    if(!cineflixServerSwitch) return;
+    /* While the stream is genuinely starting, keep the server badge visible.
+       Once playback is running, it follows the exact controls visibility. */
+    if(cineflixServerSwitchActive){
+        cineflixServerSwitch.classList.add("server-badge-hidden");
+        return;
+    }
+    if(forceVisible || cineflixPlaybackWaitingForPlay || !playerControls.classList.contains("auto-hidden")){
+        cineflixServerSwitch.classList.remove("server-badge-hidden");
+    }else{
+        cineflixServerSwitch.classList.add("server-badge-hidden");
+    }
+}
+
 function showPlayerControls(resetTimer=true){
     if(cineflixPlaybackWaitingForPlay){
         playerControls.classList.add("auto-hidden");
@@ -5438,6 +5466,7 @@ function showPlayerControls(resetTimer=true){
         playerTop.style.display="none";
         if(playerModeBadge) playerModeBadge.classList.remove("show");
         syncCenterPlayPauseWithControls();
+        cineflixSyncServerBadgeWithControls(true);
         return;
     }
     playerControls.classList.remove("auto-hidden");
@@ -5445,6 +5474,7 @@ function showPlayerControls(resetTimer=true){
     playerTop.style.display="none";
     if(playerModeBadge) playerModeBadge.classList.add("show");
     syncCenterPlayPauseWithControls();
+    cineflixSyncServerBadgeWithControls(true);
 
     clearTimeout(controlsHideTimer);
 
@@ -5461,6 +5491,7 @@ function showPlayerControls(resetTimer=true){
             playerTop.classList.add("auto-hidden");
             if(playerModeBadge) playerModeBadge.classList.remove("show");
             syncCenterPlayPauseWithControls();
+            cineflixSyncServerBadgeWithControls(false);
         },5000);
     }
 }
@@ -5472,6 +5503,7 @@ function hidePlayerControls(){
     playerTop.style.display="none";
     if(playerModeBadge) playerModeBadge.classList.remove("show");
     syncCenterPlayPauseWithControls();
+    cineflixSyncServerBadgeWithControls(cineflixPlaybackWaitingForPlay);
 }
 
 function handlePlayerInteraction(e){
@@ -5565,7 +5597,7 @@ const MAX_AUTO_REFRESH_ATTEMPTS = 3;
 
 /* Public backend for GitHub Pages. */
 const CINEFLIX_UPDATE_API_BASE =
-    "https://seventh-michel-modems-models.trycloudflare.com";
+    "https://outlined-newark-partially-bread.trycloudflare.com";
 
 let cineflixAutoRefreshTriggeredForCurrentSource = false;
 
@@ -5958,6 +5990,8 @@ function cineflixShowNetworkError(){
 function cineflixShowServerChanging(){
     cineflixHideNetworkError();
     cineflixPlaybackWaitingForPlay = true;
+    /* Keep the SERVER badge visible during an explicit server switch. */
+    if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
     if(cineflixServerChange){
         cineflixServerChange.classList.add("show");
         cineflixServerChange.setAttribute("aria-hidden","false");
@@ -5976,6 +6010,7 @@ function cineflixFinishServerTransition(){
     }
     if(playerSurface) playerSurface.classList.remove("cineflix-server-switching-controls");
     if(playerControls) playerControls.style.pointerEvents="";
+    cineflixSyncServerBadgeWithControls(cineflixPlaybackWaitingForPlay);
 }
 function cineflixGetServer2Source(){
     return String(cineflixServer2Url||"").trim();
@@ -7160,6 +7195,7 @@ if(playerModeBadge){
 }
 updateMuteIcon();
 hidePlayerControls();
+if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
 
 /* =========================================================
    PROGRESS
