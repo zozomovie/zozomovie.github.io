@@ -5386,20 +5386,20 @@ let hlsReady = false;
    immediately replacing the player with an error state. */
 let hlsNetworkRetryCount = 0;
 let hlsRetryTimer = null;
-let hlsAutoRefreshWatchdogTimer = null;
-let hlsFatalErrorCount = 0;
 let nativeRetryCount = 0;
 let nativeRetryTimer = null;
 const MAX_STREAM_RETRIES = 8;
-const AUTO_REFRESH_WATCHDOG_MS = 20000;
 let cineflixAutoRefreshInFlight = false;
 let cineflixAutoRefreshAttempts = 0;
 const MAX_AUTO_REFRESH_ATTEMPTS = 3;
-let pendingAutoPlay = false;
-let pendingStartTime = 0;
 
+/* Public backend for GitHub Pages. */
 const CINEFLIX_UPDATE_API_BASE =
     "https://selecting-registration-nikon-race.trycloudflare.com";
+
+let cineflixAutoRefreshTriggeredForCurrentSource = false;
+let pendingAutoPlay = false;
+let pendingStartTime = 0;
 
 const QUALITY_SOURCES = {
     movie: { "480": MOVIE_DEMO_URL, "720": MOVIE_DEMO_URL, "1080": MOVIE_DEMO_URL },
@@ -5718,10 +5718,6 @@ function applyHlsQuality(choice,showMessage=true){
 function clearStreamRetryTimers(){
     if(hlsRetryTimer){ clearTimeout(hlsRetryTimer); hlsRetryTimer=null; }
     if(nativeRetryTimer){ clearTimeout(nativeRetryTimer); nativeRetryTimer=null; }
-    if(hlsAutoRefreshWatchdogTimer){
-        clearTimeout(hlsAutoRefreshWatchdogTimer);
-        hlsAutoRefreshWatchdogTimer=null;
-    }
 }
 
 function destroyHls(){
@@ -5737,12 +5733,12 @@ function destroyHls(){
 }
 
 function loadHlsSource(source,autoPlay=true,savedTime=0){
+    cineflixAutoRefreshTriggeredForCurrentSource=false;
     pendingAutoPlay=autoPlay;
     pendingStartTime=savedTime||0;
     hlsReady=false;
     hlsLevels=[];
     hlsNetworkRetryCount=0;
-    hlsFatalErrorCount=0;
     nativeRetryCount=0;
     clearStreamRetryTimers();
 
@@ -5758,10 +5754,6 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
 
         hls.on(Hls.Events.MANIFEST_PARSED,(event,data)=>{
             hlsReady=true;
-            if(hlsAutoRefreshWatchdogTimer){
-                clearTimeout(hlsAutoRefreshWatchdogTimer);
-                hlsAutoRefreshWatchdogTimer=null;
-            }
             hlsLevels=hls.levels||data.levels||[];
             rebuildQualityButtons();
 
@@ -5854,23 +5846,31 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         hls.on(Hls.Events.ERROR,(event,data)=>{
             if(!data.fatal) return;
 
-            /* Count every fatal error. MEDIA_ERROR used to recover forever
-               before the auto-refresh code could ever run. */
-            hlsFatalErrorCount++;
+            /* CURRENT MOVIE AUTO-REFRESH:
+               Do not wait for the old 8-retry cycle. A fatal HLS failure
+               immediately asks the backend for a fresh link for this movie. */
+            if(currentMode==="movie" && !cineflixAutoRefreshTriggeredForCurrentSource){
+                cineflixAutoRefreshTriggeredForCurrentSource=true;
 
-            /* After repeated fatal failures, update ONLY this movie. */
-            if(hlsFatalErrorCount >= MAX_STREAM_RETRIES){
-                (async()=>{
-                    const refreshed=await window.cineflixRefreshCurrentMovieAndRetry();
-                    if(!refreshed){
-                        hidePlayerLoading();
-                        playerEmpty.classList.remove("hidden");
-                        centerPlay.style.display="grid";
-                    }
-                })();
+                if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
+                    try{ hls.recoverMediaError(); }catch(e){}
+                    showPlayerLoading();
+
+                    setTimeout(()=>{
+                        if(currentMode!=="movie") return;
+                        if(!video.paused && video.readyState>=2) return;
+                        void cineflixRefreshCurrentMovieAndRetry(true,true);
+                    },1200);
+                    return;
+                }
+
+                /* Network / manifest / level failure -> refresh immediately. */
+                void cineflixRefreshCurrentMovieAndRetry(true,true);
                 return;
             }
 
+            /* Existing fallback retry behavior remains available after an
+               automatic refresh has already been attempted. */
             if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
                 try{
                     hls.recoverMediaError();
@@ -5895,28 +5895,13 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                 return;
             }
 
-            (async()=>{
-                const refreshed=await window.cineflixRefreshCurrentMovieAndRetry();
-                if(!refreshed){
-                    hidePlayerLoading();
-                    playerEmpty.classList.remove("hidden");
-                    centerPlay.style.display="grid";
-                }
-            })();
+            hidePlayerLoading();
+            playerEmpty.classList.remove("hidden");
+            centerPlay.style.display="grid";
        });
 
         hls.loadSource(source);
         hls.attachMedia(video);
-
-        /* Do not leave a broken first load on an endless spinner. */
-        if(currentMode==="movie" && autoPlay){
-            hlsAutoRefreshWatchdogTimer=setTimeout(()=>{
-                hlsAutoRefreshWatchdogTimer=null;
-                if(!hlsReady && currentMode==="movie" && pendingAutoPlay){
-                    void window.cineflixRefreshCurrentMovieAndRetry();
-                }
-            },AUTO_REFRESH_WATCHDOG_MS);
-        }
         return;
     }
 
@@ -5925,16 +5910,6 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         showPlayerLoading();
         video.src=source;
         video.load();
-
-        if(currentMode==="movie" && autoPlay){
-            hlsAutoRefreshWatchdogTimer=setTimeout(()=>{
-                hlsAutoRefreshWatchdogTimer=null;
-                if(!video.readyState && currentMode==="movie" && pendingAutoPlay){
-                    void window.cineflixRefreshCurrentMovieAndRetry();
-                }
-            },AUTO_REFRESH_WATCHDOG_MS);
-        }
-
         const ready=()=>{
             video.removeEventListener("loadedmetadata",ready);
             /* Do not hide here: loadedmetadata can fire before playback is
@@ -6446,9 +6421,47 @@ async function togglePlay(){
     if(!hlsReady && !video.src){
         initialPoster.classList.add("hidden");
         showPlayerLoading();
+
+        /* If this movie has never received a generated HLS link, there is
+           no HLS error event to trigger the refresh. Fetch it now. */
+        const movieSource =
+            QUALITY_SOURCES.movie?.[currentQuality] ||
+            QUALITY_SOURCES.movie?.["480"] ||
+            QUALITY_SOURCES.movie?.["720"] ||
+            QUALITY_SOURCES.movie?.["1080"] ||
+            MOVIE_DEMO_URL ||
+            "";
+
+        if(currentMode==="movie" && !movieSource){
+            cineflixAutoRefreshTriggeredForCurrentSource=true;
+            const refreshed=await cineflixRefreshCurrentMovieAndRetry(false,true);
+            if(!refreshed){
+                hidePlayerLoading();
+                playerEmpty.classList.remove("hidden");
+                centerPlay.style.display="grid";
+                return;
+            }
+        }
+
         const adShown=await playVastAdThenMovie();
         if(adShown) return;
-        loadHlsSource(QUALITY_SOURCES[currentMode]?.[currentQuality] || MOVIE_DEMO_URL,true,video.currentTime||0);
+
+        const sourceAfterRefresh =
+            QUALITY_SOURCES[currentMode]?.[currentQuality] ||
+            (currentMode==="movie" ? MOVIE_DEMO_URL : TRAILER_DEMO_URL) ||
+            "";
+
+        if(sourceAfterRefresh){
+            loadHlsSource(sourceAfterRefresh,true,video.currentTime||0);
+        }else if(currentMode==="movie"){
+            cineflixAutoRefreshTriggeredForCurrentSource=false;
+            const refreshed=await cineflixRefreshCurrentMovieAndRetry(true,true);
+            if(!refreshed){
+                hidePlayerLoading();
+                playerEmpty.classList.remove("hidden");
+                centerPlay.style.display="grid";
+            }
+        }
         return;
     }
 
@@ -6580,12 +6593,7 @@ video.addEventListener("loadeddata",()=>{
 });
 video.addEventListener("playing",()=>{
     cineflixAutoRefreshAttempts=0;
-    hlsFatalErrorCount=0;
-    hlsNetworkRetryCount=0;
-    if(hlsAutoRefreshWatchdogTimer){
-        clearTimeout(hlsAutoRefreshWatchdogTimer);
-        hlsAutoRefreshWatchdogTimer=null;
-    }
+    cineflixAutoRefreshTriggeredForCurrentSource=false;
     playerEmpty.classList.add("hidden");
     video.style.visibility="visible";
     video.style.opacity="1";
@@ -6595,15 +6603,18 @@ video.addEventListener("playing",()=>{
 });
 video.addEventListener("error",()=>{
     if(typeof Hls!=="undefined" && hls) return;
+
+    /* Native HLS failure -> refresh the CURRENT movie immediately. */
+    if(currentMode==="movie" && !cineflixAutoRefreshTriggeredForCurrentSource){
+        cineflixAutoRefreshTriggeredForCurrentSource=true;
+        void cineflixRefreshCurrentMovieAndRetry(true,true);
+        return;
+    }
+
     if(!video.src || nativeRetryCount >= MAX_STREAM_RETRIES){
-        (async()=>{
-            const refreshed=await window.cineflixRefreshCurrentMovieAndRetry();
-            if(!refreshed){
-                hidePlayerLoading();
-                playerEmpty.classList.remove("hidden");
-                centerPlay.style.display="grid";
-            }
-        })();
+        hidePlayerLoading();
+        playerEmpty.classList.remove("hidden");
+        centerPlay.style.display="grid";
         return;
     }
 
@@ -7449,6 +7460,17 @@ document.addEventListener("fullscreenchange",()=>{
 
         window.CINEFLIX_MOVIE=movie;
 
+        /* IMPORTANT: If Admin has not generated an HLS link for this movie,
+           fetch/generate ONLY this movie automatically. No Update All click. */
+        if(!MOVIE_DEMO_URL && currentMode==="movie"){
+            setTimeout(()=>{
+                if(!MOVIE_DEMO_URL && !cineflixAutoRefreshInFlight){
+                    cineflixAutoRefreshTriggeredForCurrentSource=true;
+                    void cineflixRefreshCurrentMovieAndRetry(false,true);
+                }
+            },0);
+        }
+
 /* =========================================================
    CONTINUE WATCHING — ADD-ONLY LOGIC
    Existing player/source/quality code is untouched.
@@ -7634,7 +7656,7 @@ window.addEventListener("beforeunload",()=>{
         });
     }
 
-    function cineflixApplyLiveMovieSource(movie){
+    function cineflixApplyLiveMovieSource(movie, forceReload=false, autoPlayOverride=null){
         if(!movie) return;
 
         const nextSnapshot = cineflixMovieSnapshot(movie);
@@ -7675,9 +7697,10 @@ window.addEventListener("beforeunload",()=>{
             "1080": TRAILER_DEMO_URL
         };
 
-        if(nextMain && nextMain !== oldMain){
+        if(nextMain && (forceReload || nextMain !== oldMain)){
 
-            const wasPlaying = !video.paused;
+            const wasPlaying =
+                autoPlayOverride === null ? !video.paused : !!autoPlayOverride;
             const oldTime =
                 Number.isFinite(video.currentTime)
                     ? video.currentTime
@@ -7710,8 +7733,7 @@ window.addEventListener("beforeunload",()=>{
         }
     }
 
-    window.cineflixRefreshCurrentMovieAndRetry = async function(){
-       if(currentMode!=="movie") return false;
+     async function cineflixRefreshCurrentMovieAndRetry(shouldPlay=true, forceReload=true){
        if(cineflixAutoRefreshInFlight) return false;
        if(cineflixAutoRefreshAttempts >= MAX_AUTO_REFRESH_ATTEMPTS) return false;
 
@@ -7726,13 +7748,9 @@ window.addEventListener("beforeunload",()=>{
        centerPlay.style.display="none";
 
        try{
-           // GitHub Pages cannot serve the Node.js API. Use the local Node
-           // backend when this page is hosted on GitHub Pages. If you deploy
-           // the Node backend publicly, set CINEFLIX_UPDATE_API_BASE to that
-           // public backend URL.
            const apiBase = String(
                window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
-           ).replace(/\/$/, "");
+           ).replace(/\/$/,"");
 
            const response = await fetch(apiBase + "/update_movie_link",{
                method:"POST",
@@ -7740,6 +7758,7 @@ window.addEventListener("beforeunload",()=>{
                body:JSON.stringify({movie_id:movieId}),
                cache:"no-store"
            });
+
            const data = await response.json().catch(()=>({}));
            if(!response.ok || !data.success || !data.movie){
                throw new Error(data.message || "Current movie auto-update failed");
@@ -7749,10 +7768,19 @@ window.addEventListener("beforeunload",()=>{
            window.CINEFLIX_MOVIE = freshMovie;
            cineflixLastMovieSnapshot = "";
 
-           const retryTime = Number.isFinite(video.currentTime) ? video.currentTime : 0;
-           pendingAutoPlay = true;
+           const retryTime =
+               Number.isFinite(video.currentTime) ? video.currentTime : 0;
+
+           pendingAutoPlay = !!shouldPlay;
            pendingStartTime = retryTime;
-           cineflixApplyLiveMovieSource(freshMovie);
+
+           /* Force reload even if the generated URL happens to be unchanged. */
+           cineflixApplyLiveMovieSource(
+               freshMovie,
+               !!forceReload,
+               !!shouldPlay
+           );
+
            return true;
        }catch(e){
            console.warn("CINEFLIX current movie auto-update failed:",e);
@@ -7760,8 +7788,7 @@ window.addEventListener("beforeunload",()=>{
        }finally{
            cineflixAutoRefreshInFlight = false;
        }
-   }
-
+    }
    async function cineflixFetchLatestMovie(){
         const params = new URLSearchParams(window.location.search);
         const movieId = params.get("id");
