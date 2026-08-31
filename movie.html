@@ -5428,6 +5428,13 @@ video.addEventListener("play",()=>{
     updateCenterPlayPause();
 });
 video.addEventListener("pause",()=>{
+    if(cineflixNetworkError && cineflixNetworkError.classList.contains("show")){
+        if(centerPlayPause){
+            centerPlayPause.classList.remove("show");
+            centerPlayPause.style.display="none";
+        }
+        return;
+    }
     if(cineflixServerSwitchActive){
         /* A switch internally pauses the video. Never expose the normal
            pause/play SVG or controls during the Changing Server state. */
@@ -6042,9 +6049,24 @@ function cineflixHideNetworkError(){
     if(!cineflixNetworkError) return;
     cineflixNetworkError.classList.remove("show");
     cineflixNetworkError.setAttribute("aria-hidden","true");
+    if(playerSurface && !cineflixServerSwitchActive){
+        playerSurface.classList.remove("cineflix-server-switching-controls");
+    }
 }
 function cineflixShowNetworkError(){
     if(cineflixServerChange) cineflixServerChange.classList.remove("show");
+
+    /* NETWORK ERROR must never expose the normal Play/Pause SVG. A failed
+       server switch can fire the video's internal pause event just before
+       the error UI is shown, so explicitly lock both center play layers here. */
+    if(centerPlayPause){
+        centerPlayPause.classList.remove("show");
+        centerPlayPause.style.display="none";
+    }
+    if(centerPlay){
+        centerPlay.style.display="none";
+    }
+
     if(cineflixNetworkError){
         cineflixNetworkError.classList.add("show");
         cineflixNetworkError.setAttribute("aria-hidden","false");
@@ -6053,6 +6075,8 @@ function cineflixShowNetworkError(){
         playerControls.classList.add("auto-hidden");
         playerControls.style.pointerEvents="none";
     }
+    if(playerTop) playerTop.classList.add("auto-hidden");
+    if(playerSurface) playerSurface.classList.add("cineflix-server-switching-controls");
 }
 function cineflixShowServerChanging(){
     cineflixHideNetworkError();
