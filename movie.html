@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <link id="cineflixInstantThumbPreload" rel="preload" as="image" href="https://i.ibb.co/dz5y0Vq/ZOZO-Movies.jpg" fetchpriority="high">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8188,6 +8189,98 @@ window.addEventListener("beforeunload",()=>{
 
     initMovie();
 })();
+</script>
+
+   <script>
+// Universal Player Loader (Dono Purane aur Naye Links Chalane ke liye)
+function playVideoLink(videoUrl) {
+    const videoElement = document.getElementById('movieVideo');
+    let trailerOverlay = document.getElementById('trailerFrameOverlay');
+    const initialPoster = document.getElementById('initialPoster');
+    const playerEmpty = document.getElementById('playerEmpty');
+
+    // Poster aur empty screens ko hide karein
+    if (initialPoster) initialPoster.classList.add('hidden');
+    if (playerEmpty) playerEmpty.classList.add('hidden');
+
+    // Purane HLS instance ko cleanup karein agar exist karta hai
+    if (window.hlsPlayerInstance) {
+        window.hlsPlayerInstance.destroy();
+        window.hlsPlayerInstance = null;
+    }
+
+    // 1. Agar Link YOUTUBE ya EMBED Iframe link hai
+    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('/embed/')) {
+        let embedUrl = videoUrl;
+        
+        // YouTube URLs ko embed format mein convert karein
+        if (videoUrl.includes('watch?v=')) {
+            embedUrl = videoUrl.replace('watch?v=', 'embed/');
+        } else if (videoUrl.includes('youtu.be/')) {
+            embedUrl = videoUrl.replace('youtu.be/', 'www.youtube.com/embed/');
+        }
+
+        // Standard HTML video ko pause aur hide karein
+        videoElement.pause();
+        videoElement.style.display = 'none';
+
+        // Dynamic Iframe Create/Show karein
+        if (!trailerOverlay) {
+            trailerOverlay = document.createElement('iframe');
+            trailerOverlay.id = 'trailerFrameOverlay';
+            document.getElementById('videoPlayer').appendChild(trailerOverlay);
+        }
+
+        trailerOverlay.src = embedUrl;
+        trailerOverlay.classList.add('show');
+        document.getElementById('videoPlayer').classList.add('trailer-mode');
+        return;
+    }
+
+    // 2. Agar Standard Video Link hai (MP4, M3U8, WebM, etc.)
+    if (trailerOverlay) {
+        trailerOverlay.classList.remove('show');
+        trailerOverlay.src = '';
+    }
+    
+    document.getElementById('videoPlayer').classList.remove('trailer-mode');
+    videoElement.style.display = 'block';
+
+    // A. Naye `.m3u8` (HLS) Links ke liye logic
+    if (videoUrl.includes('.m3u8')) {
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(videoUrl);
+            hls.attachMedia(videoElement);
+            window.hlsPlayerInstance = hls;
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                videoElement.play().catch(e => console.log("Auto-play blocked:", e));
+            });
+        } 
+        // Safari (iOS/Mac) Native HLS support
+        else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+            videoElement.src = videoUrl;
+            videoElement.play().catch(e => console.log("Auto-play blocked:", e));
+        }
+    } 
+    // B. Purane `.mp4`, `.webm`, `.mkv` Direct Links ke liye logic
+    else {
+        videoElement.src = videoUrl;
+        videoElement.load();
+        videoElement.play().catch(e => console.log("Auto-play blocked:", e));
+    }
+}
+
+// EXAMPLE USE CASE (Video Load karne ke liye function call karein):
+// Purane Link ke liye:
+// playVideoLink("https://example.com/movie.mp4");
+
+// Naye Link (.m3u8 / Stream) ke liye:
+// playVideoLink("https://example.com/hls/stream.m3u8");
+
+// YouTube / Embed Links ke liye:
+// playVideoLink("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 </script>
 </body>
 </html>
