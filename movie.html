@@ -3380,12 +3380,23 @@ body.cineflix-db-error .cineflix-db-message{
 .cineflix-network-error button:hover{background:rgba(255,255,255,.16);transform:translateY(-1px);}
 .cineflix-server-switching-controls .player-controls,
 .cineflix-server-switching-controls .player-top,
-.cineflix-server-switching-controls .center-play-pause,
-.cineflix-server-switching-controls .cineflix-server-switch{visibility:visible!important;pointer-events:none!important;opacity:1!important;}
-/* During an explicit server change ONLY the Changing Server layer is visible.
-   The normal red player loader, center play/pause SVG, controls and server badge
-   must stay completely hidden underneath it. */
-.cineflix-server-switching-controls .player-loading{display:none!important;visibility:hidden!important;opacity:0!important;}
+.cineflix-server-switching-controls .center-play-pause{
+    visibility:hidden!important;
+    pointer-events:none!important;
+    opacity:0!important;
+}
+/* During an explicit server change ONLY the Changing Server layer and the
+   SERVER badge are visible. The red loader and play/pause SVG stay hidden. */
+.cineflix-server-switching-controls .player-loading{
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+}
+.cineflix-server-switching-controls .cineflix-server-switch{
+    visibility:visible!important;
+    pointer-events:none!important;
+    opacity:1!important;
+}
 
 /* Server badge follows the normal player controls after playback starts.
    During startup it is kept visible; after controls auto-hide it disappears too. */
@@ -3872,7 +3883,7 @@ body.cineflix-db-error .cineflix-db-message{
 ======================================================= -->
 <section class="player-section">
 <div class="video-player" id="videoPlayer">
-<div class="cineflix-server-switch" id="cineflixServerSwitch" aria-label="Video server">
+<div class="cineflix-server-switch server-badge-hidden" id="cineflixServerSwitch" aria-label="Video server">
     <label for="cineflixServerSelect">SERVER</label>
     <select id="cineflixServerSelect">
         <option value="1">Server 1</option>
@@ -5063,6 +5074,11 @@ function updateCenterPlayPause(){
 
 function showCenterPlayPause(){
     if(!centerPlayPause) return;
+    if(cineflixServerSwitchActive || (playerSurface && playerSurface.classList.contains("cineflix-server-switching-controls"))){
+        centerPlayPause.classList.remove("show");
+        centerPlayPause.style.display="none";
+        return;
+    }
     if(playerSurface && playerSurface.classList.contains("trailer-mode")) return;
     updateCenterPlayPause();
     centerPlayPause.classList.add("show");
@@ -5412,7 +5428,16 @@ video.addEventListener("play",()=>{
     updateCenterPlayPause();
 });
 video.addEventListener("pause",()=>{
-    if(!cineflixServerSwitchActive) cineflixPlaybackWaitingForPlay = false;
+    if(cineflixServerSwitchActive){
+        /* A switch internally pauses the video. Never expose the normal
+           pause/play SVG or controls during the Changing Server state. */
+        if(centerPlayPause){
+            centerPlayPause.classList.remove("show");
+            centerPlayPause.style.display="none";
+        }
+        return;
+    }
+    cineflixPlaybackWaitingForPlay = false;
     hidePlayerLoading();
     updateCenterPlayPause();
     showCenterPlayPause();
@@ -5444,12 +5469,21 @@ function syncCenterPlayPauseWithControls(){
     }
 }
 
+let cineflixServerDropdownOpen = false;
+
 function cineflixSyncServerBadgeWithControls(forceVisible=false){
     if(!cineflixServerSwitch) return;
-    /* While the stream is genuinely starting, keep the server badge visible.
-       Once playback is running, it follows the exact controls visibility. */
+    /* Keep the SERVER badge visible while the native server dropdown is open.
+       It must not disappear just because the normal controls auto-hide.
+       The badge is allowed to change state only after a server is selected. */
+    if(cineflixServerDropdownOpen){
+        cineflixServerSwitch.classList.remove("server-badge-hidden");
+        return;
+    }
+    /* During an explicit server switch the badge stays visible together with
+       the Changing Server animation until the selected source starts playing. */
     if(cineflixServerSwitchActive){
-        cineflixServerSwitch.classList.add("server-badge-hidden");
+        cineflixServerSwitch.classList.remove("server-badge-hidden");
         return;
     }
     if(forceVisible || cineflixPlaybackWaitingForPlay || !playerControls.classList.contains("auto-hidden")){
@@ -6087,7 +6121,26 @@ function cineflixSwitchServer(server){
     cineflixBeginServerRetry();
 }
 if(cineflixServerSelect){
-    cineflixServerSelect.addEventListener("change",()=>cineflixSwitchServer(cineflixServerSelect.value));
+    /* Opening the native dropdown must NOT hide the SERVER badge. Keep it
+       visible for the whole selection interaction; only the actual change
+       commits the new server and starts the switch animation. */
+    cineflixServerSelect.addEventListener("pointerdown",()=>{
+        cineflixServerDropdownOpen=true;
+        if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
+    });
+    cineflixServerSelect.addEventListener("focus",()=>{
+        if(!cineflixServerSelect.disabled){
+            cineflixServerDropdownOpen=true;
+            if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
+        }
+    });
+    cineflixServerSelect.addEventListener("change",()=>{
+        /* The selection is the exact moment the dropdown interaction ends.
+           Keep the badge visible while cineflixSwitchServer() shows Changing
+           Server, then let the normal controls/badge sync take over. */
+        cineflixServerDropdownOpen=false;
+        cineflixSwitchServer(cineflixServerSelect.value);
+    });
 }
 if(cineflixNetworkRetry){
     cineflixNetworkRetry.addEventListener("click",()=>{
@@ -7195,7 +7248,7 @@ if(playerModeBadge){
 }
 updateMuteIcon();
 hidePlayerControls();
-if(cineflixServerSwitch) cineflixServerSwitch.classList.remove("server-badge-hidden");
+if(cineflixServerSwitch) cineflixServerSwitch.classList.add("server-badge-hidden");
 
 /* =========================================================
    PROGRESS
