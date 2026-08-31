@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+   
 <link id="cineflixInstantThumbPreload" rel="preload" as="image" href="https://i.ibb.co/dz5y0Vq/ZOZO-Movies.jpg" fetchpriority="high">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3633,6 +3633,27 @@ body.cineflix-db-error .cineflix-db-message{
 }
 .vast-ad-overlay.has-controls .vast-ad-click{bottom:42px;}
 </style>
+
+<style id="cineflix-server-switch-css">
+/* SERVER 1 / SERVER 2 — additive player control */
+.server-select-wrap{position:relative;display:flex;align-items:center;flex:none}
+.server-select{appearance:none;-webkit-appearance:none;height:27px;min-width:82px;padding:0 23px 0 10px;border:1px solid rgba(255,255,255,.16);border-radius:6px;background:rgba(255,255,255,.07);color:#fff;font:700 10px Inter,Arial,sans-serif;outline:none;cursor:pointer}
+.server-select:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.24)}
+.server-select:focus{border-color:rgba(229,9,20,.7);box-shadow:0 0 0 2px rgba(229,9,20,.10)}
+.server-select:disabled{opacity:.45;cursor:not-allowed}
+.server-select-wrap::after{content:"";position:absolute;right:9px;top:10px;width:5px;height:5px;border-right:1px solid #bbb;border-bottom:1px solid #bbb;transform:rotate(45deg);pointer-events:none}
+.server-switch-overlay{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .16s ease,visibility .16s ease}
+.server-switch-overlay.show{opacity:1;visibility:visible}
+.server-switch-card{min-width:185px;padding:17px 20px 16px;border:1px solid rgba(255,255,255,.13);border-radius:16px;background:rgba(8,8,11,.78);box-shadow:0 18px 55px rgba(0,0,0,.5),0 0 30px rgba(229,9,20,.12);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);text-align:center;transform:translateY(7px) scale(.96);transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.server-switch-overlay.show .server-switch-card{transform:translateY(0) scale(1)}
+.server-switch-icon{width:42px;height:42px;margin:0 auto 9px;display:block;animation:serverSwitchSpin 1.15s linear infinite}
+.server-switch-icon .orbit{transform-origin:50% 50%;animation:serverSwitchDash 1.05s ease-in-out infinite}
+.server-switch-title{font-size:12px;font-weight:900;letter-spacing:.2px;color:#fff}
+.server-switch-sub{margin-top:4px;font-size:9px;font-weight:700;color:#9b9ba3}
+@keyframes serverSwitchSpin{to{transform:rotate(360deg)}}
+@keyframes serverSwitchDash{0%,100%{stroke-dashoffset:52}50%{stroke-dashoffset:10}}
+@media(max-width:520px){.server-select{min-width:76px;height:26px;font-size:9px;padding-left:8px;padding-right:20px}.server-select-wrap::after{right:8px;top:9px}.server-switch-card{min-width:170px;padding:15px 17px}}
+</style>
 </head>
 <body class="cineflix-db-loading">
 <div class="movie-page-skeleton" id="moviePageSkeleton" aria-label="Loading movie">
@@ -3832,6 +3853,18 @@ body.cineflix-db-error .cineflix-db-message{
 
 </div>
 
+<div class="server-switch-overlay" id="serverSwitchOverlay" aria-hidden="true">
+    <div class="server-switch-card">
+        <svg class="server-switch-icon" viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="24" r="18" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="2"/>
+            <circle class="orbit" cx="24" cy="24" r="18" fill="none" stroke="#e50914" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="18 34"/>
+            <path d="M17 24h14M24 17v14" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".9"/>
+        </svg>
+        <div class="server-switch-title" id="serverSwitchTitle">Changing Server</div>
+        <div class="server-switch-sub" id="serverSwitchSub">Connecting to Server 2…</div>
+    </div>
+</div>
+
 <div class="player-loading" id="playerLoading" aria-hidden="true">
     <div class="player-loader-mark" aria-hidden="true"><span></span><span></span></div>
 </div>
@@ -3931,6 +3964,13 @@ body.cineflix-db-error .cineflix-db-message{
             <option value="720">720p</option>
             <option value="1080" selected>1080p</option>
         </select>
+
+        <div class="server-select-wrap" id="serverSelectWrap" title="Change server">
+            <select class="server-select" id="serverSelect" aria-label="Video server">
+                <option value="1">Server 1</option>
+                <option value="2">Server 2</option>
+            </select>
+        </div>
 
         <div class="player-right-icons">
 
@@ -4708,6 +4748,12 @@ const playerModeLabel =
 const playerModeBadge =
     document.getElementById("playerModeBadge");
 
+const serverSelect = document.getElementById("serverSelect");
+const serverSelectWrap = document.getElementById("serverSelectWrap");
+const serverSwitchOverlay = document.getElementById("serverSwitchOverlay");
+const serverSwitchTitle = document.getElementById("serverSwitchTitle");
+const serverSwitchSub = document.getElementById("serverSwitchSub");
+
 const trailerToggle =
     document.getElementById("trailerToggle");
 
@@ -5374,7 +5420,10 @@ function showToast(message){
 
 /* Movie/trailer sources are populated only from Admin/Supabase data. */
 let MOVIE_DEMO_URL = "";
+let MOVIE_SERVER_2_URL = "";
 let TRAILER_DEMO_URL = "";
+let currentServer = "1";
+let serverSwitchTimer = null;
 
 
 
@@ -5888,7 +5937,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             /* CURRENT MOVIE AUTO-REFRESH:
                Do not wait for the old 8-retry cycle. A fatal HLS failure
                immediately asks the backend for a fresh link for this movie. */
-            if(currentMode==="movie" && !cineflixAutoRefreshTriggeredForCurrentSource){
+            if(currentMode==="movie" && currentServer==="1" && !cineflixAutoRefreshTriggeredForCurrentSource){
                 cineflixAutoRefreshTriggeredForCurrentSource=true;
 
                 if(data.type===Hls.ErrorTypes.MEDIA_ERROR){
@@ -5916,6 +5965,11 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                     showPlayerLoading();
                     return;
                 }catch(e){}
+            }
+
+            if(currentMode==="movie" && currentServer==="2" && data.fatal){
+                hideServerSwitch();
+                showToast("Server 2 stream error.");
             }
 
             if((data.type===Hls.ErrorTypes.NETWORK_ERROR || data.details) && hlsNetworkRetryCount < MAX_STREAM_RETRIES){
@@ -5983,11 +6037,70 @@ function hidePlayerLoading(){
     playerEmpty.classList.add("hidden");
 }
 
-function setPlayerMode(mode,autoPlay=true){
+function getCurrentMovieSource(){
+    if(currentServer === "2") return MOVIE_SERVER_2_URL || "";
+    return QUALITY_SOURCES.movie?.[currentQuality] ||
+        QUALITY_SOURCES.movie?.["480"] ||
+        QUALITY_SOURCES.movie?.["720"] ||
+        QUALITY_SOURCES.movie?.["1080"] ||
+        MOVIE_DEMO_URL || "";
+}
+
+function syncServerUI(){
+    if(!serverSelect) return;
+    serverSelect.value=currentServer;
+    const hasServer2=!!String(MOVIE_SERVER_2_URL||"").trim();
+    const opt2=serverSelect.querySelector('option[value="2"]');
+    if(opt2) opt2.disabled=!hasServer2;
+    serverSelect.disabled=(currentMode==="trailer" || !MOVIE_DEMO_URL && !hasServer2);
+    if(serverSelectWrap) serverSelectWrap.style.display=currentMode==="trailer" ? "none" : "flex";
+}
+
+function showServerSwitch(server){
+    if(!serverSwitchOverlay) return;
+    clearTimeout(serverSwitchTimer);
+    if(serverSwitchTitle) serverSwitchTitle.textContent="Changing Server";
+    if(serverSwitchSub) serverSwitchSub.textContent=`Connecting to Server ${server}…`;
+    serverSwitchOverlay.classList.add("show");
+    serverSwitchOverlay.setAttribute("aria-hidden","false");
+}
+
+function hideServerSwitch(){
+    if(!serverSwitchOverlay) return;
+    serverSwitchOverlay.classList.remove("show");
+    serverSwitchOverlay.setAttribute("aria-hidden","true");
+}
+
+function switchMovieServer(server){
+    server=String(server)==="2" ? "2" : "1";
+    if(server===currentServer) return;
+    if(server==="2" && !MOVIE_SERVER_2_URL){
+        if(serverSelect) serverSelect.value=currentServer;
+        showToast("Server 2 is not available.");
+        return;
+    }
+    const savedTime=Number.isFinite(video.currentTime) ? video.currentTime : 0;
+    const wasPlaying=!video.paused && !video.ended;
+    currentServer=server;
+    syncServerUI();
+    showServerSwitch(server);
+    // Server changes are movie-only and preserve the exact playback position.
+    cineflixAutoRefreshTriggeredForCurrentSource=true;
+    setPlayerMode("movie",wasPlaying,savedTime);
+    showPlayerControls(true);
+}
+
+if(serverSelect){
+    serverSelect.addEventListener("change",()=>switchMovieServer(serverSelect.value));
+}
+
+function setPlayerMode(mode,autoPlay=true,startTime=0){
     closeSettings();
     currentMode=mode;
     const isTrailer=mode==="trailer";
-    const source=QUALITY_SOURCES[mode]?.[currentQuality] || (isTrailer ? TRAILER_DEMO_URL : MOVIE_DEMO_URL);
+    const source=isTrailer
+        ? (QUALITY_SOURCES.trailer?.[currentQuality] || TRAILER_DEMO_URL)
+        : getCurrentMovieSource();
 
     playerModeLabel.textContent=isTrailer ? "TRAILER" : "MOVIE";
     if(playerModeBadge){
@@ -5995,6 +6108,7 @@ function setPlayerMode(mode,autoPlay=true){
         playerModeBadge.classList.add("show");
     }
     trailerToggleText.textContent=isTrailer ? "Movie" : "Trailer";
+    syncServerUI();
     trailerToggleIcon.innerHTML=isTrailer ? `
         <path d="M4 6h16v12H4z"/><path d="m8 8 8 4-8 4z"/><path d="M7 4h10"/>` : `
         <path d="M4 7h16v10H4z"/><path d="m10 10 5 2-5 2z"/>`;
@@ -6032,14 +6146,15 @@ function setPlayerMode(mode,autoPlay=true){
         initialPoster.classList.add("hidden");
         initialPoster.setAttribute("aria-hidden","true");
         showPlayerLoading();
-        loadHlsSource(source,true,0);
+        loadHlsSource(source,true,startTime||0);
     }else{
         initialPoster.classList.remove("hidden");
         initialPoster.setAttribute("aria-hidden","false");
         hidePlayerLoading();
         centerPlay.style.display="grid";
-        loadHlsSource(source,false,0);
+        loadHlsSource(source,false,startTime||0);
     }
+    syncServerUI();
 }
 
 /* =========================================================
@@ -6648,6 +6763,7 @@ video.addEventListener("loadeddata",()=>{
     video.style.zIndex="2";
 });
 video.addEventListener("playing",()=>{
+    hideServerSwitch();
     cineflixAutoRefreshAttempts=0;
     cineflixAutoRefreshTriggeredForCurrentSource=false;
     playerEmpty.classList.add("hidden");
@@ -6658,6 +6774,11 @@ video.addEventListener("playing",()=>{
     showPlayerControls(true);
 });
 video.addEventListener("error",()=>{
+    if(currentMode==="movie" && currentServer==="2"){
+        hideServerSwitch();
+        if(serverSelect) serverSelect.value="2";
+        showToast("Server 2 could not be loaded.");
+    }
     if(typeof Hls!=="undefined" && hls) return;
 
     /* Native HLS failure -> refresh the CURRENT movie immediately. */
@@ -7490,6 +7611,8 @@ document.addEventListener("fullscreenchange",()=>{
 
         // Real video sources saved by Admin only. No demo fallback.
         MOVIE_DEMO_URL = movie.video_1080 || movie.video_720 || movie.video_480 || "";
+        MOVIE_SERVER_2_URL = movie.video_server_2 || "";
+        currentServer = "1";
         TRAILER_DEMO_URL = normalizeTrailerUrl(movie.trailer_url || "");
 
         QUALITY_SOURCES.movie = {
@@ -7517,6 +7640,7 @@ document.addEventListener("fullscreenchange",()=>{
             centerPlay.style.display="grid";
             video.pause();
         }
+        syncServerUI();
 
         window.CINEFLIX_MOVIE=movie;
 
@@ -7701,6 +7825,7 @@ window.addEventListener("beforeunload",()=>{
             video_1080: movie.video_1080 || "",
             video_720: movie.video_720 || "",
             video_480: movie.video_480 || "",
+            video_server_2: movie.video_server_2 || "",
             trailer_url: movie.trailer_url || "",
             updated_at: movie.updated_at || ""
         });
@@ -7718,6 +7843,7 @@ window.addEventListener("beforeunload",()=>{
             "720": movie.video_720 || "",
             "1080": movie.video_1080 || ""
         };
+        const nextServer2 = movie.video_server_2 || "";
 
         const nextMain =
             nextSources[String(currentQuality)] ||
@@ -7733,6 +7859,7 @@ window.addEventListener("beforeunload",()=>{
             "";
 
         QUALITY_SOURCES.movie = nextSources;
+        MOVIE_SERVER_2_URL = nextServer2;
         MOVIE_DEMO_URL =
             nextSources["1080"] ||
             nextSources["720"] ||
@@ -7747,7 +7874,8 @@ window.addEventListener("beforeunload",()=>{
             "1080": TRAILER_DEMO_URL
         };
 
-        if(nextMain && (forceReload || nextMain !== oldMain)){
+        const selectedMain = currentServer === "2" ? nextServer2 : nextMain;
+        if(selectedMain && (forceReload || selectedMain !== oldMain)){
 
             const wasPlaying =
                 autoPlayOverride === null ? !video.paused : !!autoPlayOverride;
@@ -7778,9 +7906,9 @@ window.addEventListener("beforeunload",()=>{
                 centerPlay.style.display="grid";
             }
 
-            setPlayerMode("movie", wasPlaying);
+            setPlayerMode("movie", wasPlaying, oldTime);
 
-        }else if(!nextMain){
+        }else if(!selectedMain){
 
             try{ destroyHls(); }catch(e){}
 
@@ -7969,6 +8097,8 @@ window.addEventListener("beforeunload",()=>{
                 "720":freshMovie.video_720 || "",
                 "1080":freshMovie.video_1080 || ""
             };
+            MOVIE_SERVER_2_URL=freshMovie.video_server_2 || MOVIE_SERVER_2_URL || "";
+            syncServerUI();
 
             console.log("CINEFLIX background movie link repaired");
         }catch(error){
@@ -8189,98 +8319,6 @@ window.addEventListener("beforeunload",()=>{
 
     initMovie();
 })();
-</script>
-
-   <script>
-// Universal Player Loader (Dono Purane aur Naye Links Chalane ke liye)
-function playVideoLink(videoUrl) {
-    const videoElement = document.getElementById('movieVideo');
-    let trailerOverlay = document.getElementById('trailerFrameOverlay');
-    const initialPoster = document.getElementById('initialPoster');
-    const playerEmpty = document.getElementById('playerEmpty');
-
-    // Poster aur empty screens ko hide karein
-    if (initialPoster) initialPoster.classList.add('hidden');
-    if (playerEmpty) playerEmpty.classList.add('hidden');
-
-    // Purane HLS instance ko cleanup karein agar exist karta hai
-    if (window.hlsPlayerInstance) {
-        window.hlsPlayerInstance.destroy();
-        window.hlsPlayerInstance = null;
-    }
-
-    // 1. Agar Link YOUTUBE ya EMBED Iframe link hai
-    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('/embed/')) {
-        let embedUrl = videoUrl;
-        
-        // YouTube URLs ko embed format mein convert karein
-        if (videoUrl.includes('watch?v=')) {
-            embedUrl = videoUrl.replace('watch?v=', 'embed/');
-        } else if (videoUrl.includes('youtu.be/')) {
-            embedUrl = videoUrl.replace('youtu.be/', 'www.youtube.com/embed/');
-        }
-
-        // Standard HTML video ko pause aur hide karein
-        videoElement.pause();
-        videoElement.style.display = 'none';
-
-        // Dynamic Iframe Create/Show karein
-        if (!trailerOverlay) {
-            trailerOverlay = document.createElement('iframe');
-            trailerOverlay.id = 'trailerFrameOverlay';
-            document.getElementById('videoPlayer').appendChild(trailerOverlay);
-        }
-
-        trailerOverlay.src = embedUrl;
-        trailerOverlay.classList.add('show');
-        document.getElementById('videoPlayer').classList.add('trailer-mode');
-        return;
-    }
-
-    // 2. Agar Standard Video Link hai (MP4, M3U8, WebM, etc.)
-    if (trailerOverlay) {
-        trailerOverlay.classList.remove('show');
-        trailerOverlay.src = '';
-    }
-    
-    document.getElementById('videoPlayer').classList.remove('trailer-mode');
-    videoElement.style.display = 'block';
-
-    // A. Naye `.m3u8` (HLS) Links ke liye logic
-    if (videoUrl.includes('.m3u8')) {
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(videoUrl);
-            hls.attachMedia(videoElement);
-            window.hlsPlayerInstance = hls;
-
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                videoElement.play().catch(e => console.log("Auto-play blocked:", e));
-            });
-        } 
-        // Safari (iOS/Mac) Native HLS support
-        else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-            videoElement.src = videoUrl;
-            videoElement.play().catch(e => console.log("Auto-play blocked:", e));
-        }
-    } 
-    // B. Purane `.mp4`, `.webm`, `.mkv` Direct Links ke liye logic
-    else {
-        videoElement.src = videoUrl;
-        videoElement.load();
-        videoElement.play().catch(e => console.log("Auto-play blocked:", e));
-    }
-}
-
-// EXAMPLE USE CASE (Video Load karne ke liye function call karein):
-// Purane Link ke liye:
-// playVideoLink("https://example.com/movie.mp4");
-
-// Naye Link (.m3u8 / Stream) ke liye:
-// playVideoLink("https://example.com/hls/stream.m3u8");
-
-// YouTube / Embed Links ke liye:
-// playVideoLink("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 </script>
 </body>
 </html>
