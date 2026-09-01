@@ -8801,58 +8801,6 @@ window.addEventListener("beforeunload",()=>{
    
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-    <script>
-        let hlsInstance = null;
-
-        async function loadServer2Stream() {
-            try {
-                let response = await fetch('https://instanthello.indonesiarupee34.workers.dev/?url=https://nxsha.space/watch/movie/857598');
-                let data = await response.json();
-                
-                if (data.url) {
-                    initPlayer(data.url);
-                } else {
-                    console.error("Worker se m3u8 link nahi mili.");
-                }
-            } catch (err) {
-                console.error("Fetch error:", err);
-            }
-        }
-
-        function initPlayer(m3u8Url) {
-            var video = document.getElementById('videoElement'); // Yahan check kar lena ki tumhare video tag ki id 'videoElement' hi hai ya kuch aur (jaise id="player")
-            
-            if (Hls.isSupported()) {
-                if (hlsInstance) {
-                    hlsInstance.destroy();
-                }
-                
-                hlsInstance = new Hls();
-                hlsInstance.loadSource(m3u8Url);
-                hlsInstance.attachMedia(video);
-                
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
-                    video.play();
-                });
-
-                hlsInstance.on(Hls.Events.ERROR, function (event, data) {
-                    if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        let currentPlaybackTime = video.currentTime;
-                        console.log("Link expire ho gayi, naya fresh link fetch ho raha hai...");
-                        
-                        loadServer2Stream().then(() => {
-                            if (hlsInstance) {
-                                video.currentTime = currentPlaybackTime;
-                            }
-                        });
-                    }
-                });
-            }
-        }
-
-        loadServer2Stream();
-    </script>
+   
 </body>
 </html>
