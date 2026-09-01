@@ -3398,6 +3398,19 @@ body.cineflix-db-error .cineflix-db-message{
     opacity:1!important;
 }
 
+/* Network Error is different from Changing Server:
+   keep the SERVER selector visible and clickable so the user can
+   switch from a dead Server 1 to Server 2. */
+.cineflix-network-error-mode .cineflix-server-switch{
+    visibility:visible!important;
+    pointer-events:auto!important;
+    opacity:1!important;
+}
+.cineflix-network-error-mode .cineflix-server-switch select{
+    pointer-events:auto!important;
+    cursor:pointer!important;
+}
+
 /* Server badge follows the normal player controls after playback starts.
    During startup it is kept visible; after controls auto-hide it disappears too. */
 .cineflix-server-switch.server-badge-hidden{
@@ -6063,6 +6076,9 @@ function cineflixHideNetworkError(){
     if(!cineflixNetworkError) return;
     cineflixNetworkError.classList.remove("show");
     cineflixNetworkError.setAttribute("aria-hidden","true");
+    if(playerSurface){
+        playerSurface.classList.remove("cineflix-network-error-mode");
+    }
     if(playerSurface && !cineflixServerSwitchActive){
         playerSurface.classList.remove("cineflix-server-switching-controls");
     }
@@ -6090,7 +6106,17 @@ function cineflixShowNetworkError(){
         playerControls.style.pointerEvents="none";
     }
     if(playerTop) playerTop.classList.add("auto-hidden");
-    if(playerSurface) playerSurface.classList.add("cineflix-server-switching-controls");
+
+    /* Network Error must still allow Server 2 selection when Server 1
+       is dead/expired. Keep the SERVER selector above the error layer. */
+    if(playerSurface){
+        playerSurface.classList.add("cineflix-server-switching-controls");
+        playerSurface.classList.add("cineflix-network-error-mode");
+    }
+    if(cineflixServerSwitch && cineflixHasStartedPlaying && cineflixGetServer2Source()){
+        cineflixServerSwitch.classList.remove("hidden-switch");
+        cineflixServerSwitch.classList.remove("server-badge-hidden");
+    }
 }
 function cineflixShowServerChanging(){
     cineflixHideNetworkError();
