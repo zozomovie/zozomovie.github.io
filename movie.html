@@ -6061,27 +6061,37 @@ function cineflixGetServer2Source(){
 /* Server 2 uses the saved HLS URL through the same remote HLS proxy
    family used by the existing Server-1 generated links.
    IMPORTANT: no localhost / server.js dependency remains here. */
+/* =========================================================
+   SERVER 2 — REMOTE WORKER SOURCE RESOLVER
+   Server 1 stays completely untouched. Server 2 is resolved
+   through the Cloudflare Worker, so movie.html does NOT need
+   localhost:3001, server.js, or any local backend.
+========================================================= */
+const WORKER_BASE_URL = "https://instanthello.indonesiarupee34.workers.dev";
+
+function getDynamicStreamUrl(adminInputValue){
+    const raw=String(adminInputValue||"").trim();
+    if(!raw) return "";
+
+    /* Already a Worker URL — do not wrap it again. */
+    if(raw.startsWith(WORKER_BASE_URL)){
+        return raw;
+    }
+
+    /* Admin can save either a complete source URL or a TMDB ID. */
+    if(/^https?:\/\//i.test(raw)){
+        return `${WORKER_BASE_URL}/?url=${encodeURIComponent(raw)}`;
+    }
+
+    return `${WORKER_BASE_URL}/?tmdb=${encodeURIComponent(raw)}`;
+}
+
 function cineflixGetServer2PlayableSource(source){
     const raw=String(source||"").trim();
     if(!raw) return raw;
     if(cineflixActiveServer!==2) return raw;
 
-    /* If an already-generated remote proxy URL is supplied, keep it. */
-    if(/^https?:\/\/rozgarlelo\.modiplay\.xyz\/proxy\.php\?/i.test(raw)){
-        return raw;
-    }
-
-    try{
-        const u=new URL(raw);
-        const params=new URLSearchParams();
-        params.set("serve_m3u8","1");
-        params.set("ref",u.origin + "/");
-        params.set("url",raw);
-        params.set("ebd",u.origin);
-        return `https://rozgarlelo.modiplay.xyz/proxy.php?${params.toString()}`;
-    }catch(e){
-        return raw;
-    }
+    return getDynamicStreamUrl(raw);
 }
 function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
@@ -8799,36 +8809,7 @@ window.addEventListener("beforeunload",()=>{
 })();
    
 </script>
-<script>
-  // Worker Base URL
-  const WORKER_BASE_URL = "https://instanthello.indonesiarupee34.workers.dev";
 
-  // Dynamic Stream URL generator function
-  function getDynamicStreamUrl(adminInputValue) {
-    if (!adminInputValue) return "";
-    
-    // Agar admin me direct full link (http...) daala hai:
-    if (adminInputValue.startsWith("http")) {
-      return `${WORKER_BASE_URL}/?url=${encodeURIComponent(adminInputValue)}`;
-    } 
-    // Agar admin me sirf TMDB ID (e.g., 27205) daala hai:
-    else {
-      return `${WORKER_BASE_URL}/?tmdb=${adminInputValue}`;
-    }
-  }
-
-  // Player source set karte waqt is function ka use karein:
-  // Example for Server 2 click:
-  function playServer2(source2DataFromAdmin) {
-    const finalM3u8Stream = getDynamicStreamUrl(source2DataFromAdmin);
-    
-    // Aapke Video Player ka setup (Video.js / Hls.js / Plyr)
-    player.src({
-      src: finalM3u8Stream,
-      type: 'application/x-mpegURL'
-    });
-  }
-</script>
    
 </body>
 </html>
