@@ -5474,7 +5474,7 @@ let cineflixServerDropdownOpen = false;
 function cineflixSyncServerBadgeWithControls(forceVisible=false){
     if(!cineflixServerSwitch) return;
     /* No Server 2 source = no SERVER badge/dropdown anywhere. */
-    if(!cineflixGetServer2PermanentSource()){
+    if(!cineflixGetServer2Source()){
         cineflixServerSwitch.classList.add("hidden-switch");
         cineflixServerSwitch.classList.add("server-badge-hidden");
         return;
@@ -5607,12 +5607,6 @@ let currentMode = "movie";
    passive until the user explicitly selects it. */
 let cineflixActiveServer = 1;
 let cineflixServer2Url = "";
-/* Server 2: video_server_2 stays the permanent source page URL.
-   These two fields hold only the temporary generated HLS/token URL and its
-   local expiry marker in Supabase. Server 1 is completely untouched. */
-let cineflixServer2TempUrl = "";
-let cineflixServer2TempExpiresAt = "";
-let cineflixServer2Preparing = false;
 let cineflixServerSwitchActive = false;
 let cineflixServerSwitchToken = 0;
 let cineflixServerRetryTimer = null;
@@ -5646,10 +5640,6 @@ const MAX_AUTO_REFRESH_ATTEMPTS = 3;
 /* Public backend for GitHub Pages. */
 const CINEFLIX_UPDATE_API_BASE =
     "https://seventh-michel-modems-models.trycloudflare.com";
-
-/* Server 2 only: Gemini/Cloudflare Worker endpoint. */
-const CINEFLIX_SERVER2_WORKER_URL =
-    "https://instanthello.indonesiarupee34.workers.dev";
 
 let cineflixAutoRefreshTriggeredForCurrentSource = false;
 
@@ -6065,111 +6055,7 @@ function cineflixFinishServerTransition(){
     cineflixSyncServerBadgeWithControls(cineflixPlaybackWaitingForPlay);
 }
 function cineflixGetServer2Source(){
-    return String(cineflixServer2TempUrl||"").trim();
-}
-
-function cineflixGetServer2PermanentSource(){
     return String(cineflixServer2Url||"").trim();
-}
-
-function cineflixServer2TempIsUsable(){
-    const url=String(cineflixServer2TempUrl||"").trim();
-    if(!url) return false;
-    const expiry=Date.parse(String(cineflixServer2TempExpiresAt||""));
-    /* Keep a small safety window so an URL does not expire during startup. */
-    return Number.isFinite(expiry) && expiry > Date.now()+60000;
-}
-
-function cineflixServer2GuessExpiry(url){
-    try{
-        const u=new URL(String(url||""));
-        const keys=["expires","expire","expiry","expires_at","expire_at","expiration","exp","e"];
-        for(const key of keys){
-            const raw=u.searchParams.get(key);
-            if(!raw) continue;
-            if(/^\d{10,13}$/.test(raw)){
-                const n=Number(raw);
-                const ms=n<100000000000 ? n*1000 : n;
-                if(Number.isFinite(ms) && ms>Date.now()) return new Date(ms).toISOString();
-            }
-            const parsed=Date.parse(raw);
-            if(Number.isFinite(parsed) && parsed>Date.now()) return new Date(parsed).toISOString();
-        }
-    }catch(_){}
-    /* Gemini's recommended cache window: 4 hours when the token URL does
-       not expose an explicit expiry value. */
-    return new Date(Date.now()+4*60*60*1000).toISOString();
-}
-
-async function cineflixSaveServer2Temp(movieId,url,expiresAt){
-    const client=window.__CINEFLIX_SUPABASE_CLIENT;
-    if(!client || !movieId || !url) throw new Error("Supabase client/movie/link missing");
-
-    const payload={
-        p_movie_id:movieId,
-        p_temp_url:String(url).trim(),
-        p_expires_at:expiresAt
-    };
-
-    /* Controlled Supabase RPC: only the temporary Server-2 cache fields are
-       writable here; the permanent source and all other movie fields remain
-       untouched. */
-    const {error}=await client.rpc("save_server_2_temp",payload);
-
-    if(error) throw error;
-
-    cineflixServer2TempUrl=payload.p_temp_url;
-    cineflixServer2TempExpiresAt=payload.p_expires_at;
-}
-
-async function cineflixPrepareServer2TempUrl(forceFresh=false){
-    if(cineflixServer2Preparing) return cineflixServer2Preparing;
-
-    const permanentSource=cineflixGetServer2PermanentSource();
-    const params=new URLSearchParams(window.location.search);
-    const movieId=params.get("id");
-    if(!movieId) throw new Error("Movie ID missing from URL.");
-    if(!permanentSource) throw new Error("Server 2 source URL is missing.");
-
-    if(!forceFresh && cineflixServer2TempIsUsable()) return cineflixGetServer2Source();
-
-    cineflixServer2Preparing=(async()=>{
-        const workerBase=String(
-            window.CINEFLIX_SERVER2_WORKER_URL || CINEFLIX_SERVER2_WORKER_URL
-        ).replace(/\/$/,"");
-
-        /* Server-2 refresh is handled by the public Cloudflare Worker.
-           The Worker receives only the Supabase movie id and returns the
-           current authorized stream URL. It may serve its own short cache;
-           this page then stores that URL in the temporary Supabase fields
-           BEFORE attaching it to the player. */
-        const workerUrl=workerBase+"/?id="+encodeURIComponent(movieId);
-        const response=await fetch(workerUrl,{
-            method:"GET",
-            cache:"no-store",
-            credentials:"omit",
-            headers:{"Accept":"application/json"}
-        });
-        const data=await response.json().catch(()=>({}));
-        const freshUrl=String(data.url || data.link || "").trim();
-        if(!response.ok || !freshUrl){
-            throw new Error(data.error || data.message || "Fresh Server 2 stream link not found");
-        }
-
-        const expiresAt=cineflixServer2GuessExpiry(freshUrl);
-
-        /* IMPORTANT: save the new token URL to Supabase BEFORE giving it to
-           the player. This is exactly the requested temporary-save flow. */
-        await cineflixSaveServer2Temp(movieId,freshUrl,expiresAt);
-
-        return freshUrl;
-    })();
-
-    try{
-        return await cineflixServer2Preparing;
-    }finally{
-        cineflixServer2Preparing=false;
-    }
 }
 
 /* Server 2 streams can be hosted on origins that do not send CORS headers.
@@ -6179,17 +6065,10 @@ function cineflixGetServer2PlayableSource(source){
     const raw=String(source||"").trim();
     if(!raw) return raw;
     if(cineflixActiveServer!==2) return raw;
-
-    /* The new Worker returns the stream URL directly. Do not send it through
-       a localhost proxy. If a separate authorized proxy is configured later,
-       set window.CINEFLIX_SERVER2_PROXY_BASE to its public URL. */
-    const proxyBase=String(window.CINEFLIX_SERVER2_PROXY_BASE||"").replace(/\/$/,"");
-    if(proxyBase && !raw.includes("/proxy-stream?url=")){
-        return `${proxyBase}/proxy-stream?url=${encodeURIComponent(raw)}`;
-    }
-    return raw;
+    if(raw.includes("/proxy-stream?url=")) return raw;
+    return `http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
 }
-async function cineflixBeginServerRetry(showChanging=true){
+function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
     cineflixServerRetryStartedAt=Date.now();
     cineflixServerRetryPlaying=false;
@@ -6211,26 +6090,8 @@ async function cineflixBeginServerRetry(showChanging=true){
 
     try{ video.pause(); }catch(e){}
     try{ destroyHls(); }catch(e){}
-    let source=cineflixServerRetrySource;
+    const source=cineflixServerRetrySource;
     const savedTime=cineflixServerRetryTime;
-
-    /* Server 2 only: use the saved temporary URL when valid; otherwise
-       refresh it through the Worker and save it before playback. */
-    if(cineflixActiveServer===2){
-        try{
-            source = !cineflixServer2TempIsUsable()
-                ? await cineflixPrepareServer2TempUrl(true)
-                : cineflixGetServer2Source();
-            cineflixServerRetrySource=source;
-        }catch(error){
-            console.warn("CINEFLIX Server 2 refresh failed:",error);
-            cineflixFinishServerTransition();
-            hidePlayerLoading();
-            cineflixShowNetworkError();
-            return;
-        }
-    }
-
     if(!source){
         cineflixFinishServerTransition();
         hidePlayerLoading();
@@ -6255,7 +6116,7 @@ async function cineflixBeginServerRetry(showChanging=true){
         cineflixShowNetworkError();
     },15000);
 }
-async function cineflixSwitchServer(server){
+function cineflixSwitchServer(server){
     const next=Number(server)===2 ? 2 : 1;
     if(next===cineflixActiveServer) return;
     if(currentMode!=="movie") return;
@@ -6263,30 +6124,20 @@ async function cineflixSwitchServer(server){
     cineflixActiveServer=next;
     if(cineflixServerSelect) cineflixServerSelect.value=String(next);
     cineflixServerSwitchActive=true;
+    cineflixServerRetrySource = next===2 ? cineflixGetServer2Source() : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
     cineflixServerRetryTime = Number.isFinite(video.currentTime) ? video.currentTime : 0;
     cineflixServerRetryPlaying = false;
     cineflixShowServerChanging();
 
-    try{
-        /* Server 2 only: reuse a valid temporary URL; otherwise generate a
-           fresh token/M3U8 and save it to Supabase before playback. */
-        cineflixServerRetrySource = next===2
-            ? await cineflixPrepareServer2TempUrl(false)
-            : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
-
-        if(!cineflixServerRetrySource){
-            throw new Error(next===2 ? "Server 2 stream URL unavailable" : "Server 1 source unavailable");
-        }
-
-        /* Explicit switch only: nothing here runs on initial page load. */
-        cineflixBeginServerRetry();
-    }catch(error){
-        console.warn("CINEFLIX Server 2 prepare failed:",error);
-        cineflixServerSwitchActive=false;
+    if(!cineflixServerRetrySource){
         cineflixFinishServerTransition();
         hidePlayerLoading();
         cineflixShowNetworkError();
+        return;
     }
+
+    /* Explicit switch only: nothing here runs on initial page load. */
+    cineflixBeginServerRetry();
 }
 if(cineflixServerSelect){
     /* Opening the native dropdown must NOT hide the SERVER badge. Keep it
@@ -6294,14 +6145,14 @@ if(cineflixServerSelect){
        commits the new server and starts the switch animation. */
     cineflixServerSelect.addEventListener("pointerdown",()=>{
         cineflixServerDropdownOpen=true;
-        if(cineflixHasStartedPlaying && cineflixGetServer2PermanentSource() && cineflixServerSwitch){
+        if(cineflixHasStartedPlaying && cineflixGetServer2Source() && cineflixServerSwitch){
             cineflixServerSwitch.classList.remove("server-badge-hidden");
         }
     });
     cineflixServerSelect.addEventListener("focus",()=>{
         if(!cineflixServerSelect.disabled){
             cineflixServerDropdownOpen=true;
-            if(cineflixHasStartedPlaying && cineflixGetServer2PermanentSource() && cineflixServerSwitch){
+            if(cineflixHasStartedPlaying && cineflixGetServer2Source() && cineflixServerSwitch){
                 cineflixServerSwitch.classList.remove("server-badge-hidden");
             }
         }
@@ -6314,24 +6165,16 @@ if(cineflixServerSelect){
         /* Selection commits immediately: hide the badge before the switch
            animation starts. */
         if(cineflixServerSwitch) cineflixServerSwitch.classList.add("server-badge-hidden");
-        void cineflixSwitchServer(cineflixServerSelect.value);
+        cineflixSwitchServer(cineflixServerSelect.value);
     });
 }
 if(cineflixNetworkRetry){
-    cineflixNetworkRetry.addEventListener("click",async()=>{
+    cineflixNetworkRetry.addEventListener("click",()=>{
         if(currentMode!=="movie") return;
+        cineflixServerRetrySource = cineflixActiveServer===2
+            ? cineflixGetServer2Source()
+            : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
         cineflixServerRetryTime = Number.isFinite(video.currentTime) ? video.currentTime : cineflixServerRetryTime;
-        if(cineflixActiveServer===2){
-            try{
-                cineflixServerRetrySource=await cineflixPrepareServer2TempUrl(true);
-            }catch(error){
-                console.warn("CINEFLIX Server 2 retry refresh failed:",error);
-                cineflixShowNetworkError();
-                return;
-            }
-        }else{
-            cineflixServerRetrySource=QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "";
-        }
         cineflixBeginServerRetry(false);
     });
 }
@@ -6357,35 +6200,36 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         destroyHls();
         showPlayerLoading();
 
-        /* SERVER 2 ONLY: route the master and every child HLS request through
-           the same public backend proxy. Server 1 remains completely
-           untouched. */
+        /* SERVER 2 ONLY: some HLS manifests expose absolute media URLs on an
+           origin that does not send CORS headers. Route every HLS.js request
+           for Server 2 through the existing local proxy. Server 1 keeps the
+           original HLS.js configuration unchanged. */
         if(cineflixActiveServer===2){
             const baseHlsConfig=getHlsConfig();
             const BaseLoader=baseHlsConfig.loader || Hls.DefaultConfig.loader;
-            const proxyBase=String(window.CINEFLIX_SERVER2_PROXY_BASE||"").replace(/\/$/,"");
-            if(proxyBase){
-                baseHlsConfig.loader=class CineflixServer2ProxyLoader extends BaseLoader{
-                    load(context, config, callbacks){
-                        const raw=String(context.url||"").trim();
-                        const alreadyProxied=raw.indexOf(proxyBase+"/proxy-stream?url=")===0;
-                        if(raw && !alreadyProxied){
-                            context.url=proxyBase+"/proxy-stream?url="+encodeURIComponent(raw);
-                        }
-                        super.load(context, config, callbacks);
+            baseHlsConfig.loader=class CineflixServer2ProxyLoader extends BaseLoader{
+                load(context, config, callbacks){
+                    const raw=String(context.url||'').trim();
+                    /* Server 2 ONLY: every non-local HLS resource is forced
+                       through the local proxy. Already-proxied URLs are left
+                       untouched so the proxy never gets wrapped recursively. */
+                    if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
+                        context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
                     }
-                };
-                baseHlsConfig.fetchSetup=function(context, initParams){
-                    const raw=String(context.url||"").trim();
-                    const alreadyProxied=raw.indexOf(proxyBase+"/proxy-stream?url=")===0;
-                    if(raw && !alreadyProxied){
-                        context.url=proxyBase+"/proxy-stream?url="+encodeURIComponent(raw);
-                    }
-                    initParams.mode="cors";
-                    initParams.credentials="omit";
-                    return new Request(context.url,initParams);
-                };
-            }
+                    super.load(context, config, callbacks);
+                }
+            };
+            /* Keep fetchSetup consistent with the loader. This also catches
+               HLS.js requests that use the fetch path instead of XHR. */
+            baseHlsConfig.fetchSetup=function(context, initParams){
+                const raw=String(context.url||'').trim();
+                if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
+                    context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
+                }
+                initParams.mode="cors";
+                initParams.credentials="omit";
+                return new Request(context.url,initParams);
+            };
             hls=new Hls(baseHlsConfig);
         }else{
             hls=new Hls(getHlsConfig());
@@ -6502,30 +6346,16 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
                the user has explicitly switched servers. */
             if(currentMode==="movie" && cineflixServerSwitchActive){
                 cineflixServerRetryPlaying=false;
+                cineflixServerRetrySource = cineflixActiveServer===2
+                    ? cineflixGetServer2Source()
+                    : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
                 cineflixServerRetryTime = Number.isFinite(video.currentTime)
                     ? video.currentTime
                     : cineflixServerRetryTime;
-                clearTimeout(cineflixServerRetryTimer);
-
-                if(cineflixActiveServer===2){
-                    /* Server 2 only: the temporary token may have expired or
-                       become invalid. Generate -> SAVE to Supabase -> retry. */
-                    void cineflixPrepareServer2TempUrl(true).then(fresh=>{
-                        cineflixServerRetrySource=fresh;
-                        cineflixBeginServerRetry(true);
-                    }).catch(error=>{
-                        console.warn("CINEFLIX Server 2 stream refresh failed:",error);
-                        cineflixFinishServerTransition();
-                        hidePlayerLoading();
-                        cineflixShowNetworkError();
-                    });
-                    return;
-                }
-
-                cineflixServerRetrySource=QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "";
                 cineflixFinishServerTransition();
                 hidePlayerLoading();
                 cineflixShowNetworkError();
+                clearTimeout(cineflixServerRetryTimer);
                 return;
             }
 
@@ -7391,28 +7221,16 @@ video.addEventListener("error",()=>{
     /* Explicit server-switch errors use the same player-only retry UI. */
     if(currentMode==="movie" && cineflixServerSwitchActive){
         cineflixServerRetryPlaying=false;
+        cineflixServerRetrySource = cineflixActiveServer===2
+            ? cineflixGetServer2Source()
+            : (QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "");
         cineflixServerRetryTime = Number.isFinite(video.currentTime)
             ? video.currentTime
             : cineflixServerRetryTime;
-        clearTimeout(cineflixServerRetryTimer);
-
-        if(cineflixActiveServer===2){
-            void cineflixPrepareServer2TempUrl(true).then(fresh=>{
-                cineflixServerRetrySource=fresh;
-                cineflixBeginServerRetry(true);
-            }).catch(error=>{
-                console.warn("CINEFLIX Server 2 native refresh failed:",error);
-                cineflixFinishServerTransition();
-                hidePlayerLoading();
-                cineflixShowNetworkError();
-            });
-            return;
-        }
-
-        cineflixServerRetrySource=QUALITY_SOURCES.movie?.[String(currentQuality)] || MOVIE_DEMO_URL || "";
         cineflixFinishServerTransition();
         hidePlayerLoading();
         cineflixShowNetworkError();
+        clearTimeout(cineflixServerRetryTimer);
         return;
     }
 
@@ -8266,8 +8084,6 @@ document.addEventListener("fullscreenchange",()=>{
         /* Read Server 2 only; do not request, validate, preload, or switch to
            it until the user explicitly selects Server 2. */
         cineflixServer2Url = String(movie.video_server_2 || "").trim();
-        cineflixServer2TempUrl = String(movie.video_server_2_temp || "").trim();
-        cineflixServer2TempExpiresAt = String(movie.video_server_2_expires_at || "").trim();
         if(cineflixServerSelect){
             cineflixServerSelect.value="1";
             cineflixServerSelect.disabled=!cineflixServer2Url;
@@ -8492,8 +8308,6 @@ window.addEventListener("beforeunload",()=>{
             video_720: movie.video_720 || "",
             video_480: movie.video_480 || "",
             video_server_2: movie.video_server_2 || "",
-            video_server_2_temp: movie.video_server_2_temp || "",
-            video_server_2_expires_at: movie.video_server_2_expires_at || "",
             trailer_url: movie.trailer_url || "",
             updated_at: movie.updated_at || ""
         });
@@ -8527,8 +8341,6 @@ window.addEventListener("beforeunload",()=>{
 
         QUALITY_SOURCES.movie = nextSources;
         cineflixServer2Url = String(movie.video_server_2 || "").trim();
-        cineflixServer2TempUrl = String(movie.video_server_2_temp || "").trim();
-        cineflixServer2TempExpiresAt = String(movie.video_server_2_expires_at || "").trim();
         if(cineflixServerSelect){
             cineflixServerSelect.disabled=!cineflixServer2Url;
             if(cineflixActiveServer===2 && !cineflixServer2Url){
@@ -8999,6 +8811,30 @@ window.addEventListener("beforeunload",()=>{
 
     initMovie();
 })();
+</script>
+   <script>
+async function loadMoviePlayer(movieId) {
+  const workerUrl = `https://instanthello.indonesiarupee34.workers.dev/?id=${movieId}`;
+  
+  const response = await fetch(workerUrl);
+  const data = await response.json();
+
+  if (data.success && data.link) {
+    const videoElement = document.getElementById('movieVideo');
+    
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(data.link);
+      hls.attachMedia(videoElement);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => videoElement.play());
+    } else {
+      videoElement.src = data.link;
+      videoElement.play();
+    }
+  } else {
+    alert('Video load nahi ho paya.');
+  }
+}
 </script>
 </body>
 </html>
