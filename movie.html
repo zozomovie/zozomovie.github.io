@@ -6061,37 +6061,28 @@ function cineflixGetServer2Source(){
 /* Server 2 uses the saved HLS URL through the same remote HLS proxy
    family used by the existing Server-1 generated links.
    IMPORTANT: no localhost / server.js dependency remains here. */
-/* =========================================================
-   SERVER 2 — REMOTE WORKER SOURCE RESOLVER
-   Server 1 stays completely untouched. Server 2 is resolved
-   through the Cloudflare Worker, so movie.html does NOT need
-   localhost:3001, server.js, or any local backend.
-========================================================= */
-const WORKER_BASE_URL = "https://instanthello.indonesiarupee34.workers.dev";
-
-function getDynamicStreamUrl(adminInputValue){
-    const raw=String(adminInputValue||"").trim();
-    if(!raw) return "";
-
-    /* Already a Worker URL — do not wrap it again. */
-    if(raw.startsWith(WORKER_BASE_URL)){
-        return raw;
-    }
-
-    /* Admin can save either a complete source URL or a TMDB ID. */
-    if(/^https?:\/\//i.test(raw)){
-        return `${WORKER_BASE_URL}/?url=${encodeURIComponent(raw)}`;
-    }
-
-    return `${WORKER_BASE_URL}/?tmdb=${encodeURIComponent(raw)}`;
-}
-
 function cineflixGetServer2PlayableSource(source){
     const raw=String(source||"").trim();
     if(!raw) return raw;
     if(cineflixActiveServer!==2) return raw;
 
-    return getDynamicStreamUrl(raw);
+    /* Gemini/Cloudflare Worker Server-2 flow.
+       Admin can store either a full movie-page URL or a TMDB ID.
+       The Worker resolves the target to the current stream. */
+    const workerBase="https://instanthello.indonesiarupee34.workers.dev";
+
+    /* Never wrap an already-generated Worker URL again. */
+    if(raw.startsWith(workerBase)) return raw;
+
+    /* Keep a directly supplied HLS URL playable as-is. */
+    if(/\.m3u8(?:\?|$)/i.test(raw)) return raw;
+
+    if(/^https?:\/\//i.test(raw)){
+        return `${workerBase}/?url=${encodeURIComponent(raw)}`;
+    }
+
+    /* Otherwise treat the saved value as a TMDB ID. */
+    return `${workerBase}/?tmdb=${encodeURIComponent(raw)}`;
 }
 function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
