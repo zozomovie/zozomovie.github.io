@@ -6221,11 +6221,36 @@ async function loadHlsSource(source,autoPlay=true,savedTime=0){
                     throw new Error(`Server 2 Worker HTTP ${response.status}`);
                 }
 
-                const data = await response.json();
-                const freshM3u8 = String(data?.url||"").trim();
+                /* Worker implementations may return either JSON {url:"..."},
+                   a plain m3u8 URL, or the HLS playlist itself. Read as text
+                   first so an HTML/text response never throws JSON.parse. */
+                const bodyText = await response.text();
+                const contentType = String(response.headers.get("content-type")||"").toLowerCase();
+                let freshM3u8 = "";
 
-                if(!freshM3u8 || !/\.m3u8(?:\?|$)/i.test(freshM3u8)){
-                    throw new Error("Server 2 Worker did not return a valid m3u8 URL.");
+                if(contentType.includes("application/json") || /^\s*[\[{]/.test(bodyText)){
+                    try{
+                        const data = JSON.parse(bodyText);
+                        freshM3u8 = String(data?.url || data?.stream || data?.m3u8 || "").trim();
+                    }catch(_){
+                        /* Not valid JSON: continue with plain-text detection. */
+                    }
+                }
+
+                if(!freshM3u8){
+                    const plain = bodyText.trim();
+                    if(/^https?:\/\//i.test(plain) && /\.m3u8(?:\?|$)/i.test(plain)){
+                        freshM3u8 = plain;
+                    }else if(/^#EXTM3U/m.test(plain)){
+                        /* The Worker itself is serving the playlist. Let HLS.js
+                           request it from the Worker URL instead of parsing it here. */
+                        freshM3u8 = workerSource;
+                    }
+                }
+
+                if(!freshM3u8){
+                    const preview = bodyText.replace(/\s+/g," ").slice(0,120);
+                    throw new Error(`Server 2 Worker response is not a playable HLS source${preview ? `: ${preview}` : "."}`);
                 }
 
                 cineflixResolvedSource = freshM3u8;
@@ -7841,12 +7866,13 @@ window.addEventListener(
     "scroll",
     ()=>{
 
-        document
-        .getElementById("topbar")
-        .classList.toggle(
-            "scrolled",
-            window.scrollY>30
-        );
+        const topbar = document.getElementById("topbar");
+        if(topbar){
+            topbar.classList.toggle(
+                "scrolled",
+                window.scrollY>30
+            );
+        }
 
     },
     {passive:true}
