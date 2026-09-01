@@ -8801,32 +8801,58 @@ window.addEventListener("beforeunload",()=>{
    
 </script>
 
-   <script>
-  // <--- PASTE HERE: Yahan par poora code paste kar dein --->
-  async function playServer2(server2Url) {
-    const workerBaseUrl = "https://instanthello.indonesiarupee34.workers.dev"; // Apna Worker URL yahan daalein
-    const proxyUrl = `${workerBaseUrl}/?url=${encodeURIComponent(server2Url)}`;
-    const videoElement = document.getElementById("movieVideo");
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-    try {
-      const response = await fetch(proxyUrl);
-      const data = await response.text();
+    <script>
+        let hlsInstance = null;
 
-      let streamUrl = data.startsWith("http") ? data.trim() : proxyUrl;
+        async function loadServer2Stream() {
+            try {
+                let response = await fetch('https://instanthello.indonesiarupee34.workers.dev/?url=https://nxsha.space/watch/movie/857598');
+                let data = await response.json();
+                
+                if (data.url) {
+                    initPlayer(data.url);
+                } else {
+                    console.error("Worker se m3u8 link nahi mili.");
+                }
+            } catch (err) {
+                console.error("Fetch error:", err);
+            }
+        }
 
-      if (typeof Hls !== "undefined" && Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(streamUrl);
-        hls.attachMedia(videoElement);
-        videoElement.play();
-      } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-        videoElement.src = streamUrl;
-        videoElement.play();
-      }
-    } catch (err) {
-      console.error("Video play karne me dikkat aayi:", err);
-    }
-  }
-</script>
+        function initPlayer(m3u8Url) {
+            var video = document.getElementById('videoElement'); // Yahan check kar lena ki tumhare video tag ki id 'videoElement' hi hai ya kuch aur (jaise id="player")
+            
+            if (Hls.isSupported()) {
+                if (hlsInstance) {
+                    hlsInstance.destroy();
+                }
+                
+                hlsInstance = new Hls();
+                hlsInstance.loadSource(m3u8Url);
+                hlsInstance.attachMedia(video);
+                
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play();
+                });
+
+                hlsInstance.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        let currentPlaybackTime = video.currentTime;
+                        console.log("Link expire ho gayi, naya fresh link fetch ho raha hai...");
+                        
+                        loadServer2Stream().then(() => {
+                            if (hlsInstance) {
+                                video.currentTime = currentPlaybackTime;
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        loadServer2Stream();
+    </script>
 </body>
 </html>
