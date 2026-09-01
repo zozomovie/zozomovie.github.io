@@ -6058,15 +6058,31 @@ function cineflixGetServer2Source(){
     return String(cineflixServer2Url||"").trim();
 }
 
-/* Server 2 streams can be hosted on origins that do not send CORS headers.
-   Only Server 2 is routed through the existing local HLS proxy; Server 1
-   keeps its original source and loading path completely unchanged. */
+/* Server 2 uses the saved HLS URL through the same remote HLS proxy
+   family used by the existing Server-1 generated links.
+   IMPORTANT: no localhost / server.js dependency remains here. */
 function cineflixGetServer2PlayableSource(source){
     const raw=String(source||"").trim();
     if(!raw) return raw;
     if(cineflixActiveServer!==2) return raw;
-    if(raw.includes("/proxy-stream?url=")) return raw;
-    return `http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
+
+    /* Gemini/Cloudflare Worker Server-2 flow.
+       Admin can store either a full movie-page URL or a TMDB ID.
+       The Worker resolves the target to the current stream. */
+    const workerBase="https://instanthello.indonesiarupee34.workers.dev";
+
+    /* Never wrap an already-generated Worker URL again. */
+    if(raw.startsWith(workerBase)) return raw;
+
+    /* Keep a directly supplied HLS URL playable as-is. */
+    if(/\.m3u8(?:\?|$)/i.test(raw)) return raw;
+
+    if(/^https?:\/\//i.test(raw)){
+        return `${workerBase}/?url=${encodeURIComponent(raw)}`;
+    }
+
+    /* Otherwise treat the saved value as a TMDB ID. */
+    return `${workerBase}/?tmdb=${encodeURIComponent(raw)}`;
 }
 function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
@@ -6179,11 +6195,80 @@ if(cineflixNetworkRetry){
     });
 }
 
-function loadHlsSource(source,autoPlay=true,savedTime=0){
+async function loadHlsSource(source,autoPlay=true,savedTime=0){
+    /* Server 2 Worker returns JSON { url: "/...master.m3u8" }, not the
+       m3u8 itself. Resolve that JSON response first, then hand the real
+       HLS URL to the existing player. Server 1 remains unchanged. */
+    let cineflixResolvedSource = String(source||"").trim();
+
+    if(cineflixActiveServer===2){
+        try{
+            const workerSource = cineflixGetServer2PlayableSource(cineflixResolvedSource);
+            if(!workerSource){
+                throw new Error("Server 2 source is empty.");
+            }
+
+            if(/\.m3u8(?:\?|$)/i.test(workerSource)){
+                cineflixResolvedSource = workerSource;
+            }else{
+                const response = await fetch(workerSource,{
+                    method:"GET",
+                    headers:{"Accept":"application/json"},
+                    cache:"no-store"
+                });
+
+                if(!response.ok){
+                    throw new Error(`Server 2 Worker HTTP ${response.status}`);
+                }
+
+                /* Worker implementations may return either JSON {url:"..."},
+                   a plain m3u8 URL, or the HLS playlist itself. Read as text
+                   first so an HTML/text response never throws JSON.parse. */
+                const bodyText = await response.text();
+                const contentType = String(response.headers.get("content-type")||"").toLowerCase();
+                let freshM3u8 = "";
+
+                if(contentType.includes("application/json") || /^\s*[\[{]/.test(bodyText)){
+                    try{
+                        const data = JSON.parse(bodyText);
+                        freshM3u8 = String(data?.url || data?.stream || data?.m3u8 || "").trim();
+                    }catch(_){
+                        /* Not valid JSON: continue with plain-text detection. */
+                    }
+                }
+
+                if(!freshM3u8){
+                    const plain = bodyText.trim();
+                    if(/^https?:\/\//i.test(plain) && /\.m3u8(?:\?|$)/i.test(plain)){
+                        freshM3u8 = plain;
+                    }else if(/^#EXTM3U/m.test(plain)){
+                        /* The Worker itself is serving the playlist. Let HLS.js
+                           request it from the Worker URL instead of parsing it here. */
+                        freshM3u8 = workerSource;
+                    }
+                }
+
+                if(!freshM3u8){
+                    const preview = bodyText.replace(/\s+/g," ").slice(0,120);
+                    throw new Error(`Server 2 Worker response is not a playable HLS source${preview ? `: ${preview}` : "."}`);
+                }
+
+                cineflixResolvedSource = freshM3u8;
+            }
+        }catch(err){
+            console.error("CINEFLIX Server 2 resolve failed:",err);
+            if(cineflixActiveServer===2){
+                cineflixServerRetryPlaying=false;
+                cineflixPlaybackWaitingForPlay=true;
+                cineflixFinishServerTransition();
+                hidePlayerLoading();
+                cineflixShowNetworkError();
+            }
+            return;
+        }
+    }
+
     cineflixAutoRefreshTriggeredForCurrentSource=false;
-    const cineflixResolvedSource = (cineflixActiveServer===2)
-        ? cineflixGetServer2PlayableSource(source)
-        : source;
     pendingAutoPlay=autoPlay;
     pendingStartTime=savedTime||0;
     hlsReady=false;
@@ -6200,40 +6285,10 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         destroyHls();
         showPlayerLoading();
 
-        /* SERVER 2 ONLY: some HLS manifests expose absolute media URLs on an
-           origin that does not send CORS headers. Route every HLS.js request
-           for Server 2 through the existing local proxy. Server 1 keeps the
-           original HLS.js configuration unchanged. */
-        if(cineflixActiveServer===2){
-            const baseHlsConfig=getHlsConfig();
-            const BaseLoader=baseHlsConfig.loader || Hls.DefaultConfig.loader;
-            baseHlsConfig.loader=class CineflixServer2ProxyLoader extends BaseLoader{
-                load(context, config, callbacks){
-                    const raw=String(context.url||'').trim();
-                    /* Server 2 ONLY: every non-local HLS resource is forced
-                       through the local proxy. Already-proxied URLs are left
-                       untouched so the proxy never gets wrapped recursively. */
-                    if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
-                        context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
-                    }
-                    super.load(context, config, callbacks);
-                }
-            };
-            /* Keep fetchSetup consistent with the loader. This also catches
-               HLS.js requests that use the fetch path instead of XHR. */
-            baseHlsConfig.fetchSetup=function(context, initParams){
-                const raw=String(context.url||'').trim();
-                if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
-                    context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
-                }
-                initParams.mode="cors";
-                initParams.credentials="omit";
-                return new Request(context.url,initParams);
-            };
-            hls=new Hls(baseHlsConfig);
-        }else{
-            hls=new Hls(getHlsConfig());
-        }
+        /* Server 2 has already been resolved to the real m3u8 above.
+           Use the normal HLS.js loader exactly like Server 1.
+           There is NO localhost:3001 / server.js dependency here. */
+        hls=new Hls(getHlsConfig());
 
         hls.on(Hls.Events.MANIFEST_PARSED,(event,data)=>{
             hlsReady=true;
@@ -7811,12 +7866,13 @@ window.addEventListener(
     "scroll",
     ()=>{
 
-        document
-        .getElementById("topbar")
-        .classList.toggle(
-            "scrolled",
-            window.scrollY>30
-        );
+        const topbar = document.getElementById("topbar");
+        if(topbar){
+            topbar.classList.toggle(
+                "scrolled",
+                window.scrollY>30
+            );
+        }
 
     },
     {passive:true}
@@ -8810,7 +8866,9 @@ window.addEventListener("beforeunload",()=>{
     },true);
 
     initMovie();
-})();
-</script>
+   
+})();</script>
+
+   
 </body>
 </html>
