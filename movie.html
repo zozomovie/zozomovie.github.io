@@ -6195,11 +6195,55 @@ if(cineflixNetworkRetry){
     });
 }
 
-function loadHlsSource(source,autoPlay=true,savedTime=0){
+async function loadHlsSource(source,autoPlay=true,savedTime=0){
+    /* Server 2 Worker returns JSON { url: "/...master.m3u8" }, not the
+       m3u8 itself. Resolve that JSON response first, then hand the real
+       HLS URL to the existing player. Server 1 remains unchanged. */
+    let cineflixResolvedSource = String(source||"").trim();
+
+    if(cineflixActiveServer===2){
+        try{
+            const workerSource = cineflixGetServer2PlayableSource(cineflixResolvedSource);
+            if(!workerSource){
+                throw new Error("Server 2 source is empty.");
+            }
+
+            if(/\.m3u8(?:\?|$)/i.test(workerSource)){
+                cineflixResolvedSource = workerSource;
+            }else{
+                const response = await fetch(workerSource,{
+                    method:"GET",
+                    headers:{"Accept":"application/json"},
+                    cache:"no-store"
+                });
+
+                if(!response.ok){
+                    throw new Error(`Server 2 Worker HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const freshM3u8 = String(data?.url||"").trim();
+
+                if(!freshM3u8 || !/\.m3u8(?:\?|$)/i.test(freshM3u8)){
+                    throw new Error("Server 2 Worker did not return a valid m3u8 URL.");
+                }
+
+                cineflixResolvedSource = freshM3u8;
+            }
+        }catch(err){
+            console.error("CINEFLIX Server 2 resolve failed:",err);
+            if(cineflixActiveServer===2){
+                cineflixServerRetryPlaying=false;
+                cineflixPlaybackWaitingForPlay=true;
+                cineflixFinishServerTransition();
+                hidePlayerLoading();
+                cineflixShowNetworkError();
+            }
+            return;
+        }
+    }
+
     cineflixAutoRefreshTriggeredForCurrentSource=false;
-    const cineflixResolvedSource = (cineflixActiveServer===2)
-        ? cineflixGetServer2PlayableSource(source)
-        : source;
     pendingAutoPlay=autoPlay;
     pendingStartTime=savedTime||0;
     hlsReady=false;
@@ -6216,7 +6260,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         destroyHls();
         showPlayerLoading();
 
-        /* Server 2 is already resolved to the remote HLS proxy above.
+        /* Server 2 has already been resolved to the real m3u8 above.
            Use the normal HLS.js loader exactly like Server 1.
            There is NO localhost:3001 / server.js dependency here. */
         hls=new Hls(getHlsConfig());
@@ -8797,31 +8841,7 @@ window.addEventListener("beforeunload",()=>{
 
     initMovie();
    
-})();
-   document.getElementById('cineflixServerSelect').addEventListener('change', function() {
-    if (this.value === '2') {
-        loadServer2Stream();
-    } else if (this.value === '1') {
-        // Server 1 load karne ka function yahan likhein
-        loadServer1Stream();
-    }
-});
-
-async function loadServer2Stream() {
-    try {
-        let response = await fetch('https://instanthello.indonesiarupee34.workers.dev/?url=https://nxsha.space/watch/movie/857598');
-        let data = await response.json();
-        
-        if (data.url) {
-            initPlayer(data.url);
-        } else {
-            console.error("Worker se m3u8 link nahi mili.");
-        }
-    } catch (err) {
-        console.error("Fetch error:", err);
-    }
-}
-</script>
+})();</script>
 
    
 </body>
