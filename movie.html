@@ -5647,6 +5647,10 @@ const MAX_AUTO_REFRESH_ATTEMPTS = 3;
 const CINEFLIX_UPDATE_API_BASE =
     "https://seventh-michel-modems-models.trycloudflare.com";
 
+/* Server 2 only: Gemini/Cloudflare Worker endpoint. */
+const CINEFLIX_SERVER2_WORKER_URL =
+    "https://instanthello.indonesiarupee34.workers.dev";
+
 let cineflixAutoRefreshTriggeredForCurrentSource = false;
 
 /* Background current-movie health check state. The movie page uses these
@@ -6130,8 +6134,8 @@ async function cineflixPrepareServer2TempUrl(forceFresh=false){
     if(!forceFresh && cineflixServer2TempIsUsable()) return cineflixGetServer2Source();
 
     cineflixServer2Preparing=(async()=>{
-        const apiBase=String(
-            window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
+        const workerBase=String(
+            window.CINEFLIX_SERVER2_WORKER_URL || CINEFLIX_SERVER2_WORKER_URL
         ).replace(/\/$/,"");
 
         /* Server-2 refresh is handled by the public Cloudflare Worker.
@@ -6139,7 +6143,7 @@ async function cineflixPrepareServer2TempUrl(forceFresh=false){
            current authorized stream URL. It may serve its own short cache;
            this page then stores that URL in the temporary Supabase fields
            BEFORE attaching it to the player. */
-        const workerUrl=apiBase+"/?id="+encodeURIComponent(movieId);
+        const workerUrl=workerBase+"/?id="+encodeURIComponent(movieId);
         const response=await fetch(workerUrl,{
             method:"GET",
             cache:"no-store",
@@ -6185,7 +6189,7 @@ function cineflixGetServer2PlayableSource(source){
     }
     return raw;
 }
-function cineflixBeginServerRetry(showChanging=true){
+async function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
     cineflixServerRetryStartedAt=Date.now();
     cineflixServerRetryPlaying=false;
@@ -6207,8 +6211,26 @@ function cineflixBeginServerRetry(showChanging=true){
 
     try{ video.pause(); }catch(e){}
     try{ destroyHls(); }catch(e){}
-    const source=cineflixServerRetrySource;
+    let source=cineflixServerRetrySource;
     const savedTime=cineflixServerRetryTime;
+
+    /* Server 2 only: use the saved temporary URL when valid; otherwise
+       refresh it through the Worker and save it before playback. */
+    if(cineflixActiveServer===2){
+        try{
+            source = !cineflixServer2TempIsUsable()
+                ? await cineflixPrepareServer2TempUrl(true)
+                : cineflixGetServer2Source();
+            cineflixServerRetrySource=source;
+        }catch(error){
+            console.warn("CINEFLIX Server 2 refresh failed:",error);
+            cineflixFinishServerTransition();
+            hidePlayerLoading();
+            cineflixShowNetworkError();
+            return;
+        }
+    }
+
     if(!source){
         cineflixFinishServerTransition();
         hidePlayerLoading();
