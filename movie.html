@@ -8795,7 +8795,40 @@ window.addEventListener("beforeunload",()=>{
     },true);
 
     initMovie();
+   
 })();
+   
 </script>
+<script>
+  // Worker Base URL
+  const WORKER_BASE_URL = "https://instanthello.indonesiarupee34.workers.dev";
+
+  // Dynamic Stream URL generator function
+  function getDynamicStreamUrl(adminInputValue) {
+    if (!adminInputValue) return "";
+    
+    // Agar admin me direct full link (http...) daala hai:
+    if (adminInputValue.startsWith("http")) {
+      return `${WORKER_BASE_URL}/?url=${encodeURIComponent(adminInputValue)}`;
+    } 
+    // Agar admin me sirf TMDB ID (e.g., 27205) daala hai:
+    else {
+      return `${WORKER_BASE_URL}/?tmdb=${adminInputValue}`;
+    }
+  }
+
+  // Player source set karte waqt is function ka use karein:
+  // Example for Server 2 click:
+  function playServer2(source2DataFromAdmin) {
+    const finalM3u8Stream = getDynamicStreamUrl(source2DataFromAdmin);
+    
+    // Aapke Video Player ka setup (Video.js / Hls.js / Plyr)
+    player.src({
+      src: finalM3u8Stream,
+      type: 'application/x-mpegURL'
+    });
+  }
+</script>
+   
 </body>
 </html>
