@@ -8798,7 +8798,29 @@ window.addEventListener("beforeunload",()=>{
     initMovie();
    
 })();
-   
+   document.getElementById('cineflixServerSelect').addEventListener('change', function() {
+    if (this.value === '2') {
+        loadServer2Stream();
+    } else if (this.value === '1') {
+        // Server 1 load karne ka function yahan likhein
+        loadServer1Stream();
+    }
+});
+
+async function loadServer2Stream() {
+    try {
+        let response = await fetch('https://instanthello.indonesiarupee34.workers.dev/?url=https://nxsha.space/watch/movie/857598');
+        let data = await response.json();
+        
+        if (data.url) {
+            initPlayer(data.url);
+        } else {
+            console.error("Worker se m3u8 link nahi mili.");
+        }
+    } catch (err) {
+        console.error("Fetch error:", err);
+    }
+}
 </script>
 
    
