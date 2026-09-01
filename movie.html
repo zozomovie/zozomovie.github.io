@@ -6284,7 +6284,7 @@ function cineflixBeginServerRetry(showChanging=true){
         return;
     }
 
-    loadHlsSource(source,true,savedTime);
+    loadHlsSource(cineflixResolvePlaybackSource(source),true,savedTime);
 
     /* Switching: the red loader remains hidden. Retry: the red loader remains visible. */
     if(showChanging) hidePlayerLoading();
@@ -6369,7 +6369,28 @@ if(cineflixNetworkRetry){
     });
 }
 
+/* Server 1 CORS bridge — player-only compatibility fix.
+   Keep Server 1's original URL/data untouched; when running the local
+   auto-proxy on :3000, route only the problematic cross-origin M3U8 through
+   its existing /proxy-stream endpoint. Server 2 is never rewritten here. */
+function cineflixResolvePlaybackSource(source){
+    const raw=String(source||"").trim();
+    if(!raw) return raw;
+    if(Number(cineflixActiveServer)!==1) return raw;
+    if(!/^https?:\/\//i.test(raw)) return raw;
+
+    try{
+        const u=new URL(raw);
+        const host=u.hostname.toLowerCase();
+        if(host.includes("rozgarlelo.modiplay.xyz") || /\/proxy\.php(?:$|\?)/i.test(u.pathname)){
+            return `http://localhost:3000/proxy-stream?url=${encodeURIComponent(raw)}`;
+        }
+    }catch(e){}
+    return raw;
+}
+
 function loadHlsSource(source,autoPlay=true,savedTime=0){
+    source=cineflixResolvePlaybackSource(source);
     cineflixAutoRefreshTriggeredForCurrentSource=false;
     pendingAutoPlay=autoPlay;
     pendingStartTime=savedTime||0;
