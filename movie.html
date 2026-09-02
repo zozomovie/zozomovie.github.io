@@ -5470,6 +5470,7 @@ function syncCenterPlayPauseWithControls(){
 }
 
 let cineflixServerDropdownOpen = false;
+let cineflixRetryBadgeVisible = false;
 
 function cineflixSyncServerBadgeWithControls(forceVisible=false){
     if(!cineflixServerSwitch) return;
@@ -5481,19 +5482,16 @@ function cineflixSyncServerBadgeWithControls(forceVisible=false){
     }
     cineflixServerSwitch.classList.remove("hidden-switch");
 
-    /* During Network error + Retry, the badge is intentionally visible even
-       if the movie has not successfully entered PLAYING yet. */
+    /* During Retry/Error, keep the active SERVER badge visible so the user
+       can always see whether Server 1 or Server 2 is failing. */
     if(cineflixRetryBadgeVisible){
-        if(cineflixServerSelect){
-            cineflixServerSelect.value = String(cineflixActiveServer===2 ? 2 : 1);
-        }
         cineflixServerSwitch.classList.remove("server-badge-hidden");
         return;
     }
 
-    /* Outside Retry, the SERVER badge can never appear before the movie has
-       genuinely started once. Opening the dropdown after playback may keep
-       it visible even when normal controls are temporarily hidden. */
+    /* The SERVER badge can never appear before the movie has genuinely
+       started once. Opening the dropdown after playback may keep it visible
+       even when normal controls are temporarily hidden. */
     if(!cineflixHasStartedPlaying){
         cineflixServerSwitch.classList.add("server-badge-hidden");
         return;
@@ -5624,7 +5622,6 @@ let cineflixServerRetryStartedAt = 0;
 let cineflixServerRetrySource = "";
 let cineflixServerRetryTime = 0;
 let cineflixServerRetryPlaying = false;
-let cineflixRetryBadgeVisible = false;
 /* Player-only startup lock: while a movie is waiting to genuinely enter
    PLAYING state, controls stay hidden. It is released only by the real
    playing event (or by an explicit pause/error state). */
@@ -6025,16 +6022,14 @@ async function cineflixPlayWithAutoplayFallback(){
 }
 
 function cineflixHideNetworkError(){
-    if(cineflixNetworkError){
-        cineflixNetworkError.classList.remove("show");
-        cineflixNetworkError.setAttribute("aria-hidden","true");
-    }
     cineflixRetryBadgeVisible = false;
-    if(cineflixServerSwitch && !cineflixServerDropdownOpen){
-        cineflixServerSwitch.classList.add("server-badge-hidden");
-    }
+    if(!cineflixNetworkError) return;
+    cineflixNetworkError.classList.remove("show");
+    cineflixNetworkError.setAttribute("aria-hidden","true");
 }
 function cineflixShowNetworkError(){
+    cineflixRetryBadgeVisible = true;
+    if(cineflixServerSwitch) cineflixSyncServerBadgeWithControls(true);
     if(cineflixServerChange) cineflixServerChange.classList.remove("show");
     if(cineflixNetworkError){
         cineflixNetworkError.classList.add("show");
@@ -6043,17 +6038,6 @@ function cineflixShowNetworkError(){
     if(playerControls){
         playerControls.classList.add("auto-hidden");
         playerControls.style.pointerEvents="none";
-    }
-
-    /* RETRY state: keep the SERVER badge visible and make sure it reflects
-       the exact server whose stream is being retried (1 or 2). */
-    if(cineflixServerSwitch && cineflixGetServer2Source()){
-        if(cineflixServerSelect){
-            cineflixServerSelect.value = String(cineflixActiveServer===2 ? 2 : 1);
-        }
-        cineflixRetryBadgeVisible = true;
-        cineflixServerSwitch.classList.remove("hidden-switch");
-        cineflixServerSwitch.classList.remove("server-badge-hidden");
     }
 }
 function cineflixShowServerChanging(){
@@ -6108,20 +6092,12 @@ function cineflixBeginServerRetry(showChanging=true){
         cineflixShowServerChanging();
         hidePlayerLoading();
     }else{
-        /* RETRY: show only the normal red player loader. The SERVER badge
-           stays visible so the user can see whether Server 1 or 2 is retrying. */
-        cineflixRetryBadgeVisible = true;
+        /* RETRY: show only the normal red player loader.
+           No Changing Server animation is shown for Retry. */
         cineflixFinishServerTransition();
         hidePlayerControls();
         if(playerTop) playerTop.classList.add("auto-hidden");
         showPlayerLoading();
-        if(cineflixServerSwitch && cineflixGetServer2Source()){
-            if(cineflixServerSelect){
-                cineflixServerSelect.value = String(cineflixActiveServer===2 ? 2 : 1);
-            }
-            cineflixServerSwitch.classList.remove("hidden-switch");
-            cineflixServerSwitch.classList.remove("server-badge-hidden");
-        }
     }
 
     try{ video.pause(); }catch(e){}
@@ -7228,8 +7204,8 @@ video.addEventListener("loadeddata",()=>{
     video.style.zIndex="2";
 });
 video.addEventListener("playing",()=>{
-    cineflixHasStartedPlaying = true;
     cineflixRetryBadgeVisible = false;
+    cineflixHasStartedPlaying = true;
     cineflixPlaybackWaitingForPlay = false;
     if(cineflixServerSwitchActive){
         cineflixServerRetryPlaying=true;
@@ -8470,7 +8446,7 @@ window.addEventListener("beforeunload",()=>{
                window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
            ).replace(/\/$/,"");
 
-           const response = await fetch(apiBase + "/update_movie_link",{
+           const response = await fetch(apiBase + "/update_movie",{
                method:"POST",
                headers:{"Content-Type":"application/json"},
                body:JSON.stringify({movie_id:movieId}),
@@ -8478,11 +8454,23 @@ window.addEventListener("beforeunload",()=>{
            });
 
            const data = await response.json().catch(()=>({}));
-           if(!response.ok || !data.success || !data.movie){
+           if(!response.ok || !data.success || !data.generated_link){
                throw new Error(data.message || "Current movie auto-update failed");
            }
 
-           const freshMovie = data.movie;
+           /* /update_movie returns the fresh generated link. Keep all other
+              movie fields from the currently opened movie and replace only
+              its HLS fields. */
+           const baseMovie = window.CINEFLIX_MOVIE || {};
+           const freshMovie = {
+               ...baseMovie,
+               id: data.id || baseMovie.id || movieId,
+               tmdb_id: data.tmdb_id || baseMovie.tmdb_id,
+               video_1080: data.generated_link,
+               video_720: data.generated_link,
+               video_480: data.generated_link,
+               updated_at: data.updated_at || new Date().toISOString()
+           };
            window.CINEFLIX_MOVIE = freshMovie;
            cineflixLastMovieSnapshot = "";
 
@@ -8546,39 +8534,25 @@ window.addEventListener("beforeunload",()=>{
     async function cineflixCheckHlsManifestSilently(source){
         if(!source || !/^https?:\/\//i.test(String(source))) return null;
 
-        /* Conservative background health check. A browser-side CORS failure
-           cannot distinguish "dead" from "not readable by this page", so an
-           unknown/opaque response is NEVER treated as dead. This prevents a
-           valid Server-1 HLS URL from being regenerated unnecessarily.
-           Only a readable response that clearly is not an HLS playlist is
-           considered unhealthy. Actual playback errors still use the normal
-           player recovery path. */
+        /* Browser-side CORS is NOT a reliable test for a third-party HLS URL.
+           null means UNKNOWN, and UNKNOWN must never trigger regeneration. */
         try{
             const controller=new AbortController();
             const timeout=setTimeout(()=>controller.abort(),4500);
             const response=await fetch(source,{
                 method:"GET",
-                mode:"cors",
                 cache:"no-store",
                 credentials:"omit",
                 signal:controller.signal,
                 headers:{"Cache-Control":"no-cache"}
             });
             clearTimeout(timeout);
-
-            if(response.type === "opaque") return null;
             if(!response.ok) return false;
-
-            const text=(await response.text()).slice(0,32768);
+            const text=await response.text();
             if(/#EXTM3U/i.test(text)) return true;
-
-            /* Some valid endpoints may return a redirect wrapper or another
-               CORS-readable response. Do not regenerate unless the response
-               is clearly an HTML/error page. */
-            if(/^\s*<(?:!doctype\s+)?html[\s>]/i.test(text)) return false;
+            if(/<(?:!doctype|html|head|body)\b/i.test(text)) return false;
             return null;
         }catch(_){
-            /* Network/CORS/opaque errors are unknown, not proof of expiry. */
             return null;
         }
     }
@@ -8596,18 +8570,22 @@ window.addEventListener("beforeunload",()=>{
 
             /* No saved link means there is nothing to validate, so repair it
                quietly in the background before the user needs playback. */
-            let health=null;
+            let healthy=false;
             if(source){
-                health=await cineflixCheckHlsManifestSilently(source);
+                healthy=await cineflixCheckHlsManifestSilently(source);
             }
 
-            if(health !== false){
-                console.log("CINEFLIX background HLS check: valid/unknown — no update needed");
+            if(healthy === true){
+                console.log("CINEFLIX background HLS check: valid — no update needed");
+                return;
+            }
+            if(healthy === null){
+                console.log("CINEFLIX background HLS check: unknown/CORS — no update needed");
                 return;
             }
 
             cineflixBackgroundRepairDone=true;
-            console.log("CINEFLIX background HLS check: clearly invalid — repairing current movie");
+            console.log("CINEFLIX background HLS check: expired/dead — repairing current movie");
 
             const params=new URLSearchParams(window.location.search);
             const movieId=params.get("id");
@@ -8617,7 +8595,7 @@ window.addEventListener("beforeunload",()=>{
                 window.CINEFLIX_UPDATE_API_BASE || CINEFLIX_UPDATE_API_BASE
             ).replace(/\/$/,"");
 
-            const response=await fetch(apiBase + "/update_movie_link",{
+            const response=await fetch(apiBase + "/update_movie",{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
                 body:JSON.stringify({movie_id:movieId}),
@@ -8625,11 +8603,20 @@ window.addEventListener("beforeunload",()=>{
             });
 
             const data=await response.json().catch(()=>({}));
-            if(!response.ok || !data.success || !data.movie){
+            if(!response.ok || !data.success || !data.generated_link){
                 throw new Error(data.message || "Background movie link update failed");
             }
 
-            const freshMovie=data.movie;
+            const baseMovie=window.CINEFLIX_MOVIE || movie || {};
+            const freshMovie={
+                ...baseMovie,
+                id:data.id || baseMovie.id || movieId,
+                tmdb_id:data.tmdb_id || baseMovie.tmdb_id,
+                video_1080:data.generated_link,
+                video_720:data.generated_link,
+                video_480:data.generated_link,
+                updated_at:data.updated_at || new Date().toISOString()
+            };
             window.CINEFLIX_MOVIE=freshMovie;
             cineflixLastMovieSnapshot=cineflixMovieSnapshot(freshMovie);
 
