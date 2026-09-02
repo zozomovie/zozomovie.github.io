@@ -6058,15 +6058,30 @@ function cineflixGetServer2Source(){
     return String(cineflixServer2Url||"").trim();
 }
 
-/* Server 2 streams can be hosted on origins that do not send CORS headers.
-   Only Server 2 is routed through the existing local HLS proxy; Server 1
-   keeps its original source and loading path completely unchanged. */
+/* Server 2 uses the saved HLS URL through the same remote HLS proxy
+   family used by the existing Server-1 generated links.
+   IMPORTANT: no localhost / server.js dependency remains here. */
 function cineflixGetServer2PlayableSource(source){
     const raw=String(source||"").trim();
     if(!raw) return raw;
     if(cineflixActiveServer!==2) return raw;
-    if(raw.includes("/proxy-stream?url=")) return raw;
-    return `http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
+
+    /* If an already-generated remote proxy URL is supplied, keep it. */
+    if(/^https?:\/\/rozgarlelo\.modiplay\.xyz\/proxy\.php\?/i.test(raw)){
+        return raw;
+    }
+
+    try{
+        const u=new URL(raw);
+        const params=new URLSearchParams();
+        params.set("serve_m3u8","1");
+        params.set("ref",u.origin + "/");
+        params.set("url",raw);
+        params.set("ebd",u.origin);
+        return `https://rozgarlelo.modiplay.xyz/proxy.php?${params.toString()}`;
+    }catch(e){
+        return raw;
+    }
 }
 function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
@@ -6200,40 +6215,10 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         destroyHls();
         showPlayerLoading();
 
-        /* SERVER 2 ONLY: some HLS manifests expose absolute media URLs on an
-           origin that does not send CORS headers. Route every HLS.js request
-           for Server 2 through the existing local proxy. Server 1 keeps the
-           original HLS.js configuration unchanged. */
-        if(cineflixActiveServer===2){
-            const baseHlsConfig=getHlsConfig();
-            const BaseLoader=baseHlsConfig.loader || Hls.DefaultConfig.loader;
-            baseHlsConfig.loader=class CineflixServer2ProxyLoader extends BaseLoader{
-                load(context, config, callbacks){
-                    const raw=String(context.url||'').trim();
-                    /* Server 2 ONLY: every non-local HLS resource is forced
-                       through the local proxy. Already-proxied URLs are left
-                       untouched so the proxy never gets wrapped recursively. */
-                    if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
-                        context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
-                    }
-                    super.load(context, config, callbacks);
-                }
-            };
-            /* Keep fetchSetup consistent with the loader. This also catches
-               HLS.js requests that use the fetch path instead of XHR. */
-            baseHlsConfig.fetchSetup=function(context, initParams){
-                const raw=String(context.url||'').trim();
-                if(raw && !/^https?:\/\/localhost:3001\/proxy-stream\?url=/i.test(raw)){
-                    context.url=`http://localhost:3001/proxy-stream?url=${encodeURIComponent(raw)}`;
-                }
-                initParams.mode="cors";
-                initParams.credentials="omit";
-                return new Request(context.url,initParams);
-            };
-            hls=new Hls(baseHlsConfig);
-        }else{
-            hls=new Hls(getHlsConfig());
-        }
+        /* Server 2 is already resolved to the remote HLS proxy above.
+           Use the normal HLS.js loader exactly like Server 1.
+           There is NO localhost:3001 / server.js dependency here. */
+        hls=new Hls(getHlsConfig());
 
         hls.on(Hls.Events.MANIFEST_PARSED,(event,data)=>{
             hlsReady=true;
