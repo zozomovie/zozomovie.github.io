@@ -6058,13 +6058,26 @@ function cineflixGetServer2Source(){
     return String(cineflixServer2Url||"").trim();
 }
 
-/* Server 2 streams can be hosted on origins that do not send CORS headers.
-   Only Server 2 is routed through the existing local HLS proxy; Server 1
-   keeps its original source and loading path completely unchanged. */
+/* =========================================================
+   SERVER 2 PUBLIC HTTPS PROXY
+   - Server 1 stays completely unchanged.
+   - Replace only the workers.dev host below after deploying worker.js.
+   ========================================================= */
+const CINEFLIX_SERVER2_PROXY_ENDPOINT =
+    "https://instanthello.indonesiarupee34.workers.dev/proxy-stream";
+
+function cineflixIsServer2ProxyUrl(value){
+    const raw=String(value||"").trim();
+    if(!raw) return false;
+    return raw.startsWith(CINEFLIX_SERVER2_PROXY_ENDPOINT + "?url=");
+}
+
 function cineflixGetServer2PlayableSource(source){
-    /* SERVER 2 ONLY: use the saved HLS URL directly.
-       No localhost/server.js dependency. Server 1 is untouched. */
-    return String(source||"").trim();
+    const raw=String(source||"").trim();
+    if(!raw) return raw;
+    if(cineflixActiveServer!==2) return raw;
+    if(cineflixIsServer2ProxyUrl(raw)) return raw;
+    return `${CINEFLIX_SERVER2_PROXY_ENDPOINT}?url=${encodeURIComponent(raw)}`;
 }
 function cineflixBeginServerRetry(showChanging=true){
     const token=++cineflixServerSwitchToken;
@@ -6198,11 +6211,34 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
         destroyHls();
         showPlayerLoading();
 
-        /* SERVER 2 ONLY: use the original HLS URL directly.
-           There is intentionally NO localhost:3001 proxy here, so Server 2
-           works from GitHub Pages without server.js. Server 1 keeps its
-           original HLS.js configuration completely unchanged. */
-        hls=new Hls(getHlsConfig());
+        /* SERVER 2 ONLY: route the manifest, child playlists, keys, maps and
+           media segments through the public HTTPS Worker. Server 1 keeps the
+           exact original HLS.js configuration. */
+        if(cineflixActiveServer===2){
+            const baseHlsConfig=getHlsConfig();
+            const BaseLoader=baseHlsConfig.loader || Hls.DefaultConfig.loader;
+            baseHlsConfig.loader=class CineflixServer2ProxyLoader extends BaseLoader{
+                load(context, config, callbacks){
+                    const raw=String(context.url||'').trim();
+                    if(raw && !cineflixIsServer2ProxyUrl(raw)){
+                        context.url=cineflixGetServer2PlayableSource(raw);
+                    }
+                    super.load(context, config, callbacks);
+                }
+            };
+            baseHlsConfig.fetchSetup=function(context, initParams){
+                const raw=String(context.url||'').trim();
+                if(raw && !cineflixIsServer2ProxyUrl(raw)){
+                    context.url=cineflixGetServer2PlayableSource(raw);
+                }
+                initParams.mode="cors";
+                initParams.credentials="omit";
+                return new Request(context.url,initParams);
+            };
+            hls=new Hls(baseHlsConfig);
+        }else{
+            hls=new Hls(getHlsConfig());
+        }
 
         hls.on(Hls.Events.MANIFEST_PARSED,(event,data)=>{
             hlsReady=true;
@@ -7720,6 +7756,7 @@ let startX=0;
 let scrollStart=0;
 
 
+if(similarRow){
 similarRow.addEventListener(
     "pointerdown",
     e=>{
@@ -7770,6 +7807,8 @@ similarRow.addEventListener(
 
     }
 );
+
+}
 
 
 /* =========================================================
