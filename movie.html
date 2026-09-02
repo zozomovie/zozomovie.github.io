@@ -5481,9 +5481,19 @@ function cineflixSyncServerBadgeWithControls(forceVisible=false){
     }
     cineflixServerSwitch.classList.remove("hidden-switch");
 
-    /* The SERVER badge can never appear before the movie has genuinely
-       started once. Opening the dropdown after playback may keep it visible
-       even when normal controls are temporarily hidden. */
+    /* During Network error + Retry, the badge is intentionally visible even
+       if the movie has not successfully entered PLAYING yet. */
+    if(cineflixRetryBadgeVisible){
+        if(cineflixServerSelect){
+            cineflixServerSelect.value = String(cineflixActiveServer===2 ? 2 : 1);
+        }
+        cineflixServerSwitch.classList.remove("server-badge-hidden");
+        return;
+    }
+
+    /* Outside Retry, the SERVER badge can never appear before the movie has
+       genuinely started once. Opening the dropdown after playback may keep
+       it visible even when normal controls are temporarily hidden. */
     if(!cineflixHasStartedPlaying){
         cineflixServerSwitch.classList.add("server-badge-hidden");
         return;
@@ -5614,6 +5624,7 @@ let cineflixServerRetryStartedAt = 0;
 let cineflixServerRetrySource = "";
 let cineflixServerRetryTime = 0;
 let cineflixServerRetryPlaying = false;
+let cineflixRetryBadgeVisible = false;
 /* Player-only startup lock: while a movie is waiting to genuinely enter
    PLAYING state, controls stay hidden. It is released only by the real
    playing event (or by an explicit pause/error state). */
@@ -6014,9 +6025,14 @@ async function cineflixPlayWithAutoplayFallback(){
 }
 
 function cineflixHideNetworkError(){
-    if(!cineflixNetworkError) return;
-    cineflixNetworkError.classList.remove("show");
-    cineflixNetworkError.setAttribute("aria-hidden","true");
+    if(cineflixNetworkError){
+        cineflixNetworkError.classList.remove("show");
+        cineflixNetworkError.setAttribute("aria-hidden","true");
+    }
+    cineflixRetryBadgeVisible = false;
+    if(cineflixServerSwitch && !cineflixServerDropdownOpen){
+        cineflixServerSwitch.classList.add("server-badge-hidden");
+    }
 }
 function cineflixShowNetworkError(){
     if(cineflixServerChange) cineflixServerChange.classList.remove("show");
@@ -6028,8 +6044,20 @@ function cineflixShowNetworkError(){
         playerControls.classList.add("auto-hidden");
         playerControls.style.pointerEvents="none";
     }
+
+    /* RETRY state: keep the SERVER badge visible and make sure it reflects
+       the exact server whose stream is being retried (1 or 2). */
+    if(cineflixServerSwitch && cineflixGetServer2Source()){
+        if(cineflixServerSelect){
+            cineflixServerSelect.value = String(cineflixActiveServer===2 ? 2 : 1);
+        }
+        cineflixRetryBadgeVisible = true;
+        cineflixServerSwitch.classList.remove("hidden-switch");
+        cineflixServerSwitch.classList.remove("server-badge-hidden");
+    }
 }
 function cineflixShowServerChanging(){
+    cineflixRetryBadgeVisible = false;
     cineflixHideNetworkError();
     cineflixPlaybackWaitingForPlay = true;
     /* After a server is selected, hide the SERVER badge immediately. */
@@ -6080,12 +6108,20 @@ function cineflixBeginServerRetry(showChanging=true){
         cineflixShowServerChanging();
         hidePlayerLoading();
     }else{
-        /* RETRY: show only the normal red player loader.
-           No Changing Server animation is shown for Retry. */
+        /* RETRY: show only the normal red player loader. The SERVER badge
+           stays visible so the user can see whether Server 1 or 2 is retrying. */
+        cineflixRetryBadgeVisible = true;
         cineflixFinishServerTransition();
         hidePlayerControls();
         if(playerTop) playerTop.classList.add("auto-hidden");
         showPlayerLoading();
+        if(cineflixServerSwitch && cineflixGetServer2Source()){
+            if(cineflixServerSelect){
+                cineflixServerSelect.value = String(cineflixActiveServer===2 ? 2 : 1);
+            }
+            cineflixServerSwitch.classList.remove("hidden-switch");
+            cineflixServerSwitch.classList.remove("server-badge-hidden");
+        }
     }
 
     try{ video.pause(); }catch(e){}
@@ -7193,6 +7229,7 @@ video.addEventListener("loadeddata",()=>{
 });
 video.addEventListener("playing",()=>{
     cineflixHasStartedPlaying = true;
+    cineflixRetryBadgeVisible = false;
     cineflixPlaybackWaitingForPlay = false;
     if(cineflixServerSwitchActive){
         cineflixServerRetryPlaying=true;
@@ -8507,27 +8544,42 @@ window.addEventListener("beforeunload",()=>{
     }
 
     async function cineflixCheckHlsManifestSilently(source){
-        if(!source || !/^https?:\/\//i.test(String(source))) return false;
+        if(!source || !/^https?:\/\//i.test(String(source))) return null;
 
-        /* Fast silent health check. We read only the playlist, without
-           attaching anything to the visible player. If the playlist is
-           reachable and is a real HLS manifest, keep the existing link. */
+        /* Conservative background health check. A browser-side CORS failure
+           cannot distinguish "dead" from "not readable by this page", so an
+           unknown/opaque response is NEVER treated as dead. This prevents a
+           valid Server-1 HLS URL from being regenerated unnecessarily.
+           Only a readable response that clearly is not an HLS playlist is
+           considered unhealthy. Actual playback errors still use the normal
+           player recovery path. */
         try{
             const controller=new AbortController();
             const timeout=setTimeout(()=>controller.abort(),4500);
             const response=await fetch(source,{
                 method:"GET",
+                mode:"cors",
                 cache:"no-store",
                 credentials:"omit",
                 signal:controller.signal,
-                headers:{"Range":"bytes=0-8191","Cache-Control":"no-cache"}
+                headers:{"Cache-Control":"no-cache"}
             });
             clearTimeout(timeout);
+
+            if(response.type === "opaque") return null;
             if(!response.ok) return false;
-            const text=await response.text();
-            return /#EXTM3U/i.test(text);
+
+            const text=(await response.text()).slice(0,32768);
+            if(/#EXTM3U/i.test(text)) return true;
+
+            /* Some valid endpoints may return a redirect wrapper or another
+               CORS-readable response. Do not regenerate unless the response
+               is clearly an HTML/error page. */
+            if(/^\s*<(?:!doctype\s+)?html[\s>]/i.test(text)) return false;
+            return null;
         }catch(_){
-            return false;
+            /* Network/CORS/opaque errors are unknown, not proof of expiry. */
+            return null;
         }
     }
 
@@ -8544,18 +8596,18 @@ window.addEventListener("beforeunload",()=>{
 
             /* No saved link means there is nothing to validate, so repair it
                quietly in the background before the user needs playback. */
-            let healthy=false;
+            let health=null;
             if(source){
-                healthy=await cineflixCheckHlsManifestSilently(source);
+                health=await cineflixCheckHlsManifestSilently(source);
             }
 
-            if(healthy){
-                console.log("CINEFLIX background HLS check: valid — no update needed");
+            if(health !== false){
+                console.log("CINEFLIX background HLS check: valid/unknown — no update needed");
                 return;
             }
 
             cineflixBackgroundRepairDone=true;
-            console.log("CINEFLIX background HLS check: expired/dead — repairing current movie");
+            console.log("CINEFLIX background HLS check: clearly invalid — repairing current movie");
 
             const params=new URLSearchParams(window.location.search);
             const movieId=params.get("id");
