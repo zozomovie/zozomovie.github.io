@@ -257,7 +257,7 @@ button{
    - no heavy dark overlay
 ========================================================= */
 /* =========================================================
-   PREMIUM ORBIT LOADER — V16
+   PREMIUM ORBIT LOADER â€” V16
    Small, clean, completely different from the old spinner
 ========================================================= */
 .player-loading{
@@ -845,7 +845,7 @@ button{
 }
 .sub-option:hover{background:rgba(255,255,255,.06);}
 .sub-option.active{background:rgba(229,9,20,.16);color:#fff;}
-.sub-option.active::after{content:"✓";color:#e50914;font-size:12px;}
+.sub-option.active::after{content:"âœ“";color:#e50914;font-size:12px;}
 
 @media(max-width:520px){
     .settings-panel{
@@ -856,7 +856,7 @@ button{
 }
 
 
-/* MOBILE COMPACT SETTINGS — visual-only refinement */
+/* MOBILE COMPACT SETTINGS â€” visual-only refinement */
 .settings-panel{
     right:8px;
     bottom:51px;
@@ -1720,7 +1720,7 @@ button{
     flex-shrink:0;
 }
 
-/* TMDB cast photos — fill the complete circle with no gray corners. */
+/* TMDB cast photos â€” fill the complete circle with no gray corners. */
 .cast-photo{
     overflow:hidden;
     border-radius:50%;
@@ -2575,7 +2575,7 @@ button{
 }
 
 
-/* FINAL SETTINGS SPACING FIX — remove subtitle row and tighten vertical gaps */
+/* FINAL SETTINGS SPACING FIX â€” remove subtitle row and tighten vertical gaps */
 .settings-panel{
   padding:4px 5px 4px !important;
 }
@@ -2994,7 +2994,7 @@ body.cineflix-db-loading .movie-meta .rating::after{
 }
 
 /* Exact widths for the known meta structure:
-   rating • year • runtime • age • HD */
+   rating â€¢ year â€¢ runtime â€¢ age â€¢ HD */
 body.cineflix-db-loading .movie-meta > span:not(.dot):not(.rating):not(.age):nth-of-type(3){
     width:38px !important;
 }
@@ -3030,7 +3030,7 @@ body.cineflix-db-loading .movie-meta .age::after{
 /* =========================================================
    GENRES
    Keep the existing row/spacing, but skeleton ONLY the text-sized
-   portion — no giant rectangular pill.
+   portion â€” no giant rectangular pill.
 ========================================================= */
 body.cineflix-db-loading .genres{
     display:flex !important;
@@ -3220,7 +3220,7 @@ body.cineflix-db-error .cineflix-db-message{
     display:grid;
 }
 
-/* MODE BADGE — shown only during Movie/Trailer switching and while controls are visible */
+/* MODE BADGE â€” shown only during Movie/Trailer switching and while controls are visible */
 .player-mode-badge{
     position:absolute;
     top:12px;
@@ -3270,7 +3270,7 @@ body.cineflix-db-error .cineflix-db-message{
 </style>
 <style>
 
-/* FINAL MOBILE SETTINGS POLISH v10 — visual only */
+/* FINAL MOBILE SETTINGS POLISH v10 â€” visual only */
 #settingsBtn svg{
   width:18px !important;
   height:18px !important;
@@ -3357,7 +3357,7 @@ body.cineflix-db-error .cineflix-db-message{
 }
 
 
-/* SETTINGS PANEL VISIBILITY FIX — mobile upward-opening panel */
+/* SETTINGS PANEL VISIBILITY FIX â€” mobile upward-opening panel */
 .settings-panel{
   z-index:999 !important;
   max-height:calc(100vh - 70px) !important;
@@ -3547,7 +3547,7 @@ body.cineflix-db-error .cineflix-db-message{
 
 </style>
 <style id="cineflix-vast-ad-style">
-/* CINEFLIX VAST PRE-ROLL — additive only */
+/* CINEFLIX VAST PRE-ROLL â€” additive only */
 .vast-ad-overlay{
     position:absolute;
     inset:0;
@@ -3847,7 +3847,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 </style>
 
 <style id="cineflix-final-trailer-visual">
-/* FINAL TOP TRAILER VISUAL — clean, thumbnail-first, no site header */
+/* FINAL TOP TRAILER VISUAL â€” clean, thumbnail-first, no site header */
 @media(max-width:699px){
     .header{display:none !important;}
     .mobile-nav{display:flex !important;}
@@ -3981,12 +3981,98 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 .watch-now-btn .watch-icon{position:absolute;left:44px;}
 .watch-now-btn #watchNowText{margin:0 auto;}
 .watch-now-btn::before{content:"";position:absolute;right:5px;top:50%;width:32px;height:32px;transform:translateY(-50%);border:1px solid rgba(255,255,255,.45);border-radius:50%;background:rgba(255,255,255,.08);}
-.watch-now-btn::after{content:"›";position:absolute;right:16px;top:50%;transform:translateY(-53%);font-size:24px;font-weight:300;line-height:1;color:#fff;border:0;}
+.watch-now-btn::after{content:"â€º";position:absolute;right:16px;top:50%;transform:translateY(-53%);font-size:24px;font-weight:300;line-height:1;color:#fff;border:0;}
 /* Keep the real action row/nav/etc. unchanged. */
 @media(min-width:700px){
     .header{display:block;}
     .cineflix-player-chrome{display:none;}
 }
+</style>
+
+
+<style id="cineflix-clean-trailer-final">
+@media(max-width:699px){
+    body{background:#070713 !important;}
+    .header{display:none !important;}
+    .player-section{padding-top:0 !important;margin:0 !important;}
+    .video-player{
+        width:100% !important;
+        margin:0 !important;
+        aspect-ratio:1.82 / 1 !important;
+        border-radius:0 0 13px 13px !important;
+        border-top:0 !important;
+        overflow:visible !important;
+        box-shadow:0 10px 28px rgba(0,0,0,.24) !important;
+    }
+    .video-player::after{content:none !important;}
+    .cineflix-player-chrome{
+        position:fixed !important;
+        top:0 !important;
+        left:0 !important;
+        right:0 !important;
+        width:100% !important;
+        height:48px !important;
+        padding:7px 15px 0 !important;
+        display:flex !important;
+        justify-content:flex-start !important;
+        align-items:center !important;
+        background:transparent !important;
+        z-index:10000 !important;
+        pointer-events:none !important;
+    }
+    .cineflix-player-back{
+        width:32px !important;height:32px !important;
+        padding:0 !important;margin:0 !important;
+        background:transparent !important;
+        border:0 !important;box-shadow:none !important;
+        pointer-events:auto !important;
+    }
+    .cineflix-player-back svg{width:23px !important;height:23px !important;stroke-width:1.8 !important;}
+    .cineflix-earn-money{display:none !important;}
+
+    #trailerThumbOverlay{z-index:70 !important;border-radius:0 0 13px 13px !important;}
+    #trailerThumbOverlay img{object-fit:cover !important;object-position:center center !important;}
+    #trailerThumbOverlay::after{background:rgba(0,0,0,.08) !important;}
+
+    .trailer-frame-label{
+        position:absolute !important;left:12px !important;top:11px !important;
+        z-index:115 !important;display:none !important;
+        color:#fff !important;font:600 10px/1 Inter,Arial,sans-serif !important;
+        text-shadow:0 1px 5px rgba(0,0,0,.7) !important;
+        pointer-events:none !important;
+    }
+    .video-player.trailer-mode .trailer-frame-label{display:block !important;}
+    .video-player.trailer-mode .trailer-mute-control{
+        display:grid !important;right:10px !important;left:auto !important;top:7px !important;
+        width:32px !important;height:32px !important;background:transparent !important;
+    }
+    .trailer-mute-control svg{width:21px !important;height:21px !important;stroke-width:1.7 !important;}
+    .trailer-center-control{
+        width:58px !important;height:58px !important;border-radius:50% !important;
+        background:rgba(0,0,0,.10) !important;border:1px solid rgba(255,255,255,.9) !important;
+        box-shadow:0 5px 18px rgba(0,0,0,.28) !important;
+    }
+    .trailer-center-control svg{width:32px !important;height:32px !important;}
+
+    .watch-now-wrap{
+        width:100% !important;padding:10px 18px 11px !important;
+        margin:0 !important;order:0 !important;
+    }
+    .watch-now-btn{
+        width:100% !important;min-height:40px !important;height:40px !important;
+        border-radius:22px !important;
+        background:linear-gradient(100deg,#ff247c 0%,#d02be8 50%,#7b3dff 100%) !important;
+        box-shadow:0 7px 20px rgba(135,42,229,.20),inset 0 1px 0 rgba(255,255,255,.2) !important;
+        transition:none !important;
+    }
+    .watch-now-btn:hover,.watch-now-btn:active{filter:none !important;transform:none !important;}
+    .watch-now-btn .watch-icon{left:43px !important;width:15px !important;height:15px !important;}
+    .watch-now-btn #watchNowText{font-size:12px !important;font-weight:900 !important;}
+
+    /* Action tabs remain directly below Watch Now. */
+    .actions{margin-top:0 !important;}
+}
+@media(max-width:699px){#trailerToggle{display:none !important;}}
 </style>
 
 </head>
@@ -4107,7 +4193,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
         </svg>
     </button>
     <div class="cineflix-earn-money" aria-label="Earn Money">
-        <div class="cineflix-coin">₹</div>
+        <div class="cineflix-coin">â‚¹</div>
         <div class="cineflix-earn-copy"><strong>Earn</strong><span>Money</span></div>
     </div>
 </div>
@@ -4115,7 +4201,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 <div class="player-mode-badge" id="playerModeBadge" aria-hidden="true">MOVIE</div>
 
 
-<!-- CINEFLIX VAST PRE-ROLL OVERLAY — added without removing existing player UI -->
+<!-- CINEFLIX VAST PRE-ROLL OVERLAY â€” added without removing existing player UI -->
 <div class="vast-ad-overlay" id="vastAdOverlay" aria-hidden="true">
     <video class="vast-ad-video" id="vastAdVideo" playsinline preload="auto"></video>
     <div class="vast-ad-scrim" aria-hidden="true"></div>
@@ -4161,6 +4247,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 <div id="trailerThumbOverlay" aria-hidden="true">
     <img id="trailerThumbImage" src="" alt="Trailer thumbnail">
 </div>
+<div class="trailer-frame-label" id="trailerFrameLabel" aria-hidden="true">Trailer</div>
 
 <button class="trailer-mute-control" id="trailerMuteControl" type="button" data-muted="false" aria-label="Mute trailer">
     <svg class="trailer-volume-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -4194,7 +4281,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
             <path d="M5 12h10"/>
         </svg>
         <div class="gesture-seek-time" id="gestureSeekTime">00:00</div>
-        <div class="gesture-seek-delta" id="gestureSeekDelta">−10 sec</div>
+        <div class="gesture-seek-delta" id="gestureSeekDelta">âˆ’10 sec</div>
     </div>
 </div>
 
@@ -4387,7 +4474,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
                 <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 12h5M8 15h7"/></svg>
                 <span>Quality</span>
             </span>
-            <span class="settings-right" id="settingsQualityValue">Auto <b>›</b></span>
+            <span class="settings-right" id="settingsQualityValue">Auto <b>â€º</b></span>
         </button>
 
         <button class="settings-row" type="button" data-setting="speed">
@@ -4395,7 +4482,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 1.8"/><path d="M7.2 4.9 5.6 3.6M16.8 4.9l1.6-1.3"/></svg>
                 <span>Speed</span>
             </span>
-            <span class="settings-right" id="settingsSpeedValue">1× <b>›</b></span>
+            <span class="settings-right" id="settingsSpeedValue">1Ã— <b>â€º</b></span>
         </button>
 
         <button class="settings-row" type="button" data-setting="aspect">
@@ -4403,7 +4490,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
                 <svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="1.8"/><path d="M7 9h10M7 12h6M7 15h8"/></svg>
                 <span>Aspect Ratio</span>
             </span>
-            <span class="settings-right" id="settingsAspectValue">Fit <b>›</b></span>
+            <span class="settings-right" id="settingsAspectValue">Fit <b>â€º</b></span>
         </button>
 
         <button class="settings-row" type="button" data-setting="audio">
@@ -4411,7 +4498,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
                 <svg viewBox="0 0 24 24"><path d="M5 10h4l5-4v12l-5-4H5z"/><path d="M17 9a4 4 0 0 1 0 6M19 7a7 7 0 0 1 0 10"/></svg>
                 <span>Audio Track</span>
             </span>
-            <span class="settings-right">Default <b>›</b></span>
+            <span class="settings-right">Default <b>â€º</b></span>
         </button>
 
         
@@ -4432,13 +4519,13 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
         <button class="settings-back" type="button" data-back>
             <svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg><span>Speed</span>
         </button>
-        <button class="sub-option" type="button" data-speed="0.5">0.5×</button>
-        <button class="sub-option" type="button" data-speed="0.75">0.75×</button>
-        <button class="sub-option active" type="button" data-speed="1">1×</button>
-        <button class="sub-option" type="button" data-speed="1.25">1.25×</button>
-        <button class="sub-option" type="button" data-speed="1.5">1.5×</button>
-        <button class="sub-option" type="button" data-speed="1.75">1.75×</button>
-        <button class="sub-option" type="button" data-speed="2">2×</button>
+        <button class="sub-option" type="button" data-speed="0.5">0.5Ã—</button>
+        <button class="sub-option" type="button" data-speed="0.75">0.75Ã—</button>
+        <button class="sub-option active" type="button" data-speed="1">1Ã—</button>
+        <button class="sub-option" type="button" data-speed="1.25">1.25Ã—</button>
+        <button class="sub-option" type="button" data-speed="1.5">1.5Ã—</button>
+        <button class="sub-option" type="button" data-speed="1.75">1.75Ã—</button>
+        <button class="sub-option" type="button" data-speed="2">2Ã—</button>
     </div>
 
     <div class="settings-sub-view" id="aspectView">
@@ -4453,6 +4540,24 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 
 </div>
 
+</section>
+<!-- =======================================================
+     CONTENT
+======================================================= -->
+<section class="content">
+<h1 class="movie-title"></h1>
+<div class="movie-meta">
+    <span class="rating"></span>
+    <span class="dot">â€¢</span>
+    <span></span>
+    <span class="dot">â€¢</span>
+    <span></span>
+    <span class="dot">â€¢</span>
+    <span class="age"></span>
+    <span class="dot">â€¢</span>
+    <span></span>
+</div>
+<div class="genres"></div>
 <div class="watch-now-wrap">
     <button class="watch-now-btn" id="watchNowBtn" type="button" aria-label="Watch Now">
         <svg class="watch-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -4463,24 +4568,6 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 </div>
 
 
-</section>
-<!-- =======================================================
-     CONTENT
-======================================================= -->
-<section class="content">
-<h1 class="movie-title"></h1>
-<div class="movie-meta">
-    <span class="rating"></span>
-    <span class="dot">•</span>
-    <span></span>
-    <span class="dot">•</span>
-    <span></span>
-    <span class="dot">•</span>
-    <span class="age"></span>
-    <span class="dot">•</span>
-    <span></span>
-</div>
-<div class="genres"></div>
 <!-- =======================================================
      ACTION BUTTONS
 ======================================================= -->
@@ -4524,7 +4611,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
     <span>Share</span>
 </button>
 
-<!-- RATE — after Share; swipe horizontally on mobile -->
+<!-- RATE â€” after Share; swipe horizontally on mobile -->
 <button class="action" id="rateBtn" type="button">
     <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M7 10v10H4V10h3z"/>
@@ -4689,7 +4776,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
     You May Also Like
 </h2>
 
-<!-- One empty grid item only — layout demo, no fake movie data. -->
+<!-- One empty grid item only â€” layout demo, no fake movie data. -->
 <div class="similar-row">
 
     <div class="similar-card" aria-hidden="true">
@@ -5216,7 +5303,7 @@ document.querySelector('[data-setting="quality"]').addEventListener("click",()=>
     document.querySelectorAll("[data-quality-setting]").forEach(x=>{
         x.classList.toggle("active", currentQualityChoice==="auto" ? x.dataset.qualitySetting==="auto" : x.dataset.qualitySetting===q);
     });
-    settingsQualityValue.innerHTML=(currentQualityChoice==="auto" ? "Auto" : q+"p")+" <b>›</b>";
+    settingsQualityValue.innerHTML=(currentQualityChoice==="auto" ? "Auto" : q+"p")+" <b>â€º</b>";
     qualityView.classList.add("active");
     settingsPanel.classList.add("sub-open");
     rebuildQualityButtons();
@@ -5244,12 +5331,12 @@ document.querySelectorAll("[data-speed]").forEach(btn=>{
         video.playbackRate=speed;
         document.querySelectorAll("[data-speed]").forEach(x=>x.classList.remove("active"));
         btn.classList.add("active");
-        settingsSpeedValue.innerHTML=speed+"× <b>›</b>";
+        settingsSpeedValue.innerHTML=speed+"Ã— <b>â€º</b>";
         closeSettingsSub();
     });
 });
 video.addEventListener("ratechange",()=>{
-    settingsSpeedValue.innerHTML=(video.playbackRate||1)+"× <b>›</b>";
+    settingsSpeedValue.innerHTML=(video.playbackRate||1)+"Ã— <b>â€º</b>";
 });
 
 /* Aspect Ratio -> dedicated submenu, real video rendering change. */
@@ -5264,7 +5351,7 @@ document.querySelectorAll("[data-aspect]").forEach(btn=>{
         video.style.objectFit=(mode==="fill"?"cover":mode==="stretch"?"fill":"contain");
         document.querySelectorAll("[data-aspect]").forEach(x=>x.classList.remove("active"));
         btn.classList.add("active");
-        settingsAspectValue.innerHTML=(mode.charAt(0).toUpperCase()+mode.slice(1))+" <b>›</b>";
+        settingsAspectValue.innerHTML=(mode.charAt(0).toUpperCase()+mode.slice(1))+" <b>â€º</b>";
         closeSettingsSub();
     });
 });
@@ -5403,7 +5490,7 @@ function gestureShowOverlay(delta, iconDirection){
 
     gestureSeekTime.textContent = gestureFormatTime(video.currentTime || 0);
     gestureSeekDelta.textContent =
-        (delta >= 0 ? "+" : "−") + absDelta + " sec";
+        (delta >= 0 ? "+" : "âˆ’") + absDelta + " sec";
 
     gestureSeekIcon.innerHTML =
         direction === "forward"
@@ -5447,7 +5534,7 @@ function gestureDoubleTap(x,y){
        The middle 30% vertical band belongs to Play / Pause.
        This band covers the whole height of the player, so tapping
        above or below the center button still toggles playback.
-       Everything to the left/right — including the corners — seeks.
+       Everything to the left/right â€” including the corners â€” seeks.
     */
     if(ratio < .35){
         gestureSeekBy(-10);
@@ -5561,7 +5648,7 @@ function gestureMove(e){
         const delta=next-gestureSwipeStartVideoTime;
         gestureScrubTime.textContent=gestureFormatTime(next);
         gestureScrubDelta.textContent=
-            (delta>=0?"+":"−") + Math.abs(Math.round(delta)) + " sec";
+            (delta>=0?"+":"âˆ’") + Math.abs(Math.round(delta)) + " sec";
 
         gestureScrub.classList.add("show");
         showPlayerControls(true);
@@ -5889,9 +5976,20 @@ function showTrailerThumbnail(url){
     const img=document.getElementById("trailerThumbImage");
     if(!thumb || !img) return;
     const id=getYouTubeVideoId(url);
-    if(id){
+    const movie=window.CINEFLIX_MOVIE || {};
+    const tmdbThumb=movie.backdrop_url || movie.poster_url || "";
+    if(tmdbThumb){
+        img.onerror=()=>{
+            img.onerror=null;
+            if(id) img.src=`https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
+        };
+        img.src=tmdbThumb;
+        thumb.classList.add("show");
+        thumb.setAttribute("data-source","tmdb");
+    }else if(id){
         img.src=`https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
         thumb.classList.add("show");
+        thumb.setAttribute("data-source","youtube-fallback");
         thumb.setAttribute("aria-hidden","false");
     }else{
         thumb.classList.remove("show");
@@ -5902,6 +6000,14 @@ function showTrailerThumbnail(url){
 function hideTrailerThumbnail(){
     const thumb=document.getElementById("trailerThumbOverlay");
     if(thumb){thumb.classList.remove("show");thumb.setAttribute("aria-hidden","true");}
+}
+
+function postTrailerCommand(func){
+    const iframe=document.getElementById("trailerFrameOverlay");
+    if(!iframe || !iframe.contentWindow) return;
+    try{
+        iframe.contentWindow.postMessage(JSON.stringify({event:"command",func:func,args:[]}),"*");
+    }catch(e){}
 }
 
 function showTrailerFrame(url){
@@ -5938,8 +6044,8 @@ function showTrailerFrame(url){
         /* The click that opened the iframe is the user gesture. Start the
            YouTube video from that gesture, then reveal the already-loaded
            frame without a black/white flash. */
-        sendTrailerCommand("playVideo");
-        sendTrailerCommand(trailerMuted ? "mute" : "unMute");
+        postTrailerCommand("playVideo");
+        postTrailerCommand(trailerMuted ? "mute" : "unMute");
         setTrailerState(true);
         setTrailerStateFromMuteButton();
         hideTrailerThumbnail();
@@ -6075,7 +6181,7 @@ function findLevelForQuality(q){
 function syncQualityUI(label){
     const isAuto=(label==="Auto");
     if(settingsQualityValue){
-        settingsQualityValue.innerHTML=(isAuto?"Auto":label)+" <b>›</b>";
+        settingsQualityValue.innerHTML=(isAuto?"Auto":label)+" <b>â€º</b>";
     }
     if(qualitySelect){
         qualitySelect.value=isAuto?currentQuality:String(currentQuality);
@@ -6113,7 +6219,7 @@ function applyHlsQuality(choice,showMessage=true){
         try{
             /*
                Schedule the switch for the next clean media segment.
-               Do NOT force currentLevel here — forcing it can flush/rebuffer
+               Do NOT force currentLevel here â€” forcing it can flush/rebuffer
                the current buffer and create the 1-second freezes.
             */
             hls.nextLevel=level;
@@ -6220,7 +6326,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             }
 
             /* Keep the real loader visible until the video actually starts.
-               MANIFEST_PARSED only means the playlist is ready — frames may
+               MANIFEST_PARSED only means the playlist is ready â€” frames may
                still be buffering. The playing event is the true ready signal. */
             playerEmpty.classList.add("hidden");
 
@@ -6257,7 +6363,7 @@ function loadHlsSource(source,autoPlay=true,savedTime=0){
             const badge=document.getElementById("playerQuality");
 
             if(currentQualityChoice==="auto"){
-                if(settingsQualityValue) settingsQualityValue.innerHTML="Auto <b>›</b>";
+                if(settingsQualityValue) settingsQualityValue.innerHTML="Auto <b>â€º</b>";
                 if(badge){
                     badge.textContent=label.toUpperCase();
                     badge.classList.remove("quality-updated");
@@ -6448,7 +6554,7 @@ function setPlayerMode(mode,autoPlay=true){
 }
 
 /* =========================================================
-   HILLTOPADS VAST PRE-ROLL — ADDITIVE PLAYER LAYER
+   HILLTOPADS VAST PRE-ROLL â€” ADDITIVE PLAYER LAYER
    - Uses the exact VAST tag supplied for this site.
    - Respects the VAST ad's own skipOffset/skippability.
    - Keeps the existing CINEFLIX movie/HLS player untouched underneath.
@@ -6690,7 +6796,7 @@ function startVastCountdown(){
         }else{
             const remain=Math.max(0,vastAdSkipAt-now);
             if(remain>0){
-                vastSetCountdown(`Ad • Skip in ${Math.ceil(remain)}s`);
+                vastSetCountdown(`Ad â€¢ Skip in ${Math.ceil(remain)}s`);
                 if(vastAdSkip){vastAdSkip.textContent=`Skip in ${Math.ceil(remain)}s`;vastAdSkip.style.display="block";vastAdSkip.disabled=true;vastAdSkip.classList.remove("ready");}
             }else{
                 vastSetCountdown("Skip");
@@ -6778,7 +6884,7 @@ async function playVastAdThenMovie(){
         if(vastAdSkipAt===null) vastAdSkip.style.display="none";
         else vastAdSkip.style.display="block";
         /* The media was already requested during page preload. Reusing the
-           same source avoids the 2–3 second blank wait after Play. */
+           same source avoids the 2â€“3 second blank wait after Play. */
         if(vastAdVideo.src!==media.url){
             vastAdVideo.src=media.url;
             try{vastAdVideo.load();}catch(e){}
@@ -6965,7 +7071,7 @@ if(trailerToggle){
     });
 }
 
-/* QUALITY CHANGE — use real HLS levels, not fake MP4 URLs. */
+/* QUALITY CHANGE â€” use real HLS levels, not fake MP4 URLs. */
 qualitySelect.addEventListener("change",()=>{
     showPlayerControls(true);
     const newQuality=qualitySelect.value;
@@ -7111,7 +7217,7 @@ video.addEventListener("pause",()=>{
     playIcon.innerHTML=`<path d="M8.2 5.3v13.4c0 .8.9 1.2 1.6.8l9.1-6.1c.6-.4.6-1.2 0-1.6L9.8 4.5c-.7-.4-1.6 0-1.6.8Z"/>`;
 });
 
-/* Start with thumbnail first — never autoplay on page open. */
+/* Start with thumbnail first â€” never autoplay on page open. */
 video.autoplay = false;
 video.removeAttribute("autoplay");
 video.muted = false;
@@ -7210,7 +7316,7 @@ let bufferRevealBaseSeconds=20;
 
 
 /*
-   Keep roughly 10–20 seconds ahead when the source can provide it.
+   Keep roughly 10â€“20 seconds ahead when the source can provide it.
    The gray track represents the portion already buffered ahead of playback.
 */
 
@@ -7699,7 +7805,7 @@ document.addEventListener("fullscreenchange",()=>{
 </script>
 <script>
 /* =========================================================
-   CINEFLIX — LOAD THE EXACT MOVIE FROM SUPABASE
+   CINEFLIX â€” LOAD THE EXACT MOVIE FROM SUPABASE
    index.html -> movie.html?id=SUPABASE_MOVIE_ID
 ========================================================= */
 (function(){
@@ -7770,23 +7876,23 @@ document.addEventListener("fullscreenchange",()=>{
             : Number(ratingValue).toFixed(1);
         const genres = getGenres(movie);
 
-        document.title = title ? `${title} — CINEFLIX` : "CINEFLIX";
+        document.title = title ? `${title} â€” CINEFLIX` : "CINEFLIX";
 
         setText(".movie-title", title);
 
         const meta = $(".movie-meta");
         if(meta){
             meta.innerHTML = `
-                <span class="rating">${rating ? `★ ${escapeHTML(rating)}` : ""}</span>
-                <span class="dot">•</span>
+                <span class="rating">${rating ? `â˜… ${escapeHTML(rating)}` : ""}</span>
+                <span class="dot">â€¢</span>
                 <span>${escapeHTML(year || "")}</span>
-                ${runtime ? `<span class="dot">•</span><span>${escapeHTML(runtime)}</span>` : ""}
+                ${runtime ? `<span class="dot">â€¢</span><span>${escapeHTML(runtime)}</span>` : ""}
                 ${movie.age_rating || movie.certificate ? `
-                    <span class="dot">•</span>
+                    <span class="dot">â€¢</span>
                     <span class="age">${escapeHTML(movie.age_rating || movie.certificate)}</span>
                 ` : ""}
                 ${movie.quality ? `
-                    <span class="dot">•</span>
+                    <span class="dot">â€¢</span>
                     <span>${escapeHTML(movie.quality)}</span>
                 ` : ""}
             `;
@@ -7804,7 +7910,7 @@ document.addEventListener("fullscreenchange",()=>{
             description.textContent = movie.overview || movie.tagline || "";
         }
 
-        // Movie details — show only values actually supplied by Admin/Supabase.
+        // Movie details â€” show only values actually supplied by Admin/Supabase.
         const infoItems=$$(".info-item");
         infoItems.forEach(item=>{
             const label=(item.querySelector("small")?.textContent || "").trim().toLowerCase();
@@ -7827,7 +7933,7 @@ document.addEventListener("fullscreenchange",()=>{
                             movie.video_1080 ? "1080p" : "",
                             movie.video_720 ? "720p" : "",
                             movie.video_480 ? "480p" : ""
-                          ].filter(Boolean).join(" • ")
+                          ].filter(Boolean).join(" â€¢ ")
                         : "");
             }
 
@@ -7842,7 +7948,7 @@ document.addEventListener("fullscreenchange",()=>{
             if(movie.backdrop_url) el.style.backgroundImage=`url("${movie.backdrop_url}")`;
         });
 
-        // Cast & Crew — only Admin/Supabase data. Never show demo people.
+        // Cast & Crew â€” only Admin/Supabase data. Never show demo people.
         const castRow=$(".cast-row");
         if(castRow){
             const cast=[...getCast(movie), ...getCrew(movie)].slice(0,10);
@@ -7923,7 +8029,7 @@ document.addEventListener("fullscreenchange",()=>{
 
 
 /* =========================================================
-   CONTINUE WATCHING — ADD-ONLY LOGIC
+   CONTINUE WATCHING â€” ADD-ONLY LOGIC
    Existing player/source/quality code is untouched.
    ========================================================= */
 (function(){
@@ -8329,12 +8435,12 @@ window.addEventListener("beforeunload",()=>{
             }
 
             if(healthy){
-                console.log("CINEFLIX background HLS check: valid — no update needed");
+                console.log("CINEFLIX background HLS check: valid â€” no update needed");
                 return;
             }
 
             cineflixBackgroundRepairDone=true;
-            console.log("CINEFLIX background HLS check: expired/dead — repairing current movie");
+            console.log("CINEFLIX background HLS check: expired/dead â€” repairing current movie");
 
             const params=new URLSearchParams(window.location.search);
             const movieId=params.get("id");
@@ -8601,7 +8707,7 @@ window.addEventListener("beforeunload",()=>{
         const title=btn.dataset.movieTitle || document.querySelector(".movie-title")?.textContent?.trim() || "Movie";
         try{
             if(navigator.share){
-                await navigator.share({title:`${title} — CINEFLIX`,text:`Watch ${title} on CINEFLIX.`,url:location.href});
+                await navigator.share({title:`${title} â€” CINEFLIX`,text:`Watch ${title} on CINEFLIX.`,url:location.href});
             }else if(navigator.clipboard){
                 await navigator.clipboard.writeText(location.href);
                 if(typeof showToast==="function") showToast("Movie link copied.");
@@ -8616,7 +8722,7 @@ window.addEventListener("beforeunload",()=>{
 
 <script>
 /* =========================================================
-   CINEFLIX V2 — TOP YOUTUBE TRAILER + WATCH NOW CINEMA MODE
+   CINEFLIX V2 â€” TOP YOUTUBE TRAILER + WATCH NOW CINEMA MODE
 ========================================================= */
 (function(){
     const player = document.getElementById("videoPlayer");
