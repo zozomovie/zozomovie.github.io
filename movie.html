@@ -8274,7 +8274,29 @@ body.cineflix-immersive #movieVideo{object-fit:contain!important}
 }
 </style>
 
-<script id="cineflix-player-final-v2-js">
+<style id="cineflix-player-final-v3-fix">
+/* FINAL TRAILER VISIBILITY FIX */
+body.cineflix-player-v2 .topbar{display:none!important}
+body.cineflix-player-v2 .player-section{padding-top:48px!important;margin-top:0!important}
+body.cineflix-player-v2 .cineflix-player-backbar{height:48px!important}
+.video-player.trailer-preview-mode{background:#000!important;overflow:hidden!important}
+.video-player.trailer-preview-mode .initial-poster{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+.video-player.trailer-preview-mode #cineflixTrailerPreviewFrame{display:block!important;visibility:visible!important;opacity:1!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:999!important;background:#000!important;border:0!important}
+.video-player.trailer-preview-mode .cineflix-trailer-control{display:grid!important;z-index:1000!important}
+.video-player.trailer-preview-mode .player-controls,
+.video-player.trailer-preview-mode .player-top,
+.video-player.trailer-preview-mode .player-mode-badge,
+.video-player.trailer-preview-mode .player-loading,
+.video-player.trailer-preview-mode .player-empty,
+.video-player.trailer-preview-mode #movieVideo,
+.video-player.trailer-preview-mode .vast-ad-overlay{display:none!important}
+.cineflix-trailer-control{z-index:1000!important;pointer-events:auto!important;background:rgba(0,0,0,.16)!important}
+.cineflix-trailer-control svg{pointer-events:none!important}
+#trailerFrameOverlay{display:none!important}
+#trailerToggle{display:none!important}
+.cineflix-watch-wrap{position:relative!important;z-index:5!important}
+</style>
+<script id="cineflix-player-final-v3-js">
 (function(){
   function ready(fn){
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn,{once:true});
@@ -8283,45 +8305,48 @@ body.cineflix-immersive #movieVideo{object-fit:contain!important}
 
   ready(function(){
     document.body.classList.add('cineflix-player-v2');
-
     const section=document.querySelector('.player-section');
     const player=document.getElementById('videoPlayer');
     if(!section || !player) return;
 
-    /* Back arrow sits ABOVE the player, not inside the old header. */
+    /* Compatibility: the previous visual patch could call this name before it
+       existed. Keep it harmless and synchronized with the custom SVG button. */
+    window.setTrailerState=function(state){
+      const playing = state===true || state==='playing' || state===1 || state==='play';
+      const btn=document.querySelector('.cineflix-trailer-control');
+      if(btn) btn.classList.toggle('playing',playing);
+      if(btn) btn.setAttribute('aria-label',playing?'Pause trailer':'Play trailer');
+    };
+
+    /* Clean page-top back bar. */
     let backbar=document.querySelector('.cineflix-player-backbar');
     if(!backbar){
       backbar=document.createElement('div');
       backbar.className='cineflix-player-backbar';
-      backbar.innerHTML=`<button class="cineflix-player-back" id="cineflixPageBack" type="button" aria-label="Back">
-        <svg viewBox="0 0 24 24"><path d="M15 18 9 12l6-6"/><path d="M9 12h10"/></svg>
-      </button>`;
+      backbar.innerHTML='<button class="cineflix-player-back" id="cineflixPageBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18 9 12l6-6"/><path d="M9 12h10"/></svg></button>';
       section.parentNode.insertBefore(backbar,section);
     }
 
-    /* Watch Now goes before the existing action tabs. */
+    /* Watch Now stays directly below the trailer player and above actions. */
     let watchWrap=document.querySelector('.cineflix-watch-wrap');
     if(!watchWrap){
       watchWrap=document.createElement('div');
       watchWrap.className='cineflix-watch-wrap';
-      watchWrap.innerHTML=`<button class="cineflix-watch-now" id="cineflixWatchNow" type="button">
-        <svg viewBox="0 0 24 24"><path d="M8 5.8v12.4c0 .8.9 1.3 1.6.9l9-6.2c.6-.4.6-1.3 0-1.8l-9-6.2C8.9 4.5 8 5 8 5.8Z"/></svg>
-        <span class="watch-label">Watch Now</span><span class="resume-time"></span>
-      </button>`;
+      watchWrap.innerHTML='<button class="cineflix-watch-now" id="cineflixWatchNow" type="button"><svg viewBox="0 0 24 24"><path d="M8 5.8v12.4c0 .8.9 1.3 1.6.9l9-6.2c.6-.4.6-1.3 0-1.8l-9-6.2C8.9 4.5 8 5 8 5.8Z"/></svg><span class="watch-label">Watch Now</span><span class="resume-time"></span></button>';
       const content=document.querySelector('.content');
       const actions=document.getElementById('actionsRow');
       if(content && actions) content.insertBefore(watchWrap,actions);
     }
 
     const watchBtn=document.getElementById('cineflixWatchNow');
-    const watchLabel=watchBtn?.querySelector('.watch-label');
     const resumeTime=watchBtn?.querySelector('.resume-time');
     const video=document.getElementById('movieVideo');
+    const poster=document.getElementById('initialPoster');
+    const posterImg=poster?.querySelector('img');
+    const posterPlay=document.getElementById('initialPosterPlay');
 
-    /* YouTube trailer ID/URL helpers. */
     function getTrailerRaw(){
-      const b=document.getElementById('trailerToggle');
-      return b?.dataset?.trailerUrl || '';
+      return document.getElementById('trailerToggle')?.dataset?.trailerUrl || '';
     }
     function youtubeId(raw){
       raw=String(raw||'').trim();
@@ -8329,7 +8354,7 @@ body.cineflix-immersive #movieVideo{object-fit:contain!important}
       try{
         const u=new URL(raw,location.href);
         if(u.hostname.includes('youtu.be')) return u.pathname.split('/').filter(Boolean)[0]||'';
-        if(u.hostname.includes('youtube.com')){
+        if(u.hostname.includes('youtube.com') || u.hostname.includes('youtube-nocookie.com')){
           if(u.pathname==='/watch') return u.searchParams.get('v')||'';
           if(u.pathname.startsWith('/embed/')) return u.pathname.split('/')[2]||'';
           if(u.pathname.startsWith('/shorts/')) return u.pathname.split('/')[2]||'';
@@ -8338,23 +8363,24 @@ body.cineflix-immersive #movieVideo{object-fit:contain!important}
       const m=raw.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/i);
       return m?m[1]:'';
     }
-
-    function trailerThumb(id){
-      return id ? `https://i.ytimg.com/vi/${encodeURIComponent(id)}/maxresdefault.jpg` : '';
-    }
+    function thumb(id){return id?`https://i.ytimg.com/vi/${encodeURIComponent(id)}/maxresdefault.jpg`:'';}
+    function fallbackThumb(id){return id?`https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`:'';}
 
     let trailerFrame=null;
     let trailerControl=null;
-    let trailerPlaying=false;
     let trailerId='';
+    let trailerPlaying=false;
 
     function ensureTrailerUI(){
       if(!trailerFrame){
         trailerFrame=document.createElement('iframe');
         trailerFrame.id='cineflixTrailerPreviewFrame';
-        trailerFrame.setAttribute('allow','autoplay; encrypted-media; picture-in-picture');
+        trailerFrame.setAttribute('allow','autoplay; encrypted-media; picture-in-picture; fullscreen');
         trailerFrame.setAttribute('allowfullscreen','');
         trailerFrame.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+        trailerFrame.setAttribute('title','Trailer');
+        trailerFrame.setAttribute('frameborder','0');
+        trailerFrame.style.display='none';
         player.appendChild(trailerFrame);
       }
       if(!trailerControl){
@@ -8362,182 +8388,179 @@ body.cineflix-immersive #movieVideo{object-fit:contain!important}
         trailerControl.className='cineflix-trailer-control';
         trailerControl.type='button';
         trailerControl.setAttribute('aria-label','Play trailer');
-        trailerControl.innerHTML=`
-          <svg class="play-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="m10 8.7 5.2 3.3-5.2 3.3Z"/></svg>
-          <svg class="pause-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M10 9v6M14 9v6"/></svg>`;
+        trailerControl.innerHTML='<svg class="play-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="m10 8.7 5.2 3.3-5.2 3.3Z"/></svg><svg class="pause-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.2"/><path d="M10 9v6M14 9v6"/></svg>';
         player.appendChild(trailerControl);
         trailerControl.addEventListener('click',function(e){
-          e.preventDefault();e.stopPropagation();
+          e.preventDefault(); e.stopPropagation();
           if(!trailerId) return;
-          if(!trailerPlaying) playTrailer(); else pauseTrailer();
+          trailerPlaying ? pauseTrailer() : playTrailer();
         });
       }
     }
 
-    function setTrailerPlaying(v){
+    function setState(v){
       trailerPlaying=!!v;
-      trailerControl?.classList.toggle('playing',trailerPlaying);
-      trailerControl?.setAttribute('aria-label',trailerPlaying?'Pause trailer':'Play trailer');
+      window.setTrailerState(trailerPlaying);
     }
 
     function sendYT(func){
       if(!trailerFrame?.contentWindow) return;
-      try{ trailerFrame.contentWindow.postMessage(JSON.stringify({event:'command',func,args:[]}), '*'); }catch(e){}
+      try{
+        trailerFrame.contentWindow.postMessage(JSON.stringify({event:'command',func:func,args:[]}), '*');
+      }catch(e){}
+    }
+
+    function hideMovieLayersForTrailer(){
+      poster?.classList.add('hidden');
+      poster?.setAttribute('aria-hidden','true');
+      document.getElementById('centerPlay')?.style.setProperty('display','none','important');
+      document.getElementById('centerPlayPause')?.classList.remove('show');
+      document.querySelector('.player-controls')?.style.setProperty('display','none','important');
+      document.querySelector('.player-top')?.style.setProperty('display','none','important');
+      document.querySelector('.player-mode-badge')?.style.setProperty('display','none','important');
+      document.getElementById('vastAdOverlay')?.classList.remove('show');
+    }
+
+    function showTrailerFrame(){
+      if(!trailerId) return;
+      ensureTrailerUI();
+      hideMovieLayersForTrailer();
+      player.classList.add('trailer-preview-mode');
+      trailerFrame.classList.add('show');
+      trailerFrame.style.display='block';
+      trailerControl.style.display='grid';
+
+      /* Use the standard YouTube embed as the visual fallback. Some browsers/
+         extensions can partially render youtube-nocookie (audio but no video). */
+      const origin=encodeURIComponent(location.origin);
+      const src=`https://www.youtube.com/embed/${encodeURIComponent(trailerId)}?autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${origin}`;
+      trailerFrame.src=src;
+      trailerFrame.onload=function(){
+        trailerFrame.dataset.loaded='1';
+        setTimeout(()=>sendYT('playVideo'),80);
+      };
+      setState(true);
     }
 
     function playTrailer(){
       if(!trailerId) return;
       ensureTrailerUI();
-      player.classList.add('trailer-preview-mode');
-      trailerFrame.classList.add('show');
-      trailerControl.style.display='grid';
-      setTrailerPlaying(true);
-      if(trailerFrame.dataset.loaded==='1'){
+      if(trailerFrame.dataset.loaded==='1' && trailerFrame.src && trailerFrame.src!=='about:blank'){
+        hideMovieLayersForTrailer();
+        player.classList.add('trailer-preview-mode');
+        trailerFrame.style.display='block';
+        trailerFrame.classList.add('show');
+        trailerControl.style.display='grid';
         sendYT('playVideo');
-      }else{
-        const origin=encodeURIComponent(location.origin);
-        trailerFrame.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(trailerId)}?autoplay=1&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${origin}`;
-        trailerFrame.onload=function(){trailerFrame.dataset.loaded='1';sendYT('playVideo');};
-      }
+        setState(true);
+      }else showTrailerFrame();
     }
 
     function pauseTrailer(){
       sendYT('pauseVideo');
-      setTrailerPlaying(false);
+      setState(false);
     }
 
     function closeTrailer(){
       if(trailerFrame){
-        try{sendYT('pauseVideo');}catch(e){}
+        sendYT('pauseVideo');
+        trailerFrame.onload=null;
         trailerFrame.classList.remove('show');
+        trailerFrame.style.display='none';
         trailerFrame.src='about:blank';
         trailerFrame.dataset.loaded='';
       }
-      setTrailerPlaying(false);
       player.classList.remove('trailer-preview-mode');
+      setState(false);
     }
 
-    /* Page-open poster becomes the actual YouTube trailer thumbnail. */
     function syncTrailerThumb(){
-      const raw=getTrailerRaw();
-      const id=youtubeId(raw);
+      const id=youtubeId(getTrailerRaw());
       if(!id) return false;
       trailerId=id;
-      const img=document.querySelector('#initialPoster img');
-      const src=trailerThumb(id);
-      if(img && src){
-        const pre=new Image();
-        pre.onload=function(){img.src=src;};
-        pre.onerror=function(){
-          const fallback=`https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
-          const fb=new Image(); fb.onload=function(){img.src=fallback;}; fb.src=fallback;
-        };
-        pre.src=src;
+      const src=thumb(id);
+      if(posterImg && src){
+        posterImg.src=src;
+        posterImg.onerror=function(){posterImg.onerror=null;posterImg.src=fallbackThumb(id);};
       }
       ensureTrailerUI();
       return true;
     }
 
-    /* renderMovieDetails sets trailerToggle.dataset.trailerUrl asynchronously. */
-    let thumbAttempts=0;
-    const thumbTimer=setInterval(function(){
-      thumbAttempts++;
-      if(syncTrailerThumb() || thumbAttempts>80) clearInterval(thumbTimer);
-    },250);
+    let attempts=0;
+    const timer=setInterval(()=>{attempts++;if(syncTrailerThumb()||attempts>100)clearInterval(timer);},200);
     syncTrailerThumb();
 
-    /* Intercept the original poster Play handler: it now means PLAY TRAILER. */
-    const posterPlay=document.getElementById('initialPosterPlay');
+    /* Initial thumbnail click = trailer, never the movie. */
     if(posterPlay){
       posterPlay.addEventListener('click',function(e){
-        if(!trailerId) return;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        playTrailer();
+        e.preventDefault();e.stopImmediatePropagation();
+        if(trailerId) playTrailer();
       },true);
     }
 
-    /* Watch Now = close trailer, enter immersive movie mode, resume saved time. */
+    /* Also intercept taps on the trailer frame so a single tap toggles our SVG
+       state rather than exposing browser/player UI. */
+    player.addEventListener('click',function(e){
+      if(!player.classList.contains('trailer-preview-mode')) return;
+      if(e.target===trailerFrame) return;
+    },true);
+
     async function getResume(){
       try{
         const title=document.querySelector('.movie-title')?.textContent?.trim()||'';
-        const key='cineflix_continue_watching_v1';
-        const list=JSON.parse(localStorage.getItem(key)||'[]');
-        const id=(window.CINEFLIX_MOVIE && window.CINEFLIX_MOVIE.id) || new URLSearchParams(location.search).get('id') || '';
+        const list=JSON.parse(localStorage.getItem('cineflix_continue_watching_v1')||'[]');
+        const id=(window.CINEFLIX_MOVIE&&window.CINEFLIX_MOVIE.id)||new URLSearchParams(location.search).get('id')||'';
         let item=list.find(x=>String(x.id)===String(id));
-        if(!item && title) item=list.find(x=>String(x.title||'').trim()===title);
-        if(item && Number(item.currentTime)>1 && Number(item.duration)>0 && Number(item.currentTime)<Number(item.duration)-1) return item;
+        if(!item&&title)item=list.find(x=>String(x.title||'').trim()===title);
+        if(item&&Number(item.currentTime)>1&&Number(item.duration)>0&&Number(item.currentTime)<Number(item.duration)-1)return item;
       }catch(e){}
       return null;
     }
-
     function formatLeft(sec){
       sec=Math.max(0,Math.round(Number(sec)||0));
-      const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60);
-      if(h>0) return `${String(h).padStart(2,'0')}H ${String(m).padStart(2,'0')}min Left`;
+      const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+      if(h>0)return `${String(h).padStart(2,'0')}H ${String(m).padStart(2,'0')}min Left`;
       return `${m}min Left`;
     }
-
-    async function refreshResumeLabel(){
+    async function refreshResume(){
       const item=await getResume();
-      if(!resumeTime) return;
-      if(item){
-        resumeTime.textContent=`Resume - ${formatLeft(Number(item.duration)-Number(item.currentTime))}`;
-      }else resumeTime.textContent='';
+      if(resumeTime)resumeTime.textContent=item?`Resume - ${formatLeft(Number(item.duration)-Number(item.currentTime))}`:'';
     }
-    refreshResumeLabel();
-    const resumeTimer=setInterval(refreshResumeLabel,1500);
+    refreshResume();
+    const resumeTimer=setInterval(refreshResume,1500);
 
     async function enterImmersive(){
       closeTrailer();
       document.body.classList.add('cineflix-immersive');
-      const back=document.getElementById('cineflixPageBack');
-      if(back) back.setAttribute('aria-label','Back to movie page');
-
-      /* Fullscreen + landscape are attempted only after the real user click. */
+      try{if(!document.fullscreenElement&&player.requestFullscreen)await player.requestFullscreen();}catch(e){}
+      try{if(screen.orientation?.lock)await screen.orientation.lock('landscape');}catch(e){}
       try{
-        if(!document.fullscreenElement && player.requestFullscreen) await player.requestFullscreen();
-      }catch(e){}
-      try{
-        if(screen.orientation?.lock) await screen.orientation.lock('landscape');
-      }catch(e){}
-
-      /* Start existing movie player without changing its source architecture. */
-      try{
+        /* Start the existing movie engine. If it is already playing, don't
+           toggle it off. */
+        if(video && !video.paused && !video.ended) return;
         if(typeof window.togglePlay==='function') await window.togglePlay();
-        else if(document.querySelector('#centerPlay')){
-          document.querySelector('#centerPlay').click();
-        }else{
-          const poster=document.getElementById('initialPoster');
-          if(poster) poster.classList.add('hidden');
-          if(video) video.play().catch(()=>{});
-        }
-      }catch(e){
-        try{video?.play();}catch(_){}
+        else if(video) await video.play().catch(()=>{});
+      }catch(e){try{await video?.play();}catch(_){}
       }
     }
-
     async function leaveImmersive(){
       try{video?.pause();}catch(e){}
-      try{if(document.fullscreenElement) await document.exitFullscreen();}catch(e){}
-      try{if(screen.orientation?.unlock) screen.orientation.unlock();}catch(e){}
+      try{if(document.fullscreenElement)await document.exitFullscreen();}catch(e){}
+      try{screen.orientation?.unlock?.();}catch(e){}
       document.body.classList.remove('cineflix-immersive');
-      refreshResumeLabel();
+      refreshResume();
     }
-
-    watchBtn?.addEventListener('click',function(e){e.preventDefault();enterImmersive();});
-    document.getElementById('cineflixPageBack')?.addEventListener('click',function(e){e.preventDefault();leaveImmersive();});
-
-    document.addEventListener('fullscreenchange',function(){
-      if(!document.fullscreenElement && document.body.classList.contains('cineflix-immersive')){
+    watchBtn?.addEventListener('click',e=>{e.preventDefault();enterImmersive();});
+    document.getElementById('cineflixPageBack')?.addEventListener('click',e=>{e.preventDefault();leaveImmersive();});
+    document.addEventListener('fullscreenchange',()=>{
+      if(!document.fullscreenElement&&document.body.classList.contains('cineflix-immersive')){
         document.body.classList.remove('cineflix-immersive');
         try{screen.orientation?.unlock?.();}catch(e){}
-        refreshResumeLabel();
+        refreshResume();
       }
     });
-
-    /* ESC/back-like browser navigation returns to normal page. */
-    window.addEventListener('pagehide',function(){clearInterval(resumeTimer);});
+    window.addEventListener('pagehide',()=>clearInterval(resumeTimer));
   });
 })();
 </script>
