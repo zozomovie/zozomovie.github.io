@@ -1511,9 +1511,11 @@ function normalizeCast(movie,tmdb){
                 photo:first(
                     imageFrom(person.profile_url),
                     imageFrom(person.profile_path),
+                    imageFrom(person.profile),
                     imageFrom(person.image),
                     imageFrom(person.photo),
                     tmdbImage(person.profile_path,"w185"),
+                    tmdbImage(person.profile,"w185"),
                     ""
                 )
             };
