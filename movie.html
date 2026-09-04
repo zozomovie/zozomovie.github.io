@@ -3709,14 +3709,20 @@ body.cineflix-db-error .cineflix-db-message{
     .header{display:none !important;}
     .player-section{padding-top:0;}
     .video-player{
-        width:calc(100% - 14px);
-        margin:0 7px;
-        border:1px solid rgba(173,77,255,.82);
-        border-radius:15px;
+        width:calc(100% - 34px);
+        margin:0 17px;
+        aspect-ratio:2.12 / 1;
+        border:1px solid rgba(183,83,255,.88);
+        border-radius:14px;
         overflow:hidden;
-        box-shadow:0 18px 45px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.035);
+        box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 0 1px rgba(255,255,255,.025);
     }
-    .cineflix-player-chrome{height:52px;padding:8px 8px 0;}
+    .cineflix-player-chrome{
+        top:-52px !important;
+        height:52px !important;
+        padding:8px 0 0 !important;
+        background:none !important;
+    }
     .cineflix-player-back{width:32px;height:32px;}
     .cineflix-earn-money{padding-right:6px;}
     .cineflix-coin{width:23px;height:23px;font-size:12px;}
@@ -3736,12 +3742,14 @@ body.cineflix-db-error .cineflix-db-message{
     background:#000;
     opacity:0;
     visibility:hidden;
-    transition:opacity .16s ease,visibility .16s ease;
+    transition:none;
 }
 #trailerFrameOverlay.show{opacity:1;visibility:visible;}
 .video-player.trailer-mode .player-controls,
 .video-player.trailer-mode .player-top,
 .video-player.trailer-mode #playerQuality,
+.video-player.trailer-mode #initialPoster,
+.video-player.trailer-mode #initialPosterPlay,
 .video-player.trailer-mode .player-mode-badge,
 .video-player.trailer-mode .center-play,
 .video-player.trailer-mode .center-play-pause,
@@ -3770,8 +3778,8 @@ body.cineflix-db-error .cineflix-db-message{
     transition:transform .16s ease,background .16s ease;
 }
 .video-player.trailer-mode .trailer-center-control{display:grid;}
-.trailer-center-control:hover{background:rgba(0,0,0,.38);transform:translate(-50%,-50%) scale(1.04);}
-.trailer-center-control:active{transform:translate(-50%,-50%) scale(.94);}
+.trailer-center-control:hover{background:rgba(0,0,0,.28);}
+.trailer-center-control:active{transform:translate(-50%,-50%) scale(.96);}
 .trailer-center-control svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 .trailer-center-control[data-state="play"] .trailer-pause-icon{display:none;}
 .trailer-center-control[data-state="pause"] .trailer-play-icon{display:none;}
@@ -3799,7 +3807,7 @@ body.cineflix-db-error .cineflix-db-message{
     font:900 13px/1 Inter,Arial,sans-serif;
     letter-spacing:.1px;
     cursor:pointer;
-    transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;
+    transition:none;
 }
 .watch-now-btn:hover{filter:brightness(1.05);box-shadow:0 13px 35px rgba(229,9,20,.25),inset 0 1px 0 rgba(255,255,255,.18);}
 .watch-now-btn:active{transform:scale(.985);}
@@ -3833,7 +3841,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 
 @media(max-width:699px){
     .watch-now-wrap{padding:11px 12px 0;}
-    .watch-now-btn{min-height:49px;border-radius:11px;font-size:13px;}
+    .watch-now-btn{min-height:40px;border-radius:22px;font-size:12px;}
 }
 
 </style>
@@ -3845,19 +3853,20 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
     .mobile-nav{display:flex !important;}
     .player-section{padding-top:0 !important;}
     .video-player{
-        width:calc(100% - 14px) !important;
-        margin:52px 7px 0 !important;
-        border:1px solid rgba(180,82,255,.86) !important;
-        border-radius:15px !important;
+        width:calc(100% - 34px) !important;
+        margin:0 17px !important;
+        aspect-ratio:2.12 / 1 !important;
+        border:1px solid rgba(183,83,255,.88) !important;
+        border-radius:14px !important;
         overflow:hidden !important;
-        box-shadow:0 18px 46px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.035) !important;
+        box-shadow:0 14px 34px rgba(0,0,0,.34),0 0 0 1px rgba(255,255,255,.025) !important;
     }
     .cineflix-player-chrome{
         top:-52px !important;
         left:0 !important;
         right:0 !important;
         height:52px !important;
-        padding:7px 2px 0 !important;
+        padding:7px 0 0 !important;
         background:none !important;
         z-index:120 !important;
     }
@@ -3879,7 +3888,7 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 
 /* Trailer surface: only the thumbnail/video + our center SVG. */
 #trailerThumbOverlay{
-    position:absolute;inset:0;z-index:35;
+    position:absolute;inset:0;z-index:60;
     display:none;background:#000;overflow:hidden;
 }
 #trailerThumbOverlay.show{display:block;}
@@ -3893,10 +3902,36 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
     pointer-events:none;
 }
 
+/* Trailer-only controls: no YouTube chrome, no flash, no decorative UI. */
+.trailer-mute-control{
+    position:absolute;
+    left:12px;
+    top:12px;
+    z-index:110;
+    width:34px;
+    height:34px;
+    border:0;
+    padding:0;
+    border-radius:50%;
+    display:none;
+    place-items:center;
+    color:#fff;
+    background:rgba(0,0,0,.20);
+    cursor:pointer;
+}
+.video-player.trailer-mode .trailer-mute-control{display:grid;}
+.trailer-mute-control:active{transform:none;}
+.trailer-mute-control svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 3px rgba(0,0,0,.55));}
+.trailer-mute-control .trailer-muted-icon{display:none;}
+.trailer-mute-control[data-muted="true"] .trailer-volume-icon{display:none;}
+.trailer-mute-control[data-muted="true"] .trailer-muted-icon{display:block;}
+
 .video-player.trailer-mode #movieVideo,
 .video-player.trailer-mode .player-controls,
 .video-player.trailer-mode .player-top,
 .video-player.trailer-mode #playerQuality,
+.video-player.trailer-mode #initialPoster,
+.video-player.trailer-mode #initialPosterPlay,
 .video-player.trailer-mode .player-mode-badge,
 .video-player.trailer-mode .center-play,
 .video-player.trailer-mode .center-play-pause,
@@ -3941,6 +3976,12 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
     background:linear-gradient(100deg,#ff247c 0%,#cf31e9 48%,#7a3dff 100%) !important;
 }
 
+
+.watch-now-btn{justify-content:space-between !important;padding:0 7px 0 38px !important;}
+.watch-now-btn .watch-icon{position:absolute;left:44px;}
+.watch-now-btn #watchNowText{margin:0 auto;}
+.watch-now-btn::before{content:"";position:absolute;right:5px;top:50%;width:32px;height:32px;transform:translateY(-50%);border:1px solid rgba(255,255,255,.45);border-radius:50%;background:rgba(255,255,255,.08);}
+.watch-now-btn::after{content:"›";position:absolute;right:16px;top:50%;transform:translateY(-53%);font-size:24px;font-weight:300;line-height:1;color:#fff;border:0;}
 /* Keep the real action row/nav/etc. unchanged. */
 @media(min-width:700px){
     .header{display:block;}
@@ -4120,6 +4161,19 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 <div id="trailerThumbOverlay" aria-hidden="true">
     <img id="trailerThumbImage" src="" alt="Trailer thumbnail">
 </div>
+
+<button class="trailer-mute-control" id="trailerMuteControl" type="button" data-muted="false" aria-label="Mute trailer">
+    <svg class="trailer-volume-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4.5 9.5v5h3.4l4.8 3.7V5.8L7.9 9.5H4.5Z"/>
+        <path d="M15.3 9.2a4.2 4.2 0 0 1 0 5.6"/>
+        <path d="M18 6.8a7.5 7.5 0 0 1 0 10.4"/>
+    </svg>
+    <svg class="trailer-muted-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4.5 9.5v5h3.4l4.8 3.7V5.8L7.9 9.5H4.5Z"/>
+        <path d="m16 9 5 6"/>
+        <path d="m21 9-5 6"/>
+    </svg>
+</button>
 
 <button class="trailer-center-control" id="trailerCenterControl" type="button" data-state="play" aria-label="Play trailer">
     <svg class="trailer-play-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -5854,90 +5908,47 @@ function showTrailerFrame(url){
     if(!trailerFrame){
         trailerFrame=document.createElement("iframe");
         trailerFrame.id="trailerFrameOverlay";
-        trailerFrame.setAttribute(
-            "allow",
-            "autoplay; encrypted-media; picture-in-picture; fullscreen"
-        );
+        trailerFrame.setAttribute("allow","autoplay; encrypted-media; fullscreen");
         trailerFrame.setAttribute("allowfullscreen","");
         trailerFrame.setAttribute("loading","eager");
         trailerFrame.setAttribute("referrerpolicy","strict-origin-when-cross-origin");
         document.getElementById("videoPlayer")?.appendChild(trailerFrame);
     }
 
-    // Switch from our clean thumbnail to the real YouTube trailer only after Play.
-    hideTrailerThumbnail();
-    initialPoster.classList.add("hidden");
-    initialPoster.setAttribute("aria-hidden","true");
-    centerPlay.style.display="none";
+    const trailerUrl=normalizeTrailerUrl(url);
+    if(!trailerUrl) return;
+
+    playerSurface.classList.add("trailer-mode");
+    initialPoster?.classList.add("hidden");
+    initialPoster?.setAttribute("aria-hidden","true");
+    centerPlay && (centerPlay.style.display="none");
     if(centerPlayPause){
         centerPlayPause.classList.remove("show");
         centerPlayPause.style.display="none";
     }
+    if(playerModeBadge) playerModeBadge.classList.remove("show");
 
-    playerSurface.classList.add("trailer-mode");
-
-    if(playerModeBadge){
-        playerModeBadge.textContent="TRAILER";
-        playerModeBadge.classList.add("show");
-        playerModeBadge.style.opacity="1";
-        playerModeBadge.style.visibility="visible";
-    }
-
-    // Start our loader BEFORE assigning the iframe source.
-    showPlayerLoading();
-    playerLoading.style.zIndex="60";
-
-    // Assign only after the overlay is already visible, preventing the
-    // black iframe from being exposed without a loader.
+    /* Keep the real YouTube thumbnail covering the iframe until the iframe is
+       actually loaded. This prevents the black/white startup flash. */
+    showTrailerThumbnail(trailerUrl);
     trailerFrame.classList.add("show");
-
-    // YouTube does not reliably send its player-state postMessage in every
-    // browser/extension setup. Use the iframe load event as the reliable
-    // hand-off so our loader can NEVER remain stuck over a playing trailer.
-    clearTimeout(window.__cineflixTrailerLoaderFallback);
     trailerFrame.onload=()=>{
-        // Ignore the intentional about:blank reset.
-        const currentSrc=trailerFrame.src || "";
+        const currentSrc=trailerFrame.src||"";
         if(currentSrc==="about:blank") return;
-
-        clearTimeout(window.__cineflixTrailerLoaderFallback);
-        requestAnimationFrame(()=>{
-            requestAnimationFrame(()=>{
-                hidePlayerLoading();
-                playerLoading.style.zIndex="";
-            });
-        });
+        /* The click that opened the iframe is the user gesture. Start the
+           YouTube video from that gesture, then reveal the already-loaded
+           frame without a black/white flash. */
+        sendTrailerCommand("playVideo");
+        sendTrailerCommand(trailerMuted ? "mute" : "unMute");
+        setTrailerState(true);
+        setTrailerStateFromMuteButton();
+        hideTrailerThumbnail();
     };
 
-    // Keep our loader visible BEFORE starting every trailer load.
-    // This also runs on repeated Movie -> Trailer switches.
-    const trailerUrl=normalizeTrailerUrl(url);
-    trailerFrame.src="about:blank";
-
-    // Force a fresh YouTube document on every switch so the old black frame
-    // is never exposed without our loader above it.
-    requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-            trailerFrame.src=trailerUrl;
-        });
-    });
-
-    // Safety fallback: if a browser extension blocks iframe load events,
-    // never leave the CINEFLIX loader spinning forever.
-    window.__cineflixTrailerLoaderFallback=setTimeout(()=>{
-        hidePlayerLoading();
-        playerLoading.style.zIndex="";
-    },5000);
-
-    // Trailer uses YouTube's own controls. Keep CINEFLIX controls hidden.
+    trailerFrame.src=trailerUrl;
     hidePlayerControls();
     clearTimeout(controlsHideTimer);
-    // Trailer badge stays visible for the entire trailer mode.
-    if(playerModeBadge){
-        playerModeBadge.classList.add("show");
-        playerModeBadge.style.opacity="1";
-        playerModeBadge.style.visibility="visible";
-    }
+    hidePlayerLoading();
 }
 
 function hideTrailerFrame(){
@@ -7613,14 +7624,10 @@ similarRow.addEventListener(
 window.addEventListener(
     "scroll",
     ()=>{
-
-        document
-        .getElementById("topbar")
-        .classList.toggle(
-            "scrolled",
-            window.scrollY>30
-        );
-
+        const topbar=document.getElementById("topbar");
+        if(topbar){
+            topbar.classList.toggle("scrolled",window.scrollY>30);
+        }
     },
     {passive:true}
 );
@@ -8558,8 +8565,13 @@ window.addEventListener("beforeunload",()=>{
             if(initialPoster){
                 initialPoster.classList.remove("cineflix-instant-loading");
                 initialPoster.classList.remove("cineflix-loading-removed");
-                initialPoster.classList.remove("hidden");
-                initialPoster.setAttribute("aria-hidden","false");
+                if(!(initialTrailer && isYouTubeUrl(initialTrailer))){
+                    initialPoster.classList.remove("hidden");
+                    initialPoster.setAttribute("aria-hidden","false");
+                }else{
+                    initialPoster.classList.add("hidden");
+                    initialPoster.setAttribute("aria-hidden","true");
+                }
             }
             setDataSkeletonState(false);
 
@@ -8618,7 +8630,24 @@ window.addEventListener("beforeunload",()=>{
     const CW_KEY = "cineflix_continue_watching_v1";
     let cinemaActive = false;
     let trailerPlaying = false;
+    let trailerMuted = false;
     let watchTicker = null;
+
+    const trailerMuteControl=document.getElementById("trailerMuteControl");
+    function setTrailerStateFromMuteButton(){
+        if(!trailerMuteControl) return;
+        trailerMuteControl.dataset.muted=trailerMuted ? "true" : "false";
+        trailerMuteControl.setAttribute("aria-label",trailerMuted ? "Unmute trailer" : "Mute trailer");
+    }
+    function toggleTrailerMute(){
+        trailerMuted=!trailerMuted;
+        sendTrailerCommand(trailerMuted ? "mute" : "unMute");
+        setTrailerStateFromMuteButton();
+    }
+    trailerMuteControl?.addEventListener("click",e=>{
+        e.stopPropagation();
+        toggleTrailerMute();
+    });
 
     function movieId(){
         return String(window.CINEFLIX_MOVIE?.id || "");
@@ -8713,6 +8742,8 @@ window.addEventListener("beforeunload",()=>{
             return;
         }
         sendTrailerCommand("playVideo");
+        if(trailerMuted) sendTrailerCommand("mute");
+        else sendTrailerCommand("unMute");
         setTrailerState(true);
     }
     function pauseTrailer(){
