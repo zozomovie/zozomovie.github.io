@@ -1158,14 +1158,34 @@ function getGenres(movie){
 }
 
 function getPeople(movie){
-    const raw = first(
-        movie.cast,
-        movie.cast_crew,
-        movie.credits,
-        movie.actors,
-        []
-    );
-    return arr(raw);
+    const candidates = [
+        movie.cast, movie.cast_crew, movie.credits,
+        movie.actors, movie.cast_json, movie.crew
+    ];
+
+    for(const raw of candidates){
+        if(!raw) continue;
+        if(Array.isArray(raw)) return raw;
+
+        if(typeof raw === "string"){
+            try{
+                const parsed = JSON.parse(raw);
+                if(Array.isArray(parsed)) return parsed;
+                if(parsed && Array.isArray(parsed.cast)) return parsed.cast;
+                if(parsed && Array.isArray(parsed.credits)) return parsed.credits;
+            }catch(e){
+                const simple = raw.split(/[,\n|]+/).map(x=>x.trim()).filter(Boolean);
+                if(simple.length) return simple;
+            }
+        }
+
+        if(typeof raw === "object"){
+            if(Array.isArray(raw.cast)) return raw.cast;
+            if(Array.isArray(raw.credits)) return raw.credits;
+            if(Array.isArray(raw.crew)) return raw.crew;
+        }
+    }
+    return [];
 }
 
 function getPoster(movie,tmdb){
@@ -1206,27 +1226,25 @@ function getBackdrop(movie,tmdb){
 ========================================================= */
 
 async function fetchTMDB(movie){
-    /* Fast path: Supabase images/metadata are used directly. */
-    if(!TMDB_API_KEY) return null;
+    const key = String(TMDB_API_KEY || "").trim();
+    if(!key) return null;
 
     const explicitId = first(
-        movie.tmdb_id,
-        movie.tmdbId,
-        movie.tmdb_movie_id,
-        movie.tmdb_movieid
+        movie.tmdb_id, movie.tmdbId,
+        movie.tmdb_movie_id, movie.tmdb_movieid
     );
 
     try{
-        let url = "";
+        let url;
 
         if(explicitId){
-            url = `https://api.themoviedb.org/3/movie/${encodeURIComponent(explicitId)}?api_key=${encodeURIComponent(TMDB_API_KEY)}&language=en-US&append_to_response=credits`;
+            url = `https://api.themoviedb.org/3/movie/${encodeURIComponent(explicitId)}?api_key=${encodeURIComponent(key)}&language=en-US&append_to_response=credits`;
         }else{
             const title = first(movie.title,movie.name);
             if(!title) return null;
 
             const year = first(movie.year,movie.release_year,"");
-            url = `https://api.themoviedb.org/3/search/movie?api_key=${encodeURIComponent(TMDB_API_KEY)}&query=${encodeURIComponent(title)}&language=en-US&page=1&include_adult=false${year ? `&year=${encodeURIComponent(year)}` : ""}`;
+            url = `https://api.themoviedb.org/3/search/movie?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(title)}&language=en-US&page=1&include_adult=false${year ? `&year=${encodeURIComponent(year)}` : ""}`;
         }
 
         const response = await fetch(url);
@@ -1235,11 +1253,17 @@ async function fetchTMDB(movie){
         const data = await response.json();
 
         if(data.results){
-            return data.results[0] || null;
+            const found = data.results[0];
+            if(!found?.id) return found || null;
+
+            const detail = await fetch(
+                `https://api.themoviedb.org/3/movie/${found.id}?api_key=${encodeURIComponent(key)}&language=en-US&append_to_response=credits`
+            );
+            if(detail.ok) return await detail.json();
         }
+
         return data;
     }catch(error){
-        console.warn("TMDB fetch skipped:",error);
         return null;
     }
 }
@@ -1575,15 +1599,14 @@ function render(movie,tmdb,similar){
                     </div>
                 </section>
 
-                ${cast.length ? `
                 <section class="section">
                     <div class="section-head">
                         <h2 class="section-title">${icons.users} Cast & Crew</h2>
-                        <div class="section-side">View All ${icons.chevron}</div>
+                        <div class="section-side">${cast.length ? "Swipe" : ""} ${icons.chevron}</div>
                     </div>
 
                     <div class="cast-row">
-                        ${cast.map(person=>`
+                        ${cast.length ? cast.map(person=>`
                             <div class="cast-person">
                                 <div class="cast-photo">
                                     ${person.photo
@@ -1594,9 +1617,13 @@ function render(movie,tmdb,similar){
                                 <div class="cast-name">${esc(person.name)}</div>
                                 <div class="cast-role">${esc(person.role || "Cast")}</div>
                             </div>
-                        `).join("")}
+                        `).join("") : `
+                            <div style="width:100%;padding:10px 0;color:#7f8ea0;font-size:11px;text-align:center;">
+                                Cast data not available
+                            </div>
+                        `}
                     </div>
-                </section>` : ""}
+                </section>
 
                 <section class="section">
                     <div class="section-head">
