@@ -1168,6 +1168,64 @@ function getGenres(movie){
 }
 
 function getPeople(movie){
+    /*
+      Important mobile fallback:
+      TMDB is fetched live only when a TMDB token is available.
+      Admin already stores TMDB cast_data / crew_data inside the
+      Supabase movie row, so use those fields when live TMDB is not
+      available. This makes Cast & Crew work on phones/other devices
+      too, where localStorage from the admin device is not present.
+    */
+    const storedPeople = [];
+
+    const addStored = raw => {
+        if(!raw) return;
+
+        if(Array.isArray(raw)){
+            storedPeople.push(...raw);
+            return;
+        }
+
+        if(typeof raw === "string"){
+            try{
+                const parsed = JSON.parse(raw);
+                if(Array.isArray(parsed)){
+                    storedPeople.push(...parsed);
+                    return;
+                }
+                if(parsed && Array.isArray(parsed.cast)){
+                    storedPeople.push(...parsed.cast);
+                    return;
+                }
+                if(parsed && Array.isArray(parsed.credits)){
+                    storedPeople.push(...parsed.credits);
+                    return;
+                }
+                if(parsed && Array.isArray(parsed.crew)){
+                    storedPeople.push(...parsed.crew);
+                    return;
+                }
+            }catch(e){}
+
+            const simple = raw.split(/[,\n|]+/).map(x=>x.trim()).filter(Boolean);
+            if(simple.length) storedPeople.push(...simple);
+            return;
+        }
+
+        if(typeof raw === "object"){
+            if(Array.isArray(raw.cast)) storedPeople.push(...raw.cast);
+            if(Array.isArray(raw.credits)) storedPeople.push(...raw.credits);
+            if(Array.isArray(raw.crew)) storedPeople.push(...raw.crew);
+        }
+    };
+
+    /* These are the fields produced by the CINEFLIX admin TMDB fetch. */
+    addStored(movie.cast_data);
+    addStored(movie.crew_data);
+
+    if(storedPeople.length) return storedPeople;
+
+    /* Older movie rows / manually entered cast fields. */
     const candidates = [
         movie.cast, movie.cast_crew, movie.credits,
         movie.actors, movie.cast_json, movie.crew
@@ -1183,6 +1241,7 @@ function getPeople(movie){
                 if(Array.isArray(parsed)) return parsed;
                 if(parsed && Array.isArray(parsed.cast)) return parsed.cast;
                 if(parsed && Array.isArray(parsed.credits)) return parsed.credits;
+                if(parsed && Array.isArray(parsed.crew)) return parsed.crew;
             }catch(e){
                 const simple = raw.split(/[,\n|]+/).map(x=>x.trim()).filter(Boolean);
                 if(simple.length) return simple;
