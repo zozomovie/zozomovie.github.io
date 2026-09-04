@@ -200,9 +200,9 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .actions{
     display:flex;
     align-items:center;
-    gap:20px;
+    gap:14px;
     flex-wrap:wrap;
-    margin-bottom:30px;
+    margin-bottom:24px;
 }
 .action{
     height:64px;
@@ -333,7 +333,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
    SECTION
 ========================= */
 .section{
-    margin-top:32px;
+    margin-top:25px;
 }
 .section-head{
     display:flex;
@@ -667,8 +667,8 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
         overflow:hidden;
     }
     .actions{
-        gap:8px;
-        margin-bottom:22px;
+        gap:7px;
+        margin-bottom:18px;
     }
     .action{
         height:48px;
@@ -916,13 +916,24 @@ function getPoster(movie,tmdb){
 }
 
 function getBackdrop(movie,tmdb){
+    /*
+      Priority:
+      1) Supabase backdrop URL
+      2) Supabase TMDB backdrop_path
+      3) TMDB API backdrop_path
+      4) poster as last fallback
+    */
     return first(
         imageFrom(movie.backdrop_url),
         imageFrom(movie.backdrop),
         imageFrom(movie.backdrop_image),
         imageFrom(movie.hero_image),
+        tmdbImage(first(
+            movie.tmdb_backdrop_path,
+            movie.tmdbBackdropPath,
+            movie.backdrop_path
+        ),"original"),
         tmdbImage(tmdb?.backdrop_path,"original"),
-        /* If only a TMDB poster is stored, still create a cinematic background. */
         getPoster(movie,tmdb)
     );
 }
@@ -945,7 +956,7 @@ async function fetchTMDB(movie){
         let url = "";
 
         if(explicitId){
-            url = `https://api.themoviedb.org/3/movie/${encodeURIComponent(explicitId)}?api_key=${encodeURIComponent(TMDB_API_KEY)}&language=en-US`;
+            url = `https://api.themoviedb.org/3/movie/${encodeURIComponent(explicitId)}?api_key=${encodeURIComponent(TMDB_API_KEY)}&language=en-US&append_to_response=credits`;
         }else{
             const title = first(movie.title,movie.name);
             if(!title) return null;
@@ -1184,8 +1195,8 @@ function render(movie,tmdb,similar){
                     ${icons.back}
                 </button>
 
-                <button class="circle-btn" id="heartBtn" aria-label="Add to wishlist">
-                    ${icons.heart}
+                <button class="circle-btn" id="topShareBtn" aria-label="Share movie">
+                    ${icons.share}
                 </button>
             </div>
 
@@ -1213,12 +1224,6 @@ function render(movie,tmdb,similar){
                             ${icons.play}
                             Watch Now
                         </button>
-
-                        <button class="action list" id="listBtn">
-                            ${icons.plus}
-                            Add to Watchlist
-                        </button>
-
                         <button class="action share" id="shareBtn" aria-label="Share">
                             ${icons.share}
                         </button>
@@ -1323,6 +1328,14 @@ function render(movie,tmdb,similar){
     `;
 
     initInteractions(movie,clips,similar);
+
+    /* If a TMDB backdrop URL fails, gracefully fall back to the movie poster. */
+    const backdropImg = document.getElementById("backdropImg");
+    if(backdropImg){
+        backdropImg.addEventListener("error",()=>{
+            backdropImg.src = poster;
+        },{once:true});
+    }
 }
 
 /* =========================================================
@@ -1335,29 +1348,7 @@ function initInteractions(movie,clips,similar){
         else location.href = "index.html";
     };
 
-    document.getElementById("heartBtn").onclick = function(){
-        this.classList.toggle("liked");
-        this.style.background = this.classList.contains("liked")
-            ? "rgba(229,9,20,.55)"
-            : "";
-    };
-
-    document.getElementById("listBtn").onclick = function(){
-        const active = this.dataset.active === "1";
-
-        this.dataset.active = active ? "0" : "1";
-        this.innerHTML = active
-            ? `${icons.plus} Add to Watchlist`
-            : `${icons.heart} Added to Watchlist`;
-
-        if(!active){
-            this.style.background = "rgba(255,255,255,.13)";
-        }else{
-            this.style.background = "";
-        }
-    };
-
-    document.getElementById("shareBtn").onclick = async function(){
+    async function shareMovie(){
         const shareData = {
             title: document.title,
             text: `Watch ${first(movie.title,movie.name,"this movie")} on CINEFLIX`,
@@ -1367,12 +1358,17 @@ function initInteractions(movie,clips,similar){
         try{
             if(navigator.share){
                 await navigator.share(shareData);
-            }else{
+            }else if(navigator.clipboard){
                 await navigator.clipboard.writeText(location.href);
                 alert("Movie link copied!");
+            }else{
+                prompt("Copy movie link:", location.href);
             }
         }catch(e){}
-    };
+    }
+
+    document.getElementById("topShareBtn").onclick = shareMovie;
+    document.getElementById("shareBtn").onclick = shareMovie;
 
     document.getElementById("watchBtn").onclick = () => {
         location.href = `${WATCH_PAGE}?id=${encodeURIComponent(movie.id)}`;
