@@ -4231,6 +4231,80 @@ body.cineflix-cinema-mode .cineflix-player-back{background:rgba(0,0,0,.52);}
 }
 </style>
 
+
+<style id="cineflix-clean-mobile-authoritative">
+@media(max-width:699px){
+  html,body{background:#080812!important;overflow-x:hidden!important}
+  .header,.topbar{display:none!important}
+  .player-section{padding:0!important;margin:0!important}
+  .video-player{
+    width:100%!important;height:auto!important;aspect-ratio:2.18/1!important;
+    margin:0!important;border:0!important;border-bottom:1px solid rgba(183,80,255,.9)!important;
+    border-radius:0 0 12px 12px!important;overflow:hidden!important;background:#000!important;
+    box-shadow:none!important;position:relative!important
+  }
+  .cineflix-player-chrome{position:absolute!important;inset:0 0 auto 0!important;height:48px!important;
+    padding:8px 14px!important;display:flex!important;justify-content:flex-start!important;
+    align-items:center!important;background:transparent!important;z-index:1000!important;pointer-events:none!important}
+  .cineflix-player-back{width:34px!important;height:34px!important;padding:0!important;margin:0!important;
+    border:0!important;background:transparent!important;box-shadow:none!important;pointer-events:auto!important}
+  .cineflix-player-back svg{width:25px!important;height:25px!important;stroke-width:1.9!important}
+  .cineflix-earn-money{display:none!important}
+  .player-mode-badge,.player-top,#playerQuality{display:none!important}
+
+  .video-player.trailer-mode #movieVideo,
+  .video-player.trailer-mode .player-controls,
+  .video-player.trailer-mode .center-play,
+  .video-player.trailer-mode .center-play-pause,
+  .video-player.trailer-mode .player-gesture-overlay,
+  .video-player.trailer-mode .player-gesture-scrub,
+  .video-player.trailer-mode .player-empty,
+  .video-player.trailer-mode .player-loading{display:none!important}
+
+  #trailerFrameOverlay{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+    border:0!important;background:#000!important;z-index:20!important;display:block!important;
+    opacity:0!important;visibility:hidden!important}
+  #trailerFrameOverlay.show{opacity:1!important;visibility:visible!important}
+  #trailerThumbOverlay{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+    z-index:30!important;display:none!important;background:#000!important;overflow:hidden!important}
+  #trailerThumbOverlay.show{display:block!important}
+  #trailerThumbOverlay img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important;display:block!important}
+  #trailerThumbOverlay::after{display:none!important}
+  .trailer-frame-label{position:absolute!important;left:14px!important;top:12px!important;z-index:110!important;
+    display:none!important;color:#fff!important;font:600 11px/1 Inter,Arial,sans-serif!important;
+    text-shadow:0 1px 5px rgba(0,0,0,.75)!important;pointer-events:none!important}
+  .video-player.trailer-mode .trailer-frame-label{display:block!important}
+  .trailer-mute-control{position:absolute!important;right:11px!important;left:auto!important;top:9px!important;
+    width:34px!important;height:34px!important;display:none!important;place-items:center!important;
+    padding:0!important;border:0!important;background:transparent!important;color:#fff!important;z-index:115!important}
+  .video-player.trailer-mode .trailer-mute-control{display:grid!important}
+  .trailer-mute-control svg{width:22px!important;height:22px!important;stroke-width:1.8!important;filter:drop-shadow(0 1px 4px rgba(0,0,0,.65))!important}
+  .trailer-center-control{position:absolute!important;left:50%!important;top:50%!important;
+    transform:translate(-50%,-50%)!important;width:58px!important;height:58px!important;display:none!important;
+    place-items:center!important;padding:0!important;border:1.25px solid rgba(255,255,255,.92)!important;
+    border-radius:50%!important;background:rgba(0,0,0,.18)!important;color:#fff!important;z-index:115!important;
+    box-shadow:0 5px 18px rgba(0,0,0,.28)!important}
+  .video-player.trailer-mode .trailer-center-control{display:grid!important}
+  .trailer-center-control svg{width:31px!important;height:31px!important;stroke-width:1.8!important}
+
+  .content{padding-top:0!important}
+  .movie-title{margin-top:10px!important;margin-bottom:6px!important}
+  .watch-now-wrap{width:100%!important;padding:10px 18px 10px!important;margin:0!important}
+  .watch-now-btn{width:100%!important;height:44px!important;min-height:44px!important;padding:0 18px!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+    border:0!important;border-radius:24px!important;background:linear-gradient(100deg,#ff2380,#d02be7 52%,#7a3cff)!important;
+    box-shadow:0 7px 20px rgba(137,42,229,.2)!important;animation:none!important;transition:none!important;
+    color:#fff!important}
+  .watch-now-btn::before,.watch-now-btn::after{display:none!important;content:none!important}
+  .watch-now-btn .watch-icon{position:static!important;width:16px!important;height:16px!important}
+  .watch-now-btn #watchNowText{margin:0!important;font:900 13px/1 Inter,Arial,sans-serif!important;white-space:nowrap!important}
+  .watch-now-btn .watch-time{font-size:10px!important;font-weight:700!important}
+  .actions{margin-top:0!important}
+  #trailerToggle{display:none!important}
+}
+@media(min-width:700px){.cineflix-player-chrome{display:none!important}}
+</style>
+
 </head>
 <body class="cineflix-db-loading">
 <div class="movie-page-skeleton" id="moviePageSkeleton" aria-label="Loading movie">
@@ -9156,30 +9230,26 @@ window.addEventListener("beforeunload",()=>{
 </script>
 
 
-<script id="cineflix-authoritative-trailer-fix">
+
+<script id="cineflix-single-trailer-controller">
 (function(){
   'use strict';
   const player=document.getElementById('videoPlayer');
+  const frame=document.getElementById('trailerFrameOverlay');
   const thumb=document.getElementById('trailerThumbOverlay');
   const thumbImg=document.getElementById('trailerThumbImage');
-  const label=document.getElementById('trailerFrameLabel');
-  const mute=document.getElementById('trailerMuteControl');
   const center=document.getElementById('trailerCenterControl');
+  const mute=document.getElementById('trailerMuteControl');
+  const label=document.getElementById('trailerFrameLabel');
   const watch=document.getElementById('watchNowBtn');
-  const movieVideo=document.getElementById('movieVideo');
   if(!player) return;
-
-  let trailerId='';
-  let trailerPlaying=false;
-  let trailerMuted=false;
-  let observerTimer=0;
-
-  function getMovie(){ return window.CINEFLIX_MOVIE || {}; }
-  function getTrailerId(url){
-    const raw=String(url||'').trim();
-    if(/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+  let playing=false, muted=false;
+  const movie=()=>window.CINEFLIX_MOVIE||{};
+  function idOf(v){
+    const s=String(v||'').trim();
+    if(/^[A-Za-z0-9_-]{11}$/.test(s)) return s;
     try{
-      const u=new URL(raw);
+      const u=new URL(s);
       if(u.hostname.includes('youtu.be')) return (u.pathname.split('/')[1]||'').slice(0,11);
       if(u.hostname.includes('youtube.com')){
         if(u.pathname==='/watch') return (u.searchParams.get('v')||'').slice(0,11);
@@ -9187,475 +9257,75 @@ window.addEventListener("beforeunload",()=>{
         if(u.pathname.startsWith('/shorts/')) return (u.pathname.split('/')[2]||'').slice(0,11);
       }
     }catch(e){}
-    const m=raw.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+    const m=s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
     return m?m[1]:'';
   }
-  function getTrailerUrl(){ return String(getMovie().trailer_url||window.TRAILER_DEMO_URL||'').trim(); }
-  function normalize(url,autoplay){
-    const id=getTrailerId(url); if(!id) return '';
-    return 'https://www.youtube.com/embed/'+encodeURIComponent(id)+'?autoplay='+(autoplay?'1':'0')+'&mute='+(trailerMuted?'1':'0')+'&controls=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&fs=0&iv_load_policy=3&disablekb=1&origin=https%3A%2F%2Fzozomovie.github.io';
-  }
-  function command(func,args){
-    const f=document.getElementById('trailerFrameOverlay');
-    if(!f || !f.contentWindow) return;
-    try{f.contentWindow.postMessage(JSON.stringify({event:'command',func,args:args||[]}),'*');}catch(e){}
-  }
-  window.sendTrailerCommand=command;
-  function state(playing){
-    trailerPlaying=!!playing;
-    if(center){center.dataset.state=trailerPlaying?'pause':'play';center.setAttribute('aria-label',trailerPlaying?'Pause trailer':'Play trailer');}
-  }
-  function setMuteUI(){
-    if(!mute) return;
-    mute.dataset.muted=trailerMuted?'true':'false';
-    mute.setAttribute('aria-label',trailerMuted?'Unmute trailer':'Mute trailer');
-  }
-  function tmdbThumb(){
-    const m=getMovie();
-    return String(m.backdrop_url||m.poster_url||'').trim();
-  }
-  function showThumb(){
-    if(!thumb || !thumbImg) return;
-    const src=tmdbThumb();
-    if(src){thumbImg.src=src;thumb.classList.add('show');thumb.setAttribute('aria-hidden','false');}
-    else if(trailerId){thumbImg.src='https://i.ytimg.com/vi/'+encodeURIComponent(trailerId)+'/hqdefault.jpg';thumb.classList.add('show');}
-  }
-  function hideThumb(){ if(thumb){thumb.classList.remove('show');thumb.setAttribute('aria-hidden','true');} }
-  function removeFrame(){
-    const f=document.getElementById('trailerFrameOverlay');
-    if(f){f.remove();}
-  }
-  function ensureFrame(url,autoplay){
-    let f=document.getElementById('trailerFrameOverlay');
-    if(!f){
-      f=document.createElement('iframe');
-      f.id='trailerFrameOverlay';
-      f.setAttribute('allow','autoplay; encrypted-media; picture-in-picture; fullscreen');
-      f.setAttribute('allowfullscreen','');
-      f.setAttribute('loading','eager');
-      f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
-      player.appendChild(f);
-    }
-    const src=normalize(url,autoplay);
-    if(!src) return null;
-    f.classList.add('show');
-    f.src=src;
-    f.onload=function(){
-      if(autoplay){
-        setTimeout(()=>{
-          command('playVideo');
-          trailerMuted ? command('mute') : command('unMute');
-          state(true);
-        },80);
-        setTimeout(()=>{
-          command('playVideo');
-          state(true);
-        },500);
-      }
-    };
-    return f;
-  }
-  function forceTrailer(paused=true){
-    if(document.body.classList.contains('cineflix-cinema-mode')) return;
-    const url=getTrailerUrl();
-    const id=getTrailerId(url);
-    if(!id) return;
-    trailerId=id;
-    player.classList.add('trailer-mode');
-    if(movieVideo){try{movieVideo.pause();}catch(e){} movieVideo.removeAttribute('src');}
-    if(label) label.textContent='Trailer';
-    showThumb();
-    const f=document.getElementById('trailerFrameOverlay');
-    if(f && f.src && f.src!=='about:blank'){
-      f.classList.add('show');
-    }
-    state(paused?false:trailerPlaying);
-    setMuteUI();
-  }
-  function play(){
-    if(document.body.classList.contains('cineflix-cinema-mode')) return;
-    const url=getTrailerUrl(); if(!getTrailerId(url)) return;
-    player.classList.add('trailer-mode');
-    const f=document.getElementById('trailerFrameOverlay');
-    if(!f || !f.src || f.src==='about:blank'){
-      showThumb();
-      ensureFrame(url,true);
-      return;
-    }
-    hideThumb();
-    command('playVideo');
-    trailerMuted ? command('mute') : command('unMute');
-    state(true);
-  }
-  function pause(){
-    command('pauseVideo'); state(false);
-  }
-  center?.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();trailerPlaying?pause():play();});
-  mute?.addEventListener('click',function(e){
-    e.preventDefault();e.stopPropagation();
-    trailerMuted=!trailerMuted;
-    command(trailerMuted?'mute':'unMute');
-    setMuteUI();
-  });
-  /* Watch Now is the only way to enter the movie player. */
-  watch?.addEventListener('click',function(){
-    document.body.classList.add('cineflix-cinema-mode');
-    player.classList.remove('trailer-mode');
-    hideThumb();
-    const f=document.getElementById('trailerFrameOverlay');
-    if(f){f.src='about:blank';f.classList.remove('show');}
-  },true);
-  /* Keep trailer mode authoritative after Supabase renders the movie. */
-  function boot(){
-    if(!document.body.classList.contains('cineflix-cinema-mode')) forceTrailer(true);
-  }
-  const check=()=>{clearTimeout(observerTimer);observerTimer=setTimeout(boot,20);};
-  const mo=new MutationObserver(check);
-  mo.observe(player,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
-  mo.observe(document.body,{attributes:true,attributeFilter:['class']});
-  [0,250,700,1400,2500].forEach(ms=>setTimeout(boot,ms));
-  setMuteUI();
-})();
-</script>
-
-<!-- CINEFLIX CLEAN FINAL PATCH -->
-<style id="cineflix-clean-final-patch">
-@media (max-width:699px){
-  /* Clean phone layout: no extra site header and a compact trailer surface. */
-  html,body{background:#080812!important;overflow-x:hidden!important;}
-  .header,.topbar{display:none!important;}
-  .player-section{padding:0!important;margin:0!important;}
-  .video-player{
-    width:100%!important;
-    height:auto!important;
-    aspect-ratio:2/1!important;
-    margin:0!important;
-    border:1px solid rgba(177,74,255,.82)!important;
-    border-top:0!important;
-    border-radius:0 0 12px 12px!important;
-    overflow:hidden!important;
-    box-shadow:none!important;
-    background:#000!important;
-  }
-  .cineflix-player-chrome{
-    position:absolute!important;
-    top:0!important;left:0!important;right:0!important;
-    height:48px!important;
-    padding:8px 12px!important;
-    display:flex!important;
-    align-items:center!important;
-    justify-content:flex-start!important;
-    background:transparent!important;
-    z-index:200!important;
-    pointer-events:none!important;
-  }
-  .cineflix-player-back{
-    pointer-events:auto!important;
-    width:34px!important;height:34px!important;
-    padding:0!important;margin:0!important;
-    border:0!important;border-radius:50%!important;
-    background:transparent!important;box-shadow:none!important;
-    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-  }
-  .cineflix-player-back svg{width:25px!important;height:25px!important;stroke-width:1.9!important;}
-  .cineflix-earn-money{display:none!important;}
-
-  /* Trailer-only UI. */
-  .video-player.trailer-mode #movieVideo,
-  .video-player.trailer-mode .player-controls,
-  .video-player.trailer-mode .player-top,
-  .video-player.trailer-mode #playerQuality,
-  .video-player.trailer-mode #initialPoster,
-  .video-player.trailer-mode #initialPosterPlay,
-  .video-player.trailer-mode .player-mode-badge,
-  .video-player.trailer-mode .center-play,
-  .video-player.trailer-mode .center-play-pause,
-  .video-player.trailer-mode .player-gesture-overlay,
-  .video-player.trailer-mode .player-gesture-scrub,
-  .video-player.trailer-mode .player-empty,
-  .video-player.trailer-mode .player-loading{display:none!important;}
-
-  #trailerFrameOverlay{
-    position:absolute!important;inset:0!important;
-    width:100%!important;height:100%!important;
-    border:0!important;z-index:20!important;
-    display:block!important;opacity:0!important;visibility:hidden!important;
-    background:#000!important;
-  }
-  #trailerFrameOverlay.show{opacity:1!important;visibility:visible!important;}
-
-  #trailerThumbOverlay{
-    position:absolute!important;inset:0!important;
-    width:100%!important;height:100%!important;
-    z-index:30!important;display:none!important;
-    background:#000!important;border-radius:0 0 12px 12px!important;
-  }
-  #trailerThumbOverlay.show{display:block!important;}
-  #trailerThumbOverlay img{
-    width:100%!important;height:100%!important;
-    object-fit:cover!important;object-position:center!important;
-    display:block!important;
-  }
-  #trailerThumbOverlay::after{display:none!important;}
-
-  .trailer-frame-label{
-    display:none!important;
-    position:absolute!important;left:13px!important;top:11px!important;
-    z-index:100!important;color:#fff!important;
-    font:600 11px/1 Inter,Arial,sans-serif!important;
-    text-shadow:0 1px 4px rgba(0,0,0,.7)!important;
-    pointer-events:none!important;
-  }
-  .video-player.trailer-mode .trailer-frame-label{display:block!important;}
-
-  .trailer-mute-control{
-    display:none!important;
-    position:absolute!important;right:9px!important;left:auto!important;top:8px!important;
-    width:34px!important;height:34px!important;
-    border:0!important;border-radius:50%!important;
-    padding:0!important;background:transparent!important;
-    color:#fff!important;z-index:110!important;
-  }
-  .video-player.trailer-mode .trailer-mute-control{display:grid!important;place-items:center!important;}
-  .trailer-mute-control svg{width:22px!important;height:22px!important;stroke-width:1.8!important;filter:drop-shadow(0 1px 4px rgba(0,0,0,.7))!important;}
-
-  .trailer-center-control{
-    display:none!important;
-    position:absolute!important;left:50%!important;top:50%!important;
-    transform:translate(-50%,-50%)!important;
-    width:58px!important;height:58px!important;
-    border:1.4px solid rgba(255,255,255,.94)!important;
-    border-radius:50%!important;
-    padding:0!important;background:rgba(0,0,0,.22)!important;
-    color:#fff!important;z-index:110!important;
-    box-shadow:0 5px 18px rgba(0,0,0,.3)!important;
-  }
-  .video-player.trailer-mode .trailer-center-control{display:grid!important;place-items:center!important;}
-  .trailer-center-control svg{width:31px!important;height:31px!important;stroke-width:1.8!important;}
-
-  /* Exactly one clean CTA, above the action cards. */
-  .watch-now-wrap{
-    width:100%!important;padding:12px 18px 10px!important;
-    margin:0!important;
-  }
-  .watch-now-btn{
-    width:100%!important;height:46px!important;min-height:46px!important;
-    border:0!important;border-radius:24px!important;
-    padding:0 20px!important;
-    display:flex!important;align-items:center!important;justify-content:center!important;
-    gap:8px!important;
-    position:relative!important;overflow:hidden!important;
-    background:linear-gradient(100deg,#ff2380 0%,#d12be7 52%,#7a3cff 100%)!important;
-    box-shadow:0 7px 22px rgba(137,42,229,.2),inset 0 1px 0 rgba(255,255,255,.18)!important;
-    animation:none!important;transition:none!important;
-    color:#fff!important;font:900 13px/1 Inter,Arial,sans-serif!important;
-  }
-  .watch-now-btn::before,.watch-now-btn::after{content:none!important;display:none!important;}
-  .watch-now-btn .watch-icon{position:static!important;width:16px!important;height:16px!important;flex:0 0 16px!important;}
-  .watch-now-btn #watchNowText{margin:0!important;font-size:13px!important;font-weight:900!important;line-height:1!important;white-space:nowrap!important;}
-  .watch-now-btn .watch-time{font-size:10px!important;font-weight:700!important;opacity:.9!important;}
-  .actions{margin-top:0!important;}
-
-  /* Keep content clean and spaced like a mobile streaming app. */
-  .content{padding-top:0!important;}
-  .movie-title{margin-top:0!important;}
-}
-</style>
-<script id="cineflix-clean-final-js">
-(function(){
-  'use strict';
-  const $=id=>document.getElementById(id);
-  const player=$('videoPlayer');
-  const movieVideo=$('movieVideo');
-  const watchBtn=$('watchNowBtn');
-  const watchText=$('watchNowText');
-  const trailerControl=$('trailerCenterControl');
-  const muteBtn=$('trailerMuteControl');
-  const thumb=$('trailerThumbOverlay');
-  const thumbImg=$('trailerThumbImage');
-  const label=$('trailerFrameLabel');
-  const back=$('playerPageBack');
-  if(!player) return;
-
-  let playing=false;
-  let muted=false;
-  let cinema=false;
-  let bootTimer=0;
-
-  function movie(){return window.CINEFLIX_MOVIE||{};}
-  function trailerId(url){
-    const raw=String(url||'').trim();
-    if(/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
-    try{
-      const u=new URL(raw);
-      if(u.hostname.includes('youtu.be')) return (u.pathname.split('/')[1]||'').slice(0,11);
-      if(u.hostname.includes('youtube.com')){
-        if(u.pathname==='/watch') return (u.searchParams.get('v')||'').slice(0,11);
-        if(u.pathname.startsWith('/embed/')) return (u.pathname.split('/')[2]||'').slice(0,11);
-        if(u.pathname.startsWith('/shorts/')) return (u.pathname.split('/')[2]||'').slice(0,11);
-      }
-    }catch(e){}
-    const m=raw.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
-    return m?m[1]:'';
-  }
-  function trailerUrl(){return String(movie().trailer_url||'').trim();}
-  function ytUrl(id,auto){
-    return 'https://www.youtube.com/embed/'+encodeURIComponent(id)+'?autoplay='+(auto?'1':'0')+'&mute='+(muted?'1':'0')+'&controls=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&fs=0&iv_load_policy=3&disablekb=1&origin=https%3A%2F%2Fzozomovie.github.io';
-  }
-  function command(func){
-    const f=$('trailerFrameOverlay');
-    if(!f||!f.contentWindow) return;
-    try{f.contentWindow.postMessage(JSON.stringify({event:'command',func:func,args:[]}),'*');}catch(e){}
-  }
-  window.sendTrailerCommand=command;
+  function tid(){return idOf(movie().trailer_url||'')}
+  function thumbSrc(){return String(movie().backdrop_url||movie().poster_url||'').trim()}
   function setState(v){
     playing=!!v;
-    if(trailerControl){
-      trailerControl.dataset.state=playing?'pause':'play';
-      trailerControl.setAttribute('aria-label',playing?'Pause trailer':'Play trailer');
-    }
+    if(center){center.dataset.state=playing?'pause':'play';center.setAttribute('aria-label',playing?'Pause trailer':'Play trailer')}
   }
   function setMute(){
-    if(!muteBtn)return;
-    muteBtn.dataset.muted=muted?'true':'false';
-    muteBtn.setAttribute('aria-label',muted?'Unmute trailer':'Mute trailer');
+    if(!mute)return;
+    mute.dataset.muted=muted?'true':'false';
+    mute.setAttribute('aria-label',muted?'Unmute trailer':'Mute trailer');
   }
-  function tmdbImage(){return String(movie().backdrop_url||movie().poster_url||'').trim();}
   function showThumb(){
     if(!thumb||!thumbImg)return;
-    const src=tmdbImage();
-    const id=trailerId(trailerUrl());
-    if(src){
-      thumbImg.onerror=function(){this.onerror=null;if(id)this.src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg';};
-      thumbImg.src=src;
-      thumb.classList.add('show');
-    }else if(id){
-      thumbImg.src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg';
-      thumb.classList.add('show');
-    }else thumb.classList.remove('show');
+    const s=thumbSrc(), id=tid();
+    if(s){
+      thumbImg.onerror=function(){this.onerror=null;if(id)this.src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'};
+      thumbImg.src=s; thumb.classList.add('show');
+    }else if(id){thumbImg.src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg';thumb.classList.add('show')}
+    else thumb.classList.remove('show');
   }
-  function hideThumb(){if(thumb)thumb.classList.remove('show');}
-  function frame(){return $('trailerFrameOverlay');}
-  function ensureFrame(auto){
-    const id=trailerId(trailerUrl());
-    if(!id)return null;
-    let f=frame();
-    if(!f){
-      f=document.createElement('iframe');
-      f.id='trailerFrameOverlay';
-      f.setAttribute('allow','autoplay; encrypted-media; fullscreen');
-      f.setAttribute('allowfullscreen','');
-      f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
-      player.appendChild(f);
-    }
-    showThumb();
-    f.classList.add('show');
-    f.onload=function(){
-      if(auto){
-        command('playVideo');
-        muted?command('mute'):command('unMute');
-        setState(true);
-        setTimeout(function(){command('playVideo');},180);
-        setTimeout(function(){hideThumb();},260);
-      }
-    };
-    f.src=ytUrl(id,auto);
-    return f;
+  function hideThumb(){if(thumb)thumb.classList.remove('show')}
+  function post(cmd){
+    if(!frame||!frame.contentWindow)return;
+    try{frame.contentWindow.postMessage(JSON.stringify({event:'command',func:cmd,args:[]}),'*')}catch(e){}
   }
-  function forceTrailer(){
-    if(cinema||document.body.classList.contains('cineflix-cinema-mode'))return;
-    const id=trailerId(trailerUrl());
+  window.sendTrailerCommand=post;
+  function src(auto){
+    const id=tid();
+    return id?'https://www.youtube.com/embed/'+encodeURIComponent(id)+'?autoplay='+(auto?'1':'0')+'&mute='+(muted?'1':'0')+'&controls=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&fs=0&iv_load_policy=3&disablekb=1&origin=https%3A%2F%2Fzozomovie.github.io':'';
+  }
+  function prepare(){
+    const id=tid();
     player.classList.add('trailer-mode');
     if(label)label.textContent='Trailer';
-    setMute();
-    showThumb();
-    if(!id){
-      /* No YouTube key: still keep the top surface clean instead of showing movie controls. */
-      if(movieVideo){try{movieVideo.pause();}catch(e){}}
-      return;
-    }
-    const f=frame();
-    if(!f||!f.src||f.src==='about:blank')showThumb();
-    setState(false);
-  }
-  function playTrailer(){
-    if(cinema)return;
-    const id=trailerId(trailerUrl());
+    showThumb();setState(false);setMute();
     if(!id)return;
+    if(!frame)return;
+    frame.classList.remove('show');
+    frame.src=src(false);
+    frame.onload=function(){frame.classList.add('show');showThumb()};
+  }
+  function play(){
+    if(!tid())return;
     player.classList.add('trailer-mode');
-    const f=frame();
-    if(!f||!f.src||f.src==='about:blank'){
-      ensureFrame(true);
-      setState(true);
-      return;
-    }
-    hideThumb();
-    command('playVideo');
-    muted?command('mute'):command('unMute');
-    setState(true);
-  }
-  function pauseTrailer(){command('pauseVideo');setState(false);}
-
-  trailerControl&&trailerControl.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();playing?pauseTrailer():playTrailer();});
-  muteBtn&&muteBtn.addEventListener('click',function(e){
-    e.preventDefault();e.stopPropagation();
-    muted=!muted;
-    muted?command('mute'):command('unMute');
-    setMute();
-  });
-
-  /* One and only one Watch Now handler. */
-  if(watchBtn){
-    watchBtn.onclick=function(){
-      if(typeof window.__cineflixEnterCinema==='function')window.__cineflixEnterCinema();
-      else{
-        cinema=true;
-        document.body.classList.add('cineflix-cinema-mode');
-        player.classList.remove('trailer-mode');
-        hideThumb();
-        try{movieVideo&&movieVideo.play();}catch(e){}
-      }
-    };
-  }
-
-  /* Clean button text: never allow nested/duplicated pseudo content. */
-  function cleanWatch(){
-    if(!watchText)return;
-    const saved=(()=>{try{
-      const id=String(movie().id||'');
-      const a=JSON.parse(localStorage.getItem('cineflix_continue_watching_v1')||'[]');
-      return Array.isArray(a)?a.find(x=>String(x.id)===id):null;
-    }catch(e){return null;}})();
-    const d=Number(movie().runtime||0)*60;
-    const t=Number(saved?.currentTime||0);
-    if(t>1&&d>t+5){
-      const sec=Math.floor(d-t),h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
-      const txt=h?String(h).padStart(2,'0')+'H '+m+'min Left':m+'min Left';
-      watchText.innerHTML='Resume <span class="watch-time">- '+txt+'</span>';
-      watchBtn.classList.add('resume');
+    if(!frame.src || frame.src==='about:blank'){
+      frame.src=src(true); frame.classList.add('show');
+      frame.onload=function(){post('playVideo');muted?post('mute'):post('unMute');setState(true);setTimeout(hideThumb,220)};
     }else{
-      watchText.textContent='Watch Now';
-      watchBtn.classList.remove('resume');
+      hideThumb(); post('playVideo'); muted?post('mute'):post('unMute'); setState(true);
     }
   }
-
+  function pause(){post('pauseVideo');setState(false);}
+  center&&center.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();playing?pause():play()});
+  mute&&mute.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();muted=!muted;muted?post('mute'):post('unMute');setMute()});
+  /* Watch Now: hand off to the existing movie player only once. */
+  watch&&watch.addEventListener('click',()=>{
+    hideThumb();
+    player.classList.remove('trailer-mode');
+    if(frame){frame.src='about:blank';frame.classList.remove('show')}
+    if(typeof window.__cineflixEnterCinema==='function') window.__cineflixEnterCinema();
+  },true);
   function boot(){
     if(document.body.classList.contains('cineflix-cinema-mode'))return;
-    /* Never leave the movie controls visible on the normal mobile page. */
-    player.classList.add('trailer-mode');
-    forceTrailer();
-    cleanWatch();
+    prepare();
   }
-  [0,100,400,900,1600,3000].forEach(ms=>setTimeout(boot,ms));
-  const observer=new MutationObserver(function(){
-    clearTimeout(bootTimer);
-    bootTimer=setTimeout(function(){
-      if(!document.body.classList.contains('cineflix-cinema-mode'))boot();
-    },40);
-  });
-  observer.observe(player,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
-  observer.observe(document.body,{attributes:true,attributeFilter:['class']});
-  cleanWatch();
+  [0,300,900,1800].forEach(t=>setTimeout(boot,t));
   setMute();
 })();
 </script>
