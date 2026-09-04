@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <meta name="theme-color" content="#02070d">
+<link rel="icon" href="data:,">
 <title>CINEFLIX — Movie Details</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2216%22 fill=%22%23e50914%22/%3E%3Cpath d=%22M24 16v32l25-16z%22 fill=%22white%22/%3E%3C/svg%3E">
 
@@ -34,7 +35,7 @@ body{
         radial-gradient(circle at 50% 0%,rgba(27,66,99,.22),transparent 40%),
         #02070d;
     color:var(--text);
-    font-family:Inter,Arial,sans-serif;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
 }
 button{font:inherit}
 button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent}
@@ -267,8 +268,8 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     z-index:5;
     width:min(1160px,94%);
     margin:0 auto;
-    padding-top:145px;
-    padding-bottom:75px;
+    padding-top:125px;
+    padding-bottom:65px;
 }
 
 /* =========================
@@ -453,11 +454,11 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .info-label{
     color:#aab7c8;
     font-size:13px;
-    margin-bottom:5px;
+    margin-bottom:3px;
 }
 .info-value{
     color:#e4eaf2;
-    font-size:14px;
+    font-size:13px;
     line-height:1.45;
 }
 
@@ -585,15 +586,26 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 ========================= */
 .cast-row{
     display:flex;
-    gap:28px;
+    gap:24px;
     overflow-x:auto;
+    overflow-y:hidden;
     padding:7px 8px 12px;
     scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
+    overscroll-behavior-x:contain;
+    touch-action:pan-x;
+    cursor:grab;
 }
+.cast-row:active{cursor:grabbing}
 .cast-row::-webkit-scrollbar{display:none}
+.cast-person{
+    scroll-snap-align:start;
+}
 .cast-person{
     flex:0 0 102px;
     text-align:center;
+    scroll-snap-align:start;
 }
 .cast-photo{
     width:88px;
@@ -840,6 +852,9 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
         height:62px;
         padding:0 18px;
     }
+    .backdrop{
+        top:62px;
+    }
     .logo{font-size:20px}
     .logo-mark{width:27px;height:27px}
     .nav{display:none}
@@ -992,8 +1007,8 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .clip-prev{left:6px}.clip-next{right:6px}
 
     .cast-row{
-        gap:18px;
-        padding-left:2px;
+        gap:17px;
+        padding:5px 2px 10px;
     }
     .cast-person{flex-basis:82px}
     .cast-photo{
@@ -1066,7 +1081,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
    If your admin stores tmdb_id but does not store the TMDB images,
    put your TMDB API Read Access Token/API key here.
 */
-const TMDB_API_KEY = "";
+const TMDB_API_KEY = ""; // Add your TMDB API key here to fetch real cast/crew, backdrop and metadata.
 
 /* Change only this if your watch/quality page has another filename. */
 const WATCH_PAGE = "quality.html";
@@ -1325,16 +1340,34 @@ function makeInfo(movie,tmdb){
 ========================================================= */
 
 function normalizeCast(movie,tmdb){
+    /*
+      Real movie cast:
+      TMDB credits are preferred whenever available. This gives the actual
+      actors + character names + profile photos for the selected movie.
+    */
+    if(tmdb?.credits?.cast?.length){
+        return tmdb.credits.cast
+            .filter(person=>person && person.name)
+            .slice(0,12)
+            .map(person=>({
+                name:person.name,
+                role:person.character || "Cast",
+                photo:tmdbImage(person.profile_path,"w185")
+            }));
+    }
+
+    /* Fallback to cast saved in Supabase, if present. */
     const own = getPeople(movie);
 
     if(own.length){
         return own.slice(0,12).map(person=>{
             if(typeof person === "string"){
-                return {name:person,role:"",photo:""};
+                return {name:person,role:"Cast",photo:""};
             }
+
             return {
                 name:first(person.name,person.title,"Cast"),
-                role:first(person.character,person.role,person.job,""),
+                role:first(person.character,person.role,person.job,"Cast"),
                 photo:first(
                     imageFrom(person.profile_url),
                     imageFrom(person.profile_path),
@@ -1345,14 +1378,6 @@ function normalizeCast(movie,tmdb){
                 )
             };
         });
-    }
-
-    if(tmdb?.credits?.cast){
-        return tmdb.credits.cast.slice(0,12).map(person=>({
-            name:person.name,
-            role:person.character || "",
-            photo:tmdbImage(person.profile_path,"w185")
-        }));
     }
 
     return [];
@@ -1436,7 +1461,7 @@ function render(movie,tmdb,similar){
     app.innerHTML = `
         <div class="page">
             <div class="backdrop">
-                <img id="backdropImg" src="${esc(backdrop)}" alt="">
+                <img id="backdropImg" src="${esc(backdrop)}" alt="" fetchpriority="high" decoding="async">
             </div>
 
             <header class="header" id="header">
@@ -1550,35 +1575,6 @@ function render(movie,tmdb,similar){
                     </div>
                 </section>
 
-                <section class="section">
-                    <div class="section-head">
-                        <h2 class="section-title">${icons.clips} Movie Clips</h2>
-                        <div class="section-side">
-                            <span id="clipCounter">1 / ${clips.length}</span>
-                            <button class="circle-btn clip-mini-prev" aria-label="Previous clip">${icons.back}</button>
-                            <button class="circle-btn clip-mini-next" aria-label="Next clip">${icons.chevron}</button>
-                        </div>
-                    </div>
-
-                    <div class="clips-wrap">
-                        <div class="clip-card">
-                            <img id="clipImage" src="${esc(clips[0]?.image || poster)}" alt="${esc(title)}">
-                            <div class="clip-quote" id="clipQuote">${esc(clips[0]?.quote || "")}</div>
-
-                            <button class="clip-arrow clip-prev" id="clipPrev" aria-label="Previous">
-                                ${icons.back}
-                            </button>
-                            <button class="clip-arrow clip-next" id="clipNext" aria-label="Next">
-                                ${icons.chevron}
-                            </button>
-
-                            <div class="clip-dots" id="clipDots">
-                                ${clips.map((_,i)=>`<button class="clip-dot ${i===0?"active":""}" data-index="${i}"></button>`).join("")}
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 ${cast.length ? `
                 <section class="section">
                     <div class="section-head">
@@ -1601,6 +1597,35 @@ function render(movie,tmdb,similar){
                         `).join("")}
                     </div>
                 </section>` : ""}
+
+                <section class="section">
+                    <div class="section-head">
+                        <h2 class="section-title">${icons.clips} Movie Clips</h2>
+                        <div class="section-side">
+                            <span id="clipCounter">1 / ${clips.length}</span>
+                            <button class="circle-btn clip-mini-prev" aria-label="Previous clip">${icons.back}</button>
+                            <button class="circle-btn clip-mini-next" aria-label="Next clip">${icons.chevron}</button>
+                        </div>
+                    </div>
+
+                    <div class="clips-wrap">
+                        <div class="clip-card">
+                            <img id="clipImage" src="${esc(clips[0]?.image || poster)}" alt="${esc(title)}" loading="lazy" decoding="async">
+                            <div class="clip-quote" id="clipQuote">${esc(clips[0]?.quote || "")}</div>
+
+                            <button class="clip-arrow clip-prev" id="clipPrev" aria-label="Previous">
+                                ${icons.back}
+                            </button>
+                            <button class="clip-arrow clip-next" id="clipNext" aria-label="Next">
+                                ${icons.chevron}
+                            </button>
+
+                            <div class="clip-dots" id="clipDots">
+                                ${clips.map((_,i)=>`<button class="clip-dot ${i===0?"active":""}" data-index="${i}"></button>`).join("")}
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 ${similar.length ? `
                 <section class="section">
@@ -1806,6 +1831,9 @@ function initInteractions(movie,clips,similar){
     }
 
     image.style.transition = ".25s";
+    image.addEventListener("error",()=>{
+        image.src = poster;
+    });
 
     document.getElementById("clipPrev").onclick = () => showClip(clipIndex-1);
     document.getElementById("clipNext").onclick = () => showClip(clipIndex+1);
@@ -1816,6 +1844,35 @@ function initInteractions(movie,clips,similar){
     dots.forEach(dot=>{
         dot.onclick = () => showClip(Number(dot.dataset.index));
     });
+
+    /* Cast slider: native touch swipe + desktop mouse drag. */
+    const castRow = document.querySelector(".cast-row");
+    if(castRow){
+        let dragging = false;
+        let startX = 0;
+        let startScroll = 0;
+
+        castRow.addEventListener("pointerdown",(e)=>{
+            if(e.pointerType === "mouse"){
+                dragging = true;
+                startX = e.clientX;
+                startScroll = castRow.scrollLeft;
+                castRow.setPointerCapture?.(e.pointerId);
+            }
+        });
+
+        castRow.addEventListener("pointermove",(e)=>{
+            if(!dragging) return;
+            castRow.scrollLeft = startScroll - (e.clientX - startX);
+        });
+
+        const stopCastDrag = ()=>{
+            dragging = false;
+        };
+        castRow.addEventListener("pointerup",stopCastDrag);
+        castRow.addEventListener("pointercancel",stopCastDrag);
+        castRow.addEventListener("lostpointercapture",stopCastDrag);
+    }
 
     /* Similar */
     document.querySelectorAll(".poster-card").forEach(card=>{
@@ -1865,7 +1922,7 @@ async function loadMovie(){
                 .select("*")
                 .neq("id",movieId)
                 .order("created_at",{ascending:false})
-                .limit(18);
+                .limit(12);
 
             similar = Array.isArray(rows)
                 ? rows.filter(x=>x && x.id && (x.poster_url || x.poster || x.thumbnail)).slice(0,12)
