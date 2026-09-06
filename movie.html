@@ -1106,7 +1106,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .backdrop{height:375px}
     .title{font-size:27px;letter-spacing:.06em}
     .info-item{padding:9px 6px 9px 9px;min-height:63px}
-    .info-label{font-size:8.5px}
+    .info-label{font-size:8px}
     .info-value{font-size:9px}
     .action{font-size:11px;padding:0 12px}
     .similar-row{gap:7px}
@@ -1135,6 +1135,15 @@ const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/*
+   Optional TMDB API key.
+
+   The page DOES NOT require this key when your Supabase row already
+   contains poster_url / backdrop_url / tmdb_id.
+
+   If your admin stores tmdb_id but does not store the TMDB images,
+   put your TMDB API Read Access Token/API key here.
+*/
 const TMDB_API_KEY = ""; // Optional direct key. If empty, the saved admin Read Access Token is used.
 
 function getTMDBToken(){
@@ -1147,7 +1156,7 @@ function getTMDBToken(){
     }
 }
 
-/* Target Quality Page */
+/* Change only this if your watch/quality page has another filename. */
 const WATCH_PAGE = "quality.html";
 
 const params = new URLSearchParams(location.search);
@@ -1175,6 +1184,15 @@ const arr = value => {
         return value.split(",").map(x=>x.trim()).filter(Boolean);
     }
     return [];
+};
+
+const val = (obj, keys, fallback="") => {
+    for(const key of keys){
+        if(obj && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== ""){
+            return obj[key];
+        }
+    }
+    return fallback;
 };
 
 function imageFrom(value, fallback=""){
@@ -1213,6 +1231,14 @@ function getGenres(movie){
 }
 
 function getPeople(movie){
+    /*
+      Important mobile fallback:
+      TMDB is fetched live only when a TMDB token is available.
+      Admin already stores TMDB cast_data / crew_data inside the
+      Supabase movie row, so use those fields when live TMDB is not
+      available. This makes Cast & Crew work on phones/other devices
+      too, where localStorage from the admin device is not present.
+    */
     const storedPeople = [];
 
     const addStored = raw => {
@@ -1256,11 +1282,13 @@ function getPeople(movie){
         }
     };
 
+    /* These are the fields produced by the CINEFLIX admin TMDB fetch. */
     addStored(movie.cast_data);
     addStored(movie.crew_data);
 
     if(storedPeople.length) return storedPeople;
 
+    /* Older movie rows / manually entered cast fields. */
     const candidates = [
         movie.cast, movie.cast_crew, movie.credits,
         movie.actors, movie.cast_json, movie.crew
@@ -1303,6 +1331,13 @@ function getPoster(movie,tmdb){
 }
 
 function getBackdrop(movie,tmdb){
+    /*
+      Priority:
+      1) Supabase backdrop URL
+      2) Supabase TMDB backdrop_path
+      3) TMDB API backdrop_path
+      4) poster as last fallback
+    */
     return first(
         imageFrom(movie.backdrop_url),
         imageFrom(movie.backdrop),
@@ -1318,6 +1353,10 @@ function getBackdrop(movie,tmdb){
     );
 }
 
+/* =========================================================
+   TMDB
+========================================================= */
+
 async function fetchTMDB(movie){
     const token = getTMDBToken();
     if(!token) return null;
@@ -1325,6 +1364,18 @@ async function fetchTMDB(movie){
     const headers = {
         accept: "application/json",
         Authorization: `Bearer ${token}`
+    };
+
+    // TMDB must NEVER block the movie page. If TMDB/network is slow,
+    // the page continues immediately using Supabase data.
+    const tmdbFetch = async (url) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 2200);
+        try {
+            return await fetch(url,{headers,cache:"no-store",signal:controller.signal});
+        } finally {
+            clearTimeout(timer);
+        }
     };
 
     const explicitId = first(
@@ -1352,7 +1403,7 @@ async function fetchTMDB(movie){
             searchUrl.searchParams.set("include_adult","false");
             if(year) searchUrl.searchParams.set("year",String(year));
 
-            const searchResponse = await fetch(searchUrl.toString(),{headers,cache:"no-store"});
+            const searchResponse = await tmdbFetch(searchUrl.toString());
             if(!searchResponse.ok) return null;
 
             const searchData = await searchResponse.json();
@@ -1374,15 +1425,19 @@ async function fetchTMDB(movie){
         detailUrl.searchParams.set("append_to_response","credits,images,videos");
         detailUrl.searchParams.set("include_image_language","en,null");
 
-        const response = await fetch(detailUrl.toString(),{headers,cache:"no-store"});
+        const response = await tmdbFetch(detailUrl.toString());
         if(!response.ok) return null;
 
         return await response.json();
     }catch(error){
-        console.warn("CINEFLIX TMDB metadata unavailable:",error);
+        // Network/blocked/timeout/invalid TMDB token should not break the page.
         return null;
     }
 }
+
+/* =========================================================
+   SVG ICONS
+========================================================= */
 
 const icons = {
     back:`<svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
@@ -1403,6 +1458,10 @@ const icons = {
     clips:`<svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="m8 7 2-4h3l-2 4M14 7l2-4h3l-2 4"/><path d="m10 11 5 3-5 3z"/></svg>`,
     chevron:`<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>`
 };
+
+/* =========================================================
+   INFO DATA
+========================================================= */
 
 function makeInfo(movie,tmdb){
     const release = first(
@@ -1468,7 +1527,16 @@ function makeInfo(movie,tmdb){
     ];
 }
 
+/* =========================================================
+   CAST
+========================================================= */
+
 function normalizeCast(movie,tmdb){
+    /*
+      TMDB is the primary source. Show the real cast first, followed by a
+      useful selection of crew (Director/Writer/Producer/Cinematography/
+      Editor/Music) so the section genuinely represents Cast & Crew.
+    */
     if(tmdb?.credits){
         const cast = Array.isArray(tmdb.credits.cast)
             ? tmdb.credits.cast
@@ -1508,6 +1576,7 @@ function normalizeCast(movie,tmdb){
         }).slice(0,30);
     }
 
+    /* Fallback to people saved in Supabase, if present. */
     const own = getPeople(movie);
     if(own.length){
         return own.slice(0,30).map(person=>{
@@ -1530,6 +1599,10 @@ function normalizeCast(movie,tmdb){
     }
     return [];
 }
+
+/* =========================================================
+   CLIPS
+========================================================= */
 
 function normalizeClips(movie,tmdb){
     let raw = first(
@@ -1572,6 +1645,10 @@ function normalizeClips(movie,tmdb){
     }];
 }
 
+/* =========================================================
+   RENDER
+========================================================= */
+
 function render(movie,tmdb,similar){
     const title = first(movie.title,movie.name,tmdb?.title,tmdb?.name,"Movie");
     const year = first(movie.year,movie.release_year,tmdb?.release_date?.slice(0,4),"");
@@ -1595,10 +1672,6 @@ function render(movie,tmdb,similar){
     const clips = normalizeClips(movie,tmdb);
     const cast = normalizeCast(movie,tmdb);
     const info = makeInfo(movie,tmdb);
-
-    /* Dynamic Quality Page URL generation logic */
-    const linkmakeUrl = movie.linkmake_url || "";
-    const qualityPageUrl = `${WATCH_PAGE}?id=${encodeURIComponent(movieId || "")}&title=${encodeURIComponent(title)}&link=${encodeURIComponent(linkmakeUrl)}`;
 
     document.title = `CINEFLIX — ${title}`;
 
@@ -1745,9 +1818,8 @@ function render(movie,tmdb,similar){
                     </div>
                 </section>
 
-                <!-- UPDATED DYNAMIC DOWNLOAD NOW BUTTON -->
                 <div class="download-now-wrap">
-                    <a class="download-now-btn" id="downloadNowBtn" href="${esc(qualityPageUrl)}">
+                    <a class="download-now-btn" id="downloadNowBtn" href="${esc(WATCH_PAGE)}?id=${encodeURIComponent(movieId || "")}">
                         ${icons.download}
                         <span>Download Now</span>
                     </a>
@@ -1809,6 +1881,7 @@ function render(movie,tmdb,similar){
 
     initInteractions(movie,clips,similar);
 
+    /* If a TMDB backdrop URL fails, gracefully fall back to the movie poster. */
     const backdropImg = document.getElementById("backdropImg");
     if(backdropImg){
         backdropImg.addEventListener("error",()=>{
@@ -1816,6 +1889,10 @@ function render(movie,tmdb,similar){
         },{once:true});
     }
 }
+
+/* =========================================================
+   INTERACTIONS
+========================================================= */
 
 function initInteractions(movie,clips,similar){
     async function shareMovie(){
@@ -1847,7 +1924,6 @@ function initInteractions(movie,clips,similar){
 
     function getVideoSource(movie){
         return first(
-            movie.video_1080,
             movie.video_url,
             movie.videoUrl,
             movie.video,
@@ -1924,6 +2000,7 @@ function initInteractions(movie,clips,similar){
         }
     });
 
+    /* Same header behavior as index.html. */
     const header = document.getElementById("header");
     const searchBtn = document.getElementById("headerSearchBtn");
     const searchBox = document.getElementById("headerSearchBox");
@@ -1954,6 +2031,7 @@ function initInteractions(movie,clips,similar){
         });
     };
 
+    /* Clips */
     let clipIndex = 0;
 
     const image = document.getElementById("clipImage");
@@ -1995,6 +2073,7 @@ function initInteractions(movie,clips,similar){
         dot.onclick = () => showClip(Number(dot.dataset.index));
     });
 
+    /* Cast slider: native touch swipe + desktop mouse drag. */
     const castRow = document.querySelector(".cast-row");
     if(castRow){
         let dragging = false;
@@ -2023,6 +2102,7 @@ function initInteractions(movie,clips,similar){
         castRow.addEventListener("lostpointercapture",stopCastDrag);
     }
 
+    /* Similar */
     document.querySelectorAll(".poster-card").forEach(card=>{
         card.onclick = () => {
             if(card.dataset.id){
@@ -2031,11 +2111,16 @@ function initInteractions(movie,clips,similar){
         };
     });
 
+    /* Keyboard clip navigation */
     document.addEventListener("keydown",e=>{
         if(e.key === "ArrowLeft") showClip(clipIndex-1);
         if(e.key === "ArrowRight") showClip(clipIndex+1);
     });
 }
+
+/* =========================================================
+   LOAD
+========================================================= */
 
 async function loadMovie(){
     if(!movieId){
@@ -2053,26 +2138,36 @@ async function loadMovie(){
         if(error) throw error;
         if(!data) throw new Error("Movie not found");
 
-        const tmdb = await fetchTMDB(data);
+        /*
+           IMPORTANT: render Supabase data FIRST.
+           TMDB is only an enhancement and must never make the whole page
+           sit on "Loading movie..." when TMDB/network is slow or blocked.
+        */
+        render(data,null,[]);
 
-        let similar = [];
+        /* Fetch optional TMDB + similar movies in the background. */
+        const tmdbPromise = fetchTMDB(data);
+        const similarPromise = (async()=>{
+            try{
+                const {data:rows} = await supabaseClient
+                    .from("movies")
+                    .select("*")
+                    .neq("id",movieId)
+                    .order("created_at",{ascending:false})
+                    .limit(12);
 
-        try{
-            const {data:rows} = await supabaseClient
-                .from("movies")
-                .select("*")
-                .neq("id",movieId)
-                .order("created_at",{ascending:false})
-                .limit(12);
+                return Array.isArray(rows)
+                    ? rows.filter(x=>x && x.id && (x.poster_url || x.poster || x.thumbnail)).slice(0,12)
+                    : [];
+            }catch(e){
+                return [];
+            }
+        })();
 
-            similar = Array.isArray(rows)
-                ? rows.filter(x=>x && x.id && (x.poster_url || x.poster || x.thumbnail)).slice(0,12)
-                : [];
-        }catch(e){
-            console.warn("Similar movies unavailable:",e);
-        }
+        const [tmdb,similar] = await Promise.all([tmdbPromise,similarPromise]);
 
-        render(data,tmdb,similar);
+        /* Only repaint when extra data actually arrived. */
+        if(tmdb || similar.length) render(data,tmdb,similar);
 
     }catch(error){
         console.error("CINEFLIX movie details error:",error);
