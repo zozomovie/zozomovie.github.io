@@ -361,6 +361,9 @@ body{
     </div>
 </div>
 
+<!-- Invisible iframe for direct downloads -->
+<iframe id="downloadFrame" style="display:none;"></iframe>
+
 <script>
 const params = new URLSearchParams(window.location.search);
 const movieTitle = params.get("title") || "Movie Download";
@@ -421,20 +424,23 @@ async function fetchAndRenderServers() {
 }
 
 function isDirectDownload(url, name) {
-    const directExtensions = ['.mkv', '.mp4', '.avi', '.zip', '.rar'];
-    const nameLower = name.toLowerCase();
-    
-    if (directExtensions.some(ext => url.toLowerCase().includes(ext))) return true;
-    if (nameLower.includes('direct') || nameLower.includes('10gbps') || nameLower.includes('fast')) return true;
-    
+    const u = url.toLowerCase();
+    const n = name.toLowerCase();
+
+    // Block any accidental ad domain
+    if (u.includes('filmyfly')) return false;
+
+    if (u.includes('.mkv') || u.includes('.mp4') || u.includes('.zip') || u.includes('.rar')) return true;
+    if (n.includes('direct download') || n.includes('10gbps')) return true;
+
     return false;
 }
 
 function triggerDownload(e, link, serverName) {
     e.preventDefault();
 
-    if(!link || link === "#") {
-        alert("Server link unavailable.");
+    if(!link || link === "#" || link.includes("filmyfly")) {
+        alert("Server link temporarily unavailable. Please try another server.");
         return;
     }
 
@@ -443,6 +449,7 @@ function triggerDownload(e, link, serverName) {
     const popupSub = document.getElementById("popupSub");
     const spinner = document.getElementById("modalSpinner");
     const checkIcon = document.getElementById("modalCheck");
+    const iframe = document.getElementById("downloadFrame");
 
     spinner.style.display = "block";
     checkIcon.style.display = "none";
@@ -459,10 +466,12 @@ function triggerDownload(e, link, serverName) {
             popupText.textContent = "Download Started!";
             popupSub.textContent = "File is downloading in background...";
             
+            // Trigger download via hidden iframe without navigating main window
+            iframe.src = link;
+
             setTimeout(() => {
                 overlay.classList.remove("show");
-                window.location.href = link;
-            }, 1200);
+            }, 1800);
         } else {
             popupText.textContent = "Redirecting to Server...";
             popupSub.textContent = "Opening host mirror...";
