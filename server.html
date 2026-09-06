@@ -361,8 +361,6 @@ body{
     </div>
 </div>
 
-<iframe id="downloadFrame" style="display:none;"></iframe>
-
 <script>
 const params = new URLSearchParams(window.location.search);
 const movieTitle = params.get("title") || "Movie Download";
@@ -384,28 +382,56 @@ async function fetchAndRenderServers() {
 
     let servers = [];
 
+    // Client-side HTTPS Proxy Parsing
     try {
-        const response = await fetch(`http://localhost:3001/scrape-servers?url=${encodeURIComponent(serverUrl)}`);
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(serverUrl)}`;
+        const response = await fetch(proxyUrl);
         const data = await response.json();
 
-        if (data.success && Array.isArray(data.servers) && data.servers.length > 0) {
-            servers = data.servers;
+        if (data.contents) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.contents, 'text/html');
+            const links = doc.querySelectorAll('a');
+
+            links.forEach(a => {
+                const href = a.getAttribute('href');
+                const text = a.textContent.trim();
+
+                if (href && href.startsWith('http')) {
+                    const lower = href.toLowerCase();
+                    const isAd = lower.includes('filmyfly') || 
+                                 lower.includes('telegram') || 
+                                 lower.includes('filesdl.top/cloud') || 
+                                 lower.includes('filesdl.in/cloud') ||
+                                 href === serverUrl;
+
+                    if (!isAd && text.length > 0) {
+                        if (!servers.some(s => s.url === href)) {
+                            servers.push({
+                                server_name: text,
+                                url: href
+                            });
+                        }
+                    }
+                }
+            });
         }
     } catch (e) {
-        console.warn("Backend scrape fallback:", e);
+        console.warn("Direct CORS proxy scrape failed:", e);
     }
 
     if (servers.length === 0) {
+        // Direct mirror link fallback
         servers = [
-            { server_name: "Direct Download (Fast)", url: serverUrl },
-            { server_name: "Backup Mirror Server", url: serverUrl }
+            { server_name: "Direct Mirror Server 1", url: serverUrl },
+            { server_name: "Cloud Mirror Server 2", url: serverUrl }
         ];
     }
 
-    container.innerHTML = servers.map((srv, idx) => {
+    container.innerHTML = servers.slice(0, 6).map((srv, idx) => {
         const num = (idx + 1).toString().padStart(2, '0');
         return `
-            <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}', '${esc(srv.server_name)}')">
+            <a href="${esc(srv.url)}" target="_blank" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}')">
                 <div class="server-number">${num}</div>
                 <div class="server-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
@@ -422,51 +448,37 @@ async function fetchAndRenderServers() {
     }).join("");
 }
 
-function isDirectFile(url) {
-    const u = url.toLowerCase();
-    return u.includes('.mkv') || u.includes('.mp4') || u.includes('.zip') || u.includes('.rar');
-}
-
-function triggerDownload(e, link, serverName) {
-    e.preventDefault();
-
-    if(!link || link === "#" || link.includes("filmyfly")) {
-        alert("Server link unavailable. Please choose another server.");
+function triggerDownload(e, link) {
+    if(!link || link === "#") {
+        e.preventDefault();
+        alert("Server link unavailable.");
         return;
     }
+
+    e.preventDefault();
 
     const overlay = document.getElementById("popupOverlay");
     const popupText = document.getElementById("popupText");
     const popupSub = document.getElementById("popupSub");
     const spinner = document.getElementById("modalSpinner");
     const checkIcon = document.getElementById("modalCheck");
-    const iframe = document.getElementById("downloadFrame");
 
     spinner.style.display = "block";
     checkIcon.style.display = "none";
     overlay.classList.add("show");
     popupText.textContent = "Connecting to Server...";
-    popupSub.textContent = "Preparing high speed download...";
-
-    const directUrl = isDirectFile(link);
+    popupSub.textContent = "Opening secure host mirror...";
 
     setTimeout(() => {
         spinner.style.display = "none";
         checkIcon.style.display = "block";
-        popupText.textContent = "Download Started!";
-        popupSub.textContent = "Transferring file...";
+        popupText.textContent = "Redirecting...";
+        popupSub.textContent = "Starting file download...";
 
-        if (directUrl) {
-            // If direct file link (.mkv, .mp4), trigger iframe
-            iframe.src = link;
-            setTimeout(() => overlay.classList.remove("show"), 1500);
-        } else {
-            // Cloud server direct link -> Open in new tab to bypass token block
-            setTimeout(() => {
-                overlay.classList.remove("show");
-                window.open(link, "_blank");
-            }, 1000);
-        }
+        setTimeout(() => {
+            overlay.classList.remove("show");
+            window.open(link, "_blank");
+        }, 1000);
     }, 1200);
 }
 
