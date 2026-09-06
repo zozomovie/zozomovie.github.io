@@ -133,7 +133,7 @@ body{
 .server-list{
     width:100%;
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-columns:1fr;
     gap:10px;
 }
 
@@ -142,7 +142,7 @@ body{
     height:57px;
     display:flex;
     align-items:center;
-    padding:0 10px;
+    padding:0 12px;
     position:relative;
     overflow:hidden;
     color:#fff;
@@ -201,7 +201,7 @@ body{
 
 .server-name{
     color:#e9e9e9;
-    font-size:13px;
+    font-size:13.5px;
     font-weight:800;
     white-space:nowrap;
     overflow:hidden;
@@ -276,22 +276,6 @@ body{
     animation:spin .7s linear infinite;
 }
 
-.check-icon{
-    width:36px;
-    height:36px;
-    margin-bottom:10px;
-    color:#39d98a;
-    display:none;
-}
-
-.check-icon svg{
-    width:100%;
-    height:100%;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:2.5;
-}
-
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .popup-text{
@@ -307,7 +291,6 @@ body{
 }
 
 .loading-msg{
-    grid-column:1 / -1;
     text-align:center;
     padding:40px 0;
     color:#888;
@@ -315,7 +298,6 @@ body{
 }
 
 @media(max-width:600px){
-    .server-list{grid-template-columns:1fr;}
     .page{padding:23px 13px 40px;}
 }
 </style>
@@ -352,17 +334,11 @@ body{
 
 <div class="popup-overlay" id="popupOverlay">
     <div class="popup" id="popup">
-        <div class="spinner" id="modalSpinner"></div>
-        <div class="check-icon" id="modalCheck">
-            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-        </div>
+        <div class="spinner"></div>
         <div class="popup-text" id="popupText">Please wait...</div>
         <div class="popup-sub" id="popupSub">Connecting to server...</div>
     </div>
 </div>
-
-<!-- Invisible iframe for direct downloads -->
-<iframe id="downloadFrame" style="display:none;"></iframe>
 
 <script>
 const params = new URLSearchParams(window.location.search);
@@ -383,36 +359,64 @@ async function fetchAndRenderServers() {
         return;
     }
 
-    let servers = [];
+    let scrapedServers = [];
 
+    // Background me FilesDL page ke andar ke internal buttons fetch karna
     try {
         const response = await fetch(`http://localhost:3001/scrape-servers?url=${encodeURIComponent(serverUrl)}`);
         const data = await response.json();
 
         if (data.success && Array.isArray(data.servers) && data.servers.length > 0) {
-            servers = data.servers;
+            scrapedServers = data.servers;
         }
     } catch (e) {
-        console.warn("Backend scrape fallback:", e);
+        console.warn("Backend scrape fallback active:", e);
     }
 
-    if (servers.length === 0) {
-        servers = [
-            { server_name: "Direct Download (Fast)", url: serverUrl },
-            { server_name: "Backup Mirror Server", url: serverUrl }
+    // 4th Button par hamesha movie ka dynamic FilesDL URL asign hoga
+    const mainFilesDlLink = {
+        server_name: "Cloud Direct",
+        url: serverUrl
+    };
+
+    let finalServers = [];
+
+    if (scrapedServers.length >= 3) {
+        // Top 3 scraped servers pehle rakhna (1, 2, 3)
+        finalServers = scrapedServers.slice(0, 3);
+        
+        // 4th button pe main FilesDL URL rakhna
+        finalServers.push(mainFilesDlLink);
+        
+        // Remaining scraped servers 5th aur 6th button pe
+        if (scrapedServers[3]) finalServers.push(scrapedServers[3]);
+        if (scrapedServers[4]) finalServers.push(scrapedServers[4]);
+    } else {
+        // Fallback layout
+        finalServers = [
+            { server_name: "Direct Download (10Gbps)", url: serverUrl },
+            { server_name: "Download Pixeldrain -1", url: serverUrl },
+            { server_name: "Download - HubCloud", url: serverUrl },
+            mainFilesDlLink, // 4th Button
+            { server_name: "Login To Download - GDFLIX", url: serverUrl },
+            { server_name: "Download - GoFile.io", url: serverUrl }
         ];
     }
 
-    container.innerHTML = servers.map((srv, idx) => {
+    // Render 6 Buttons Exact UI Layout
+    container.innerHTML = finalServers.slice(0, 6).map((srv, idx) => {
         const num = (idx + 1).toString().padStart(2, '0');
+        const is4th = idx === 3;
+        const displayName = is4th ? `${srv.server_name} - Direct Host` : srv.server_name;
+
         return `
-            <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}', '${esc(srv.server_name)}')">
+            <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}')">
                 <div class="server-number">${num}</div>
                 <div class="server-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
                 </div>
                 <div class="server-content">
-                    <div class="server-name">${esc(srv.server_name)}</div>
+                    <div class="server-name">${esc(displayName)}</div>
                     <div class="server-desc">High speed connection</div>
                 </div>
                 <div class="server-arrow">
@@ -423,65 +427,26 @@ async function fetchAndRenderServers() {
     }).join("");
 }
 
-function isDirectDownload(url, name) {
-    const u = url.toLowerCase();
-    const n = name.toLowerCase();
-
-    // Block any accidental ad domain
-    if (u.includes('filmyfly')) return false;
-
-    if (u.includes('.mkv') || u.includes('.mp4') || u.includes('.zip') || u.includes('.rar')) return true;
-    if (n.includes('direct download') || n.includes('10gbps')) return true;
-
-    return false;
-}
-
-function triggerDownload(e, link, serverName) {
+function triggerDownload(e, link) {
     e.preventDefault();
 
-    if(!link || link === "#" || link.includes("filmyfly")) {
-        alert("Server link temporarily unavailable. Please try another server.");
+    if(!link || link === "#") {
+        alert("Server link unavailable.");
         return;
     }
 
     const overlay = document.getElementById("popupOverlay");
     const popupText = document.getElementById("popupText");
     const popupSub = document.getElementById("popupSub");
-    const spinner = document.getElementById("modalSpinner");
-    const checkIcon = document.getElementById("modalCheck");
-    const iframe = document.getElementById("downloadFrame");
 
-    spinner.style.display = "block";
-    checkIcon.style.display = "none";
     overlay.classList.add("show");
     popupText.textContent = "Connecting to Server...";
-    popupSub.textContent = "Preparing file transfer...";
-
-    const isDirect = isDirectDownload(link, serverName);
+    popupSub.textContent = "Opening host mirror...";
 
     setTimeout(() => {
-        if (isDirect) {
-            spinner.style.display = "none";
-            checkIcon.style.display = "block";
-            popupText.textContent = "Download Started!";
-            popupSub.textContent = "File is downloading in background...";
-            
-            // Trigger download via hidden iframe without navigating main window
-            iframe.src = link;
-
-            setTimeout(() => {
-                overlay.classList.remove("show");
-            }, 1800);
-        } else {
-            popupText.textContent = "Redirecting to Server...";
-            popupSub.textContent = "Opening host mirror...";
-            
-            setTimeout(() => {
-                overlay.classList.remove("show");
-                window.open(link, "_blank");
-            }, 1000);
-        }
-    }, 1200);
+        overlay.classList.remove("show");
+        window.open(link, "_blank");
+    }, 1000);
 }
 
 fetchAndRenderServers();
