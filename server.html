@@ -231,7 +231,7 @@ body{
     height:13px;
 }
 
-/* POPUP */
+/* POPUP MODAL */
 .popup-overlay{
     position:fixed;
     inset:0;
@@ -274,6 +274,22 @@ body{
     border-top-color:#e50914;
     border-radius:50%;
     animation:spin .7s linear infinite;
+}
+
+.check-icon{
+    width:36px;
+    height:36px;
+    margin-bottom:10px;
+    color:#39d98a;
+    display:none;
+}
+
+.check-icon svg{
+    width:100%;
+    height:100%;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2.5;
 }
 
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -336,7 +352,10 @@ body{
 
 <div class="popup-overlay" id="popupOverlay">
     <div class="popup" id="popup">
-        <div class="spinner"></div>
+        <div class="spinner" id="modalSpinner"></div>
+        <div class="check-icon" id="modalCheck">
+            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
         <div class="popup-text" id="popupText">Please wait...</div>
         <div class="popup-sub" id="popupSub">Connecting to server...</div>
     </div>
@@ -363,7 +382,6 @@ async function fetchAndRenderServers() {
 
     let servers = [];
 
-    // Node.js Backend seFilesDL page ke andar ke saare Real Buttons scrape karna
     try {
         const response = await fetch(`http://localhost:3001/scrape-servers?url=${encodeURIComponent(serverUrl)}`);
         const data = await response.json();
@@ -372,10 +390,9 @@ async function fetchAndRenderServers() {
             servers = data.servers;
         }
     } catch (e) {
-        console.warn("Backend server scrape failed, using direct link fallback:", e);
+        console.warn("Backend scrape fallback:", e);
     }
 
-    // Fallback if scraping fails
     if (servers.length === 0) {
         servers = [
             { server_name: "Direct Download (Fast)", url: serverUrl },
@@ -383,18 +400,17 @@ async function fetchAndRenderServers() {
         ];
     }
 
-    // Render up to 6 Server Buttons
     container.innerHTML = servers.map((srv, idx) => {
         const num = (idx + 1).toString().padStart(2, '0');
         return `
-            <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}')">
+            <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}', '${esc(srv.server_name)}')">
                 <div class="server-number">${num}</div>
                 <div class="server-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
                 </div>
                 <div class="server-content">
                     <div class="server-name">${esc(srv.server_name)}</div>
-                    <div class="server-desc">High speed direct connection</div>
+                    <div class="server-desc">High speed connection</div>
                 </div>
                 <div class="server-arrow">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
@@ -404,7 +420,17 @@ async function fetchAndRenderServers() {
     }).join("");
 }
 
-function triggerDownload(e, link) {
+function isDirectDownload(url, name) {
+    const directExtensions = ['.mkv', '.mp4', '.avi', '.zip', '.rar'];
+    const nameLower = name.toLowerCase();
+    
+    if (directExtensions.some(ext => url.toLowerCase().includes(ext))) return true;
+    if (nameLower.includes('direct') || nameLower.includes('10gbps') || nameLower.includes('fast')) return true;
+    
+    return false;
+}
+
+function triggerDownload(e, link, serverName) {
     e.preventDefault();
 
     if(!link || link === "#") {
@@ -415,20 +441,38 @@ function triggerDownload(e, link) {
     const overlay = document.getElementById("popupOverlay");
     const popupText = document.getElementById("popupText");
     const popupSub = document.getElementById("popupSub");
+    const spinner = document.getElementById("modalSpinner");
+    const checkIcon = document.getElementById("modalCheck");
 
+    spinner.style.display = "block";
+    checkIcon.style.display = "none";
     overlay.classList.add("show");
     popupText.textContent = "Connecting to Server...";
-    popupSub.textContent = "Preparing direct download...";
+    popupSub.textContent = "Preparing file transfer...";
+
+    const isDirect = isDirectDownload(link, serverName);
 
     setTimeout(() => {
-        popupText.textContent = "Starting Download!";
-        popupSub.textContent = "Redirecting to mirror...";
-    }, 1000);
-
-    setTimeout(() => {
-        overlay.classList.remove("show");
-        window.open(link, "_blank");
-    }, 1800);
+        if (isDirect) {
+            spinner.style.display = "none";
+            checkIcon.style.display = "block";
+            popupText.textContent = "Download Started!";
+            popupSub.textContent = "File is downloading in background...";
+            
+            setTimeout(() => {
+                overlay.classList.remove("show");
+                window.location.href = link;
+            }, 1200);
+        } else {
+            popupText.textContent = "Redirecting to Server...";
+            popupSub.textContent = "Opening host mirror...";
+            
+            setTimeout(() => {
+                overlay.classList.remove("show");
+                window.open(link, "_blank");
+            }, 1000);
+        }
+    }, 1200);
 }
 
 fetchAndRenderServers();
