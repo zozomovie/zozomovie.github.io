@@ -361,7 +361,6 @@ body{
     </div>
 </div>
 
-<!-- Invisible iframe for direct downloads -->
 <iframe id="downloadFrame" style="display:none;"></iframe>
 
 <script>
@@ -423,24 +422,16 @@ async function fetchAndRenderServers() {
     }).join("");
 }
 
-function isDirectDownload(url, name) {
+function isDirectFile(url) {
     const u = url.toLowerCase();
-    const n = name.toLowerCase();
-
-    // Block any accidental ad domain
-    if (u.includes('filmyfly')) return false;
-
-    if (u.includes('.mkv') || u.includes('.mp4') || u.includes('.zip') || u.includes('.rar')) return true;
-    if (n.includes('direct download') || n.includes('10gbps')) return true;
-
-    return false;
+    return u.includes('.mkv') || u.includes('.mp4') || u.includes('.zip') || u.includes('.rar');
 }
 
 function triggerDownload(e, link, serverName) {
     e.preventDefault();
 
     if(!link || link === "#" || link.includes("filmyfly")) {
-        alert("Server link temporarily unavailable. Please try another server.");
+        alert("Server link unavailable. Please choose another server.");
         return;
     }
 
@@ -455,27 +446,22 @@ function triggerDownload(e, link, serverName) {
     checkIcon.style.display = "none";
     overlay.classList.add("show");
     popupText.textContent = "Connecting to Server...";
-    popupSub.textContent = "Preparing file transfer...";
+    popupSub.textContent = "Preparing high speed download...";
 
-    const isDirect = isDirectDownload(link, serverName);
+    const directUrl = isDirectFile(link);
 
     setTimeout(() => {
-        if (isDirect) {
-            spinner.style.display = "none";
-            checkIcon.style.display = "block";
-            popupText.textContent = "Download Started!";
-            popupSub.textContent = "File is downloading in background...";
-            
-            // Trigger download via hidden iframe without navigating main window
-            iframe.src = link;
+        spinner.style.display = "none";
+        checkIcon.style.display = "block";
+        popupText.textContent = "Download Started!";
+        popupSub.textContent = "Transferring file...";
 
-            setTimeout(() => {
-                overlay.classList.remove("show");
-            }, 1800);
+        if (directUrl) {
+            // If direct file link (.mkv, .mp4), trigger iframe
+            iframe.src = link;
+            setTimeout(() => overlay.classList.remove("show"), 1500);
         } else {
-            popupText.textContent = "Redirecting to Server...";
-            popupSub.textContent = "Opening host mirror...";
-            
+            // Cloud server direct link -> Open in new tab to bypass token block
             setTimeout(() => {
                 overlay.classList.remove("show");
                 window.open(link, "_blank");
