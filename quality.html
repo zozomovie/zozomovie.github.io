@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#050505">
+<title>CINEFLIX — Select Quality</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html{
+    min-height:100%;
+    background:#050505;
+    scroll-behavior:smooth;
+}
+
+body{
+    min-height:100vh;
+    color:#fff;
+    font-family:Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+        radial-gradient(ellipse 90% 42% at 50% -12%, rgba(229,9,20,.17), transparent 65%),
+        linear-gradient(180deg, #080808 0%, #050505 100%);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+}
+
+:root{
+    --red:#e50914;
+    --red-light:#ff2632;
+    --white:#fff;
+    --text:#f5f5f5;
+    --muted:#8a8a8a;
+    --card:rgba(255,255,255,.045);
+    --border:rgba(255,255,255,.085);
+    --green:#39d98a;
+}
+
+.navbar{
+    width:100%;
+    height:64px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 clamp(16px,5vw,60px);
+    position:sticky;
+    top:0;
+    z-index:1000;
+    background:rgba(5,5,5,.84);
+    border-bottom:1px solid rgba(255,255,255,.055);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+}
+
+.logo{
+    color:var(--red);
+    text-decoration:none;
+    font-size:25px;
+    font-weight:900;
+    letter-spacing:-1.2px;
+    line-height:1;
+    transition:.2s ease;
+}
+
+.nav-right{
+    display:flex;
+    align-items:center;
+    gap:22px;
+}
+
+.nav-link{
+    color:#a5a5a5;
+    text-decoration:none;
+    font-size:13px;
+    font-weight:500;
+    transition:color .2s ease;
+}
+
+.nav-link:hover{color:#fff;}
+
+.page{
+    width:min(620px,92%);
+    margin:0 auto;
+    padding:30px 0 70px;
+    text-align:center;
+}
+
+.movie-title{
+    max-width:100%;
+    margin:0 auto 7px;
+    color:#fff;
+    font-size:clamp(22px,5vw,32px);
+    font-weight:800;
+    line-height:1.2;
+    letter-spacing:-.65px;
+    word-break:break-word;
+}
+
+.subtitle{
+    margin-bottom:25px;
+    color:#777;
+    font-size:12px;
+    font-weight:450;
+    line-height:1.4;
+}
+
+.quality-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.quality-button{
+    width:100%;
+    min-height:64px;
+    display:flex;
+    align-items:center;
+    position:relative;
+    padding:0 13px;
+    color:#fff;
+    text-decoration:none;
+    border:1px solid var(--border);
+    border-radius:15px;
+    background:linear-gradient(135deg, rgba(255,255,255,.052), rgba(255,255,255,.018));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+    overflow:hidden;
+    transition:transform .18s ease, border-color .2s ease, background .2s ease;
+}
+
+.quality-button:hover{
+    transform:translateY(-2px);
+    border-color:rgba(229,9,20,.43);
+    background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(255,255,255,.025));
+}
+
+.quality-icon{
+    width:41px;
+    height:41px;
+    flex:0 0 41px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#d2d2d2;
+    border:1px solid rgba(255,255,255,.065);
+    border-radius:12px;
+    background:rgba(255,255,255,.045);
+}
+
+.quality-icon svg{
+    width:21px;
+    height:21px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+}
+
+.quality-content{
+    flex:1;
+    min-width:0;
+    margin-left:12px;
+    text-align:left;
+}
+
+.quality-name{
+    display:block;
+    color:#fff;
+    font-size:15px;
+    font-weight:700;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.go-arrow{
+    width:29px;
+    height:29px;
+    flex:0 0 29px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#5f5f5f;
+}
+
+.go-arrow svg{
+    width:17px;
+    height:17px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+}
+
+.loader-box{
+    padding:40px 0;
+    color:#8a8a8a;
+    font-size:13px;
+}
+.spinner{
+    width:32px;
+    height:32px;
+    margin:0 auto 12px;
+    border:3px solid rgba(255,255,255,.1);
+    border-top-color:var(--red);
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:600px){
+    .page{width:91%;padding:27px 0 65px;}
+    .quality-button{min-height:60px;}
+    .quality-name{font-size:13.5px;}
+}
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+    <a href="index.html" class="logo">CINEFLIX</a>
+    <div class="nav-right">
+        <a href="index.html" class="nav-link">Home</a>
+    </div>
+</nav>
+
+<main class="page">
+    <h1 class="movie-title" id="movieTitle">Select Movie Quality</h1>
+    <p class="subtitle">Choose your preferred download quality</p>
+
+    <div class="quality-list" id="qualityContainer">
+        <div class="loader-box">
+            <div class="spinner"></div>
+            Loading available qualities...
+        </div>
+    </div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const params = new URLSearchParams(window.location.search);
+const movieId = params.get("id");
+const urlTitle = params.get("title");
+const linkmakeUrl = params.get("link");
+
+const SERVER_PAGE = "server.html"; // Target Server Page
+
+function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+
+async function loadQualities() {
+    const container = document.getElementById("qualityContainer");
+    let movieTitle = urlTitle || "Download Movie";
+    let qualities = [];
+
+    // 1. Fetch from Supabase Database first
+    if (movieId) {
+        try {
+            const { data, error } = await supabaseClient
+                .from("movies")
+                .select("title, qualities_data, linkmake_url")
+                .eq("id", movieId)
+                .single();
+
+            if (data) {
+                if (data.title) movieTitle = data.title;
+                if (Array.isArray(data.qualities_data) && data.qualities_data.length > 0) {
+                    qualities = data.qualities_data;
+                }
+            }
+        } catch (e) {
+            console.warn("Database fetch warning:", e);
+        }
+    }
+
+    // 2. If Supabase JSON is empty, fallback to live Node.js scraper
+    const targetLink = linkmakeUrl || (qualities.length === 0 ? "https://linkmake.in/view/7aO2H31gsa" : null);
+    if (qualities.length === 0 && targetLink) {
+        try {
+            const res = await fetch(`http://localhost:3001/scrape-linkmake?url=${encodeURIComponent(targetLink)}`);
+            const scraped = await res.json();
+            if (scraped.success && Array.isArray(scraped.qualities)) {
+                qualities = scraped.qualities;
+            }
+        } catch (e) {
+            console.warn("Live scraper fallback warning:", e);
+        }
+    }
+
+    document.getElementById("movieTitle").textContent = movieTitle;
+
+    // Render Qualities
+    if (qualities.length === 0) {
+        container.innerHTML = `<div class="loader-box">No qualities available for this movie right now.</div>`;
+        return;
+    }
+
+    container.innerHTML = qualities.map((q, idx) => {
+        const qualityName = q.quality_name || `Quality ${idx + 1}`;
+        const targetUrl = q.url || "#";
+        const redirectUrl = `${SERVER_PAGE}?title=${encodeURIComponent(movieTitle)}&quality=${encodeURIComponent(qualityName)}&server_url=${encodeURIComponent(targetUrl)}`;
+
+        return `
+            <a class="quality-button" href="${esc(redirectUrl)}">
+                <span class="quality-icon">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="2.5" y="4" width="19" height="13" rx="2"/>
+                        <path d="M6 9v5M6 11.5h4M10 9v5M14 9h1.8M15.8 9c1.6 0 2.6 1 2.6 2.5s-1 2.6-2.6 2.6H14"/>
+                    </svg>
+                </span>
+                <span class="quality-content">
+                    <span class="quality-name">${esc(qualityName)}</span>
+                </span>
+                <span class="go-arrow">
+                    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                </span>
+            </a>
+        `;
+    }).join("");
+}
+
+loadQualities();
+</script>
+
+</body>
+</html>
