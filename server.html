@@ -382,6 +382,7 @@ async function fetchAndRenderServers() {
 
     let servers = [];
 
+    // Client-side HTTPS Proxy Parsing
     try {
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(serverUrl)}`;
         const response = await fetch(proxyUrl);
@@ -400,6 +401,8 @@ async function fetchAndRenderServers() {
                     const lower = href.toLowerCase();
                     const isAd = lower.includes('filmyfly') || 
                                  lower.includes('telegram') || 
+                                 lower.includes('filesdl.top/cloud') || 
+                                 lower.includes('filesdl.in/cloud') ||
                                  href === serverUrl;
 
                     if (!isAd && text.length > 0) {
@@ -414,10 +417,11 @@ async function fetchAndRenderServers() {
             });
         }
     } catch (e) {
-        console.warn("Proxy scrape failed:", e);
+        console.warn("Direct CORS proxy scrape failed:", e);
     }
 
     if (servers.length === 0) {
+        // Direct mirror link fallback
         servers = [
             { server_name: "Direct Mirror Server 1", url: serverUrl },
             { server_name: "Cloud Mirror Server 2", url: serverUrl }
@@ -427,7 +431,7 @@ async function fetchAndRenderServers() {
     container.innerHTML = servers.slice(0, 6).map((srv, idx) => {
         const num = (idx + 1).toString().padStart(2, '0');
         return `
-            <a href="${esc(srv.url)}" target="_blank" rel="noreferrer" class="server-card" onclick="handleCardClick(event, '${esc(srv.url)}')">
+            <a href="${esc(srv.url)}" target="_blank" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}')">
                 <div class="server-number">${num}</div>
                 <div class="server-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
@@ -444,14 +448,15 @@ async function fetchAndRenderServers() {
     }).join("");
 }
 
-function handleCardClick(e, link) {
+function triggerDownload(e, link) {
     if(!link || link === "#") {
         e.preventDefault();
         alert("Server link unavailable.");
         return;
     }
 
-    // Modal UI animation showing download starting
+    e.preventDefault();
+
     const overlay = document.getElementById("popupOverlay");
     const popupText = document.getElementById("popupText");
     const popupSub = document.getElementById("popupSub");
@@ -462,18 +467,19 @@ function handleCardClick(e, link) {
     checkIcon.style.display = "none";
     overlay.classList.add("show");
     popupText.textContent = "Connecting to Server...";
-    popupSub.textContent = "Preparing high-speed stream...";
+    popupSub.textContent = "Opening secure host mirror...";
 
     setTimeout(() => {
         spinner.style.display = "none";
         checkIcon.style.display = "block";
-        popupText.textContent = "Download Started!";
-        popupSub.textContent = "Opening file host...";
+        popupText.textContent = "Redirecting...";
+        popupSub.textContent = "Starting file download...";
 
         setTimeout(() => {
             overlay.classList.remove("show");
-        }, 1200);
-    }, 1000);
+            window.open(link, "_blank");
+        }, 1000);
+    }, 1200);
 }
 
 fetchAndRenderServers();
