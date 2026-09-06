@@ -22,16 +22,8 @@ body{
     font-family:Inter,Arial,Helvetica,sans-serif;
     color:#fff;
     background:
-        radial-gradient(
-            circle at 50% -10%,
-            rgba(255,255,255,.055),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 100% 35%,
-            rgba(229,9,20,.08),
-            transparent 30%
-        ),
+        radial-gradient(circle at 50% -10%, rgba(255,255,255,.055), transparent 30%),
+        radial-gradient(circle at 100% 35%, rgba(229,9,20,.08), transparent 30%),
         #050505;
 }
 
@@ -41,7 +33,7 @@ body{
     padding:0 6%;
     display:flex;
     align-items:center;
-    justify-space-between;
+    justify-content:space-between;
     position:sticky;
     top:0;
     z-index:100;
@@ -178,7 +170,7 @@ body{
     border-radius:8px;
     background:#101010;
     border:1px solid rgba(255,255,255,.075);
-    color:#555;
+    color:#e50914;
     font-size:9px;
     font-weight:900;
 }
@@ -298,6 +290,14 @@ body{
     font-size:10px;
 }
 
+.loading-msg{
+    grid-column:1 / -1;
+    text-align:center;
+    padding:40px 0;
+    color:#888;
+    font-size:13px;
+}
+
 @media(max-width:600px){
     .server-list{grid-template-columns:1fr;}
     .page{padding:23px 13px 40px;}
@@ -327,34 +327,10 @@ body{
     <div class="section-label">Choose Download Server</div>
 
     <div class="server-list" id="serverContainer">
-        <!-- Servers will render dynamically -->
-        <a href="#" class="server-card" onclick="triggerDownload(event, currentServerUrl)">
-            <div class="server-number">01</div>
-            <div class="server-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
-            </div>
-            <div class="server-content">
-                <div class="server-name">Fast Direct Server</div>
-                <div class="server-desc">High speed file access</div>
-            </div>
-            <div class="server-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
-            </div>
-        </a>
-
-        <a href="#" class="server-card" onclick="triggerDownload(event, currentServerUrl)">
-            <div class="server-number">02</div>
-            <div class="server-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.3a5 5 0 0 1 .5 10h-.5z"/></svg>
-            </div>
-            <div class="server-content">
-                <div class="server-name">Cloud Mirror Server</div>
-                <div class="server-desc">Alternative backup link</div>
-            </div>
-            <div class="server-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
-            </div>
-        </a>
+        <div class="loading-msg">
+            <div class="spinner"></div>
+            Fetching live servers from host...
+        </div>
     </div>
 </main>
 
@@ -370,18 +346,69 @@ body{
 const params = new URLSearchParams(window.location.search);
 const movieTitle = params.get("title") || "Movie Download";
 const qualityText = params.get("quality") || "HD Quality";
-const serverUrl = params.get("server_url") || "#";
+const serverUrl = params.get("server_url") || "";
 
 document.getElementById("movieTitle").textContent = movieTitle;
 document.getElementById("qualityText").textContent = qualityText;
 
-let currentServerUrl = serverUrl;
+function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+
+async function fetchAndRenderServers() {
+    const container = document.getElementById("serverContainer");
+
+    if (!serverUrl || serverUrl === "#") {
+        container.innerHTML = `<div class="loading-msg">No download link provided.</div>`;
+        return;
+    }
+
+    let servers = [];
+
+    // Node.js Backend seFilesDL page ke andar ke saare Real Buttons scrape karna
+    try {
+        const response = await fetch(`http://localhost:3001/scrape-servers?url=${encodeURIComponent(serverUrl)}`);
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.servers) && data.servers.length > 0) {
+            servers = data.servers;
+        }
+    } catch (e) {
+        console.warn("Backend server scrape failed, using direct link fallback:", e);
+    }
+
+    // Fallback if scraping fails
+    if (servers.length === 0) {
+        servers = [
+            { server_name: "Direct Download (Fast)", url: serverUrl },
+            { server_name: "Backup Mirror Server", url: serverUrl }
+        ];
+    }
+
+    // Render up to 6 Server Buttons
+    container.innerHTML = servers.map((srv, idx) => {
+        const num = (idx + 1).toString().padStart(2, '0');
+        return `
+            <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}')">
+                <div class="server-number">${num}</div>
+                <div class="server-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+                </div>
+                <div class="server-content">
+                    <div class="server-name">${esc(srv.server_name)}</div>
+                    <div class="server-desc">High speed direct connection</div>
+                </div>
+                <div class="server-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+            </a>
+        `;
+    }).join("");
+}
 
 function triggerDownload(e, link) {
     e.preventDefault();
-    
-    if(!link || link === "#" || link.startsWith("YOUR_")) {
-        alert("Download link currently unavailable.");
+
+    if(!link || link === "#") {
+        alert("Server link unavailable.");
         return;
     }
 
@@ -391,18 +418,20 @@ function triggerDownload(e, link) {
 
     overlay.classList.add("show");
     popupText.textContent = "Connecting to Server...";
-    popupSub.textContent = "Preparing your file...";
+    popupSub.textContent = "Preparing direct download...";
 
     setTimeout(() => {
         popupText.textContent = "Starting Download!";
-        popupSub.textContent = "Redirecting to host...";
+        popupSub.textContent = "Redirecting to mirror...";
     }, 1000);
 
     setTimeout(() => {
         overlay.classList.remove("show");
         window.open(link, "_blank");
-    }, 2000);
+    }, 1800);
 }
+
+fetchAndRenderServers();
 </script>
 
 </body>
