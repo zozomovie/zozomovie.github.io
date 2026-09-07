@@ -130,26 +130,30 @@ body{
 
 <script>
 // ==========================================
-// DIRECT ACCESS PROTECTION & URL MASKING
+// DIRECT ACCESS PROTECTION & URL MASKING (FIXED)
 // ==========================================
 const params = new URLSearchParams(window.location.search);
 const movieId = params.get("id");
 
 (function protectAndMaskQualityPage() {
+    if (!movieId) return;
+
     const isReloaded = (
         (window.performance && window.performance.navigation && window.performance.navigation.type === 1) ||
         (performance.getEntriesByType && performance.getEntriesByType("navigation")[0]?.type === "reload")
     );
 
-    const hasAccess = sessionStorage.getItem(`access_quality_${movieId}`);
+    // Session token check
+    const hasAccess = sessionStorage.getItem(`access_quality_${movieId}`) || sessionStorage.getItem(`auth_movie_${movieId}`);
 
+    // If NOT reloaded AND NO session token -> Block Direct Copy Paste
     if (!isReloaded && !hasAccess) {
         alert("Direct URL access prohibited!");
         window.location.href = "index.html";
         return;
     }
 
-    // Custom URL Masking: /download/Movie-Title
+    // Custom URL Masking: /download/movie-title
     const rawTitle = params.get("movie") || params.get("title") || "download";
     const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     
@@ -169,7 +173,7 @@ function generateRandomHash(length = 12) {
 function navigateToServer(qIndex, title, qualityName) {
     const randomRef = generateRandomHash(12);
     sessionStorage.setItem(`access_server_${movieId}_${qIndex}`, 'granted');
-    // Root path '/server.html' use kiya gaya hai taaki 404 error na aaye
+    sessionStorage.setItem(`auth_server_${movieId}_${qIndex}`, 'true');
     window.location.href = `/server.html?ref=${randomRef}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
 }
 
