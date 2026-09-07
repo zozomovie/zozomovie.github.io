@@ -361,7 +361,6 @@ async function fetchAndRenderServers() {
 
     let scrapedServers = [];
 
-    // Background me FilesDL page ke andar ke internal buttons fetch karna
     try {
         const response = await fetch(`http://localhost:3001/scrape-servers?url=${encodeURIComponent(serverUrl)}`);
         const data = await response.json();
@@ -373,42 +372,46 @@ async function fetchAndRenderServers() {
         console.warn("Backend scrape fallback active:", e);
     }
 
-    // Main FilesDL Direct Link (Jo 4th position par set Hoga)
+    // Pehle Cloud Direct button ko filter out karna (taaki duplicate na ho)
+    const cleanedScraped = scrapedServers.filter(s => 
+        !s.server_name.toLowerCase().includes("cloud direct")
+    );
+
+    // Main Direct Host Link
     const mainFilesDlLink = {
-        server_name: "Cloud Direct",
+        server_name: "Cloud Direct - Direct Host",
         url: serverUrl
     };
 
     let finalServers = [];
 
-    if (scrapedServers.length >= 2) {
-        // 1st button ko remove karke direct 2nd aur 3rd server position 1 aur 2 pe set karna
-        finalServers.push(scrapedServers[0]); 
-        finalServers.push(scrapedServers[1]);
-        if (scrapedServers[2]) finalServers.push(scrapedServers[2]);
+    if (cleanedScraped.length >= 3) {
+        // Position 01, 02, 03 pe scraped items
+        finalServers.push(cleanedScraped[0]);
+        finalServers.push(cleanedScraped[1]);
+        finalServers.push(cleanedScraped[2]);
 
-        // 4th button par main FilesDL URL
-        finalServers.splice(3, 0, mainFilesDlLink);
+        // Position 04 pe main FilesDL Link
+        finalServers.push(mainFilesDlLink);
 
-        // Remaining servers
-        if (scrapedServers[3]) finalServers.push(scrapedServers[3]);
-        if (scrapedServers[4]) finalServers.push(scrapedServers[4]);
+        // Position 05 aur 06 pe baaki scraped items
+        if (cleanedScraped[3]) finalServers.push(cleanedScraped[3]);
+        if (cleanedScraped[4]) finalServers.push(cleanedScraped[4]);
     } else {
-        // Default Fallback
+        // Fallback Layout (Exactly 6 Items)
         finalServers = [
             { server_name: "Direct Download (10Gbps)", url: serverUrl },
             { server_name: "Download Pixeldrain -1", url: serverUrl },
             { server_name: "Download - HubCloud", url: serverUrl },
-            mainFilesDlLink, // 4th Button
-            { server_name: "Login To Download - GDFLIX", url: serverUrl }
+            mainFilesDlLink, // 04 Position
+            { server_name: "Login To Download - GDFLIX", url: serverUrl },
+            { server_name: "Download - GoFile.io", url: serverUrl }
         ];
     }
 
-    // Render exact buttons list
-    container.innerHTML = finalServers.slice(0, 5).map((srv, idx) => {
+    // Exact 6 buttons render karega
+    container.innerHTML = finalServers.slice(0, 6).map((srv, idx) => {
         const num = (idx + 1).toString().padStart(2, '0');
-        const is4th = idx === 3;
-        const displayName = is4th ? `${srv.server_name} - Direct Host` : srv.server_name;
 
         return `
             <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}')">
@@ -417,7 +420,7 @@ async function fetchAndRenderServers() {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
                 </div>
                 <div class="server-content">
-                    <div class="server-name">${esc(displayName)}</div>
+                    <div class="server-name">${esc(srv.server_name)}</div>
                     <div class="server-desc">High speed connection</div>
                 </div>
                 <div class="server-arrow">
