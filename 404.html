@@ -5,30 +5,19 @@
 <title>CINEFLIX - Loading...</title>
 <script>
 (function restoreRoute() {
-    const path = window.location.pathname;
-    const search = window.location.search;
+    const activeMovieId = sessionStorage.getItem("active_movie_id");
+    const lastPage = sessionStorage.getItem("last_active_page");
 
-    // Direct access to masked quality URL -> restore quality.html
-    if (path.includes('/download/')) {
-        const urlParams = new URLSearchParams(search);
-        const movieId = urlParams.get('id');
-        if (movieId) {
-            window.location.replace(`/quality.html${search}`);
-            return;
-        }
+    if (lastPage === "server" && activeMovieId) {
+        window.location.replace("/server.html");
+        return;
     }
 
-    // Direct access to masked server URL -> restore server.html
-    if (path.match(/\/[a-z0-9]+_h$/i)) {
-        const urlParams = new URLSearchParams(search);
-        const movieId = urlParams.get('id');
-        if (movieId) {
-            window.location.replace(`/server.html${search}`);
-            return;
-        }
+    if (lastPage === "quality" && activeMovieId) {
+        window.location.replace("/quality.html");
+        return;
     }
 
-    // Default Fallback
     window.location.replace("/zozomovie.github.io");
 })();
 </script>
