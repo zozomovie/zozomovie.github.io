@@ -175,7 +175,7 @@ body{
 <body>
 
 <nav class="navbar">
-    <a href="/zozomovie.github.io" class="logo">CINE<span>FLIX</span></a>
+    <a href="/index.html" class="logo">CINE<span>FLIX</span></a>
 </nav>
 
 <main class="page">
@@ -200,32 +200,35 @@ body{
 
 <script>
 // ==========================================
-// REFRESH SAFE DIRECT ACCESS PROTECTION
+// CLEAN URL MASKING: /random13digit/server.html
 // ==========================================
 const params = new URLSearchParams(window.location.search);
-const movieId = params.get("id");
-const qIndex = parseInt(params.get("q_index") || "0", 10);
-const movieTitle = params.get("title") || "Movie Download";
-const qualityName = params.get("quality") || "HD Quality";
-const randomRef = params.get("ref") || "server";
+let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
+let qIndex = parseInt(params.get("q_index") || sessionStorage.getItem("active_q_index") || "0", 10);
+let movieTitle = params.get("title") || sessionStorage.getItem("active_movie_title") || "Movie Download";
+let qualityName = params.get("quality") || sessionStorage.getItem("active_quality_name") || "HD Quality";
+let randomRef = params.get("ref") || sessionStorage.getItem("active_server_ref") || "v8x9a2k1m4z0p";
 
 (function protectAndMaskServerPage() {
-    if (!movieId) return;
+    if (!movieId) {
+        alert("Direct server access prohibited!");
+        window.location.href = "/index.html";
+        return;
+    }
 
-    // Session token check
     const hasAccess = sessionStorage.getItem(`access_server_${movieId}_${qIndex}`) || sessionStorage.getItem(`auth_server_${movieId}_${qIndex}`);
 
     if (!hasAccess) {
         alert("Direct server access prohibited!");
-        window.location.href = "/zozomovie.github.io";
+        window.location.href = "/index.html";
         return;
     }
 
-// Address Bar URL Masking with Query Retention
-if (window.history.pushState && randomRef && movieId) {
-    const customServerUrl = window.location.protocol + "//" + window.location.host + '/' + randomRef + '?id=' + movieId + '&q_index=' + qIndex + '&title=' + encodeURIComponent(movieTitle) + '&quality=' + encodeURIComponent(qualityName);
-    window.history.pushState({ path: customServerUrl }, '', customServerUrl);
-}
+    // Exact Target Display: https://zozomovie.github.io/randomTextAndnuber13digit/server.html
+    if (window.history.pushState && randomRef) {
+        const customServerUrl = window.location.protocol + "//" + window.location.host + '/' + randomRef + '/server.html';
+        window.history.pushState({ path: customServerUrl }, '', customServerUrl);
+    }
 })();
 
 document.getElementById("movieTitle").textContent = movieTitle;
@@ -233,7 +236,6 @@ document.getElementById("qualityText").textContent = qualityName;
 
 function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 
-// Initialize Supabase client
 const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
