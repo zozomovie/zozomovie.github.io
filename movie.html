@@ -11,8 +11,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-/* System font stack keeps the page fast and avoids a render-blocking font request. */
-
 :root{
     --red:#e50914;
     --bg:#02070d;
@@ -94,7 +92,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 }
 
 /* =========================
-   CINEFLIX HEADER — same visual language as index.html
+   HEADER
 ========================= */
 .header{
     position:fixed;
@@ -865,14 +863,8 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .error-box h2{font-size:21px;margin-bottom:8px}
 .error-box p{color:#9ba9ba;font-size:13px;line-height:1.6}
 
-/* =========================
-   HIDDEN HELPERS
-========================= */
 .hidden{display:none!important}
 
-/* =========================
-   TABLET
-========================= */
 @media(max-width:900px){
     .content{
         width:min(94%,720px);
@@ -894,9 +886,6 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .similar-row{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 }
 
-/* =========================
-   PHONE
-========================= */
 @media(max-width:600px){
     .header{
         height:62px;
@@ -923,7 +912,6 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
             radial-gradient(circle at 50% 0%,rgba(27,66,99,.17),transparent 32%),
             #02070d;
     }
-    /* Shorter cinematic thumbnail/backdrop on phones */
     .backdrop{
         top:62px;
         height:390px;
@@ -1007,7 +995,6 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     }
     .share svg{width:20px;height:20px}
 
-    /* Compact Movie Information card for phones */
     .info-card{border-radius:14px}
     .info-head{
         padding:10px 12px 5px;
@@ -1083,7 +1070,6 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .download-now-btn svg{width:20px;height:20px}
     .download-now-sub{font-size:8px;margin-top:5px}
 
-    /* Similar Movies = proper mobile grid */
     .similar-row{
         grid-template-columns:repeat(3,minmax(0,1fr));
         gap:9px;
@@ -1101,14 +1087,13 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     }
 }
 
-/* Very small phones */
 @media(max-width:380px){
     .content{width:calc(100% - 22px)}
     .backdrop{height:375px}
     .title{font-size:27px;letter-spacing:.06em}
     .info-item{padding:9px 6px 9px 9px;min-height:63px}
     .info-label{font-size:8.5px}
-    .info-value{font-size:9px}
+    .info-value{font-size:9.5px}
     .action{font-size:11px;padding:0 12px}
     .similar-row{gap:7px}
 }
@@ -1126,17 +1111,11 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 </div>
 
 <script>
-/* =========================================================
-   CINEFLIX MOVIE DETAILS
-   Uses the same Supabase project as your homepage.
-   Homepage currently stores movie poster as poster_url.
-   ========================================================= */
-
 const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const TMDB_API_KEY = ""; // Optional direct key. If empty, the saved admin Read Access Token is used.
+const TMDB_API_KEY = ""; 
 
 function getTMDBToken(){
     const direct = String(window.CINEFLIX_TMDB_TOKEN || TMDB_API_KEY || "").trim();
@@ -1148,7 +1127,6 @@ function getTMDBToken(){
     }
 }
 
-/* Target Quality Page */
 const WATCH_PAGE = "quality.html";
 
 const params = new URLSearchParams(location.search);
@@ -1612,11 +1590,21 @@ function normalizeClips(movie,tmdb){
 }
 
 /* =========================================================
-   REDIRECT TO QUALITY PAGE WITH SESSION ACCESS
+   REDIRECT TO QUALITY PAGE WITH SESSION ACCESS (UPDATED)
 ========================================================= */
 function openQualityPage(mId, mTitle) {
+    if (!mId) return;
+
+    // Both Session Storage keys stored for compatibility
     sessionStorage.setItem(`access_quality_${mId}`, 'granted');
-    window.location.href = `${WATCH_PAGE}?id=${mId}&movie=${encodeURIComponent(mTitle)}`;
+    sessionStorage.setItem(`auth_movie_${mId}`, 'granted');
+
+    const movieSlug = (mTitle || 'movie')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
+
+    window.location.href = `${WATCH_PAGE}?id=${mId}&movie=${encodeURIComponent(movieSlug)}`;
 }
 
 /* =========================================================
@@ -1868,13 +1856,14 @@ function render(movie,tmdb,similar){
 ========================================================= */
 
 function initInteractions(movie,clips,similar){
-    // Download Now button Handler -> Triggers quality page with session access
+    // Download Now Button Action (FIXED REDIRECT)
     const downloadNowBtn = document.getElementById("downloadNowBtn");
     if(downloadNowBtn){
         downloadNowBtn.onclick = (e) => {
             e.preventDefault();
+            const targetId = movieId || (movie && movie.id);
             const currentTitle = first(movie.title, movie.name, "Movie");
-            openQualityPage(movieId, currentTitle);
+            openQualityPage(targetId, currentTitle);
         };
     }
 
