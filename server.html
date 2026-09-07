@@ -175,7 +175,7 @@ body{
 <body>
 
 <nav class="navbar">
-    <a href="/index.html" class="logo">CINE<span>FLIX</span></a>
+    <a href="/zozomovie.github.io" class="logo">CINE<span>FLIX</span></a>
 </nav>
 
 <main class="page">
@@ -200,7 +200,7 @@ body{
 
 <script>
 // ==========================================
-// DIRECT ACCESS PROTECTION & URL MASKING
+// REFRESH SAFE DIRECT ACCESS PROTECTION
 // ==========================================
 const params = new URLSearchParams(window.location.search);
 const movieId = params.get("id");
@@ -210,16 +210,14 @@ const qualityName = params.get("quality") || "HD Quality";
 const randomRef = params.get("ref") || "server";
 
 (function protectAndMaskServerPage() {
-    const isReloaded = (
-        (window.performance && window.performance.navigation && window.performance.navigation.type === 1) ||
-        (performance.getEntriesByType && performance.getEntriesByType("navigation")[0]?.type === "reload")
-    );
+    if (!movieId) return;
 
-    const hasAccess = sessionStorage.getItem(`access_server_${movieId}_${qIndex}`);
+    // Session token check
+    const hasAccess = sessionStorage.getItem(`access_server_${movieId}_${qIndex}`) || sessionStorage.getItem(`auth_server_${movieId}_${qIndex}`);
 
-    if (!isReloaded && !hasAccess) {
+    if (!hasAccess) {
         alert("Direct server access prohibited!");
-        window.location.href = "/index.html";
+        window.location.href = "/zozomovie.github.io";
         return;
     }
 
