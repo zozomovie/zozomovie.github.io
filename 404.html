@@ -2,50 +2,60 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CINEFLIX - Redirecting...</title>
+<title>CINEFLIX - Loading...</title>
 <script>
-(function handleGitHub404() {
-    // Current Path aur Query params extract karna
+(function restoreRoute() {
     const path = window.location.pathname;
     const search = window.location.search;
 
-    // Direct access / refresh on custom masked paths
-    // Agar koi masked path par F5 (refresh) kare ya direct link paste kare
-    if (path.includes('/download/') || path.match(/\/[a-z0-9]+_h$/i)) {
-        // Direct home page redirect taaki broken 404 page na dikhe
-        window.location.replace("/index.html");
-    } else {
-        // Default redirect to home page
-        window.location.replace("/index.html");
+    // Direct access to masked quality URL -> restore quality.html
+    if (path.includes('/download/')) {
+        const urlParams = new URLSearchParams(search);
+        const movieId = urlParams.get('id');
+        if (movieId) {
+            window.location.replace(`/quality.html${search}`);
+            return;
+        }
     }
+
+    // Direct access to masked server URL -> restore server.html
+    if (path.match(/\/[a-z0-9]+_h$/i)) {
+        const urlParams = new URLSearchParams(search);
+        const movieId = urlParams.get('id');
+        if (movieId) {
+            window.location.replace(`/server.html${search}`);
+            return;
+        }
+    }
+
+    // Default Fallback
+    window.location.replace("/zozomovie.github.io");
 })();
 </script>
 <style>
 body {
     background: #050505;
     color: #fff;
-    font-family: Inter, sans-serif;
+    font-family: sans-serif;
     display: grid;
     place-items: center;
     min-height: 100vh;
     margin: 0;
 }
-.loader {
-    width: 35px;
-    height: 35px;
+.spinner {
+    width: 32px;
+    height: 32px;
     border: 3px solid rgba(255,255,255,.1);
     border-top-color: #e50914;
     border-radius: 50%;
     animation: spin .7s linear infinite;
-    margin-bottom: 12px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 <div style="text-align: center;">
-    <div class="loader"></div>
-    <p style="font-size: 14px; color: #888;">Redirecting to CINEFLIX...</p>
+    <div class="spinner"></div>
 </div>
 </body>
 </html>
