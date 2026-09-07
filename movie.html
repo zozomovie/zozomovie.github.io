@@ -659,6 +659,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     font-weight:900;
     letter-spacing:.02em;
     transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;
+    cursor:pointer;
 }
 .download-now-btn:hover{
     transform:translateY(-2px);
@@ -1106,7 +1107,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .backdrop{height:375px}
     .title{font-size:27px;letter-spacing:.06em}
     .info-item{padding:9px 6px 9px 9px;min-height:63px}
-    .info-label{font-size:8px}
+    .info-label{font-size:8.5px}
     .info-value{font-size:9px}
     .action{font-size:11px;padding:0 12px}
     .similar-row{gap:7px}
@@ -1135,15 +1136,6 @@ const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/*
-   Optional TMDB API key.
-
-   The page DOES NOT require this key when your Supabase row already
-   contains poster_url / backdrop_url / tmdb_id.
-
-   If your admin stores tmdb_id but does not store the TMDB images,
-   put your TMDB API Read Access Token/API key here.
-*/
 const TMDB_API_KEY = ""; // Optional direct key. If empty, the saved admin Read Access Token is used.
 
 function getTMDBToken(){
@@ -1156,7 +1148,7 @@ function getTMDBToken(){
     }
 }
 
-/* Change only this if your watch/quality page has another filename. */
+/* Target Quality Page */
 const WATCH_PAGE = "quality.html";
 
 const params = new URLSearchParams(location.search);
@@ -1231,14 +1223,6 @@ function getGenres(movie){
 }
 
 function getPeople(movie){
-    /*
-      Important mobile fallback:
-      TMDB is fetched live only when a TMDB token is available.
-      Admin already stores TMDB cast_data / crew_data inside the
-      Supabase movie row, so use those fields when live TMDB is not
-      available. This makes Cast & Crew work on phones/other devices
-      too, where localStorage from the admin device is not present.
-    */
     const storedPeople = [];
 
     const addStored = raw => {
@@ -1282,13 +1266,11 @@ function getPeople(movie){
         }
     };
 
-    /* These are the fields produced by the CINEFLIX admin TMDB fetch. */
     addStored(movie.cast_data);
     addStored(movie.crew_data);
 
     if(storedPeople.length) return storedPeople;
 
-    /* Older movie rows / manually entered cast fields. */
     const candidates = [
         movie.cast, movie.cast_crew, movie.credits,
         movie.actors, movie.cast_json, movie.crew
@@ -1331,13 +1313,6 @@ function getPoster(movie,tmdb){
 }
 
 function getBackdrop(movie,tmdb){
-    /*
-      Priority:
-      1) Supabase backdrop URL
-      2) Supabase TMDB backdrop_path
-      3) TMDB API backdrop_path
-      4) poster as last fallback
-    */
     return first(
         imageFrom(movie.backdrop_url),
         imageFrom(movie.backdrop),
@@ -1366,8 +1341,6 @@ async function fetchTMDB(movie){
         Authorization: `Bearer ${token}`
     };
 
-    // TMDB must NEVER block the movie page. If TMDB/network is slow,
-    // the page continues immediately using Supabase data.
     const tmdbFetch = async (url) => {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 2200);
@@ -1430,7 +1403,6 @@ async function fetchTMDB(movie){
 
         return await response.json();
     }catch(error){
-        // Network/blocked/timeout/invalid TMDB token should not break the page.
         return null;
     }
 }
@@ -1532,11 +1504,6 @@ function makeInfo(movie,tmdb){
 ========================================================= */
 
 function normalizeCast(movie,tmdb){
-    /*
-      TMDB is the primary source. Show the real cast first, followed by a
-      useful selection of crew (Director/Writer/Producer/Cinematography/
-      Editor/Music) so the section genuinely represents Cast & Crew.
-    */
     if(tmdb?.credits){
         const cast = Array.isArray(tmdb.credits.cast)
             ? tmdb.credits.cast
@@ -1576,7 +1543,6 @@ function normalizeCast(movie,tmdb){
         }).slice(0,30);
     }
 
-    /* Fallback to people saved in Supabase, if present. */
     const own = getPeople(movie);
     if(own.length){
         return own.slice(0,30).map(person=>{
@@ -1643,6 +1609,14 @@ function normalizeClips(movie,tmdb){
         image:getPoster(movie,tmdb),
         quote:""
     }];
+}
+
+/* =========================================================
+   REDIRECT TO QUALITY PAGE WITH SESSION ACCESS
+========================================================= */
+function openQualityPage(mId, mTitle) {
+    sessionStorage.setItem(`access_quality_${mId}`, 'granted');
+    window.location.href = `${WATCH_PAGE}?id=${mId}&movie=${encodeURIComponent(mTitle)}`;
 }
 
 /* =========================================================
@@ -1819,10 +1793,10 @@ function render(movie,tmdb,similar){
                 </section>
 
                 <div class="download-now-wrap">
-                    <a class="download-now-btn" id="downloadNowBtn" href="${esc(WATCH_PAGE)}?id=${encodeURIComponent(movieId || "")}">
+                    <button class="download-now-btn" id="downloadNowBtn">
                         ${icons.download}
                         <span>Download Now</span>
-                    </a>
+                    </button>
                     <div class="download-now-sub">Choose your preferred quality &amp; server</div>
                 </div>
 
@@ -1881,7 +1855,6 @@ function render(movie,tmdb,similar){
 
     initInteractions(movie,clips,similar);
 
-    /* If a TMDB backdrop URL fails, gracefully fall back to the movie poster. */
     const backdropImg = document.getElementById("backdropImg");
     if(backdropImg){
         backdropImg.addEventListener("error",()=>{
@@ -1895,6 +1868,16 @@ function render(movie,tmdb,similar){
 ========================================================= */
 
 function initInteractions(movie,clips,similar){
+    // Download Now button Handler -> Triggers quality page with session access
+    const downloadNowBtn = document.getElementById("downloadNowBtn");
+    if(downloadNowBtn){
+        downloadNowBtn.onclick = (e) => {
+            e.preventDefault();
+            const currentTitle = first(movie.title, movie.name, "Movie");
+            openQualityPage(movieId, currentTitle);
+        };
+    }
+
     async function shareMovie(){
         const shareData = {
             title: document.title,
@@ -2000,7 +1983,6 @@ function initInteractions(movie,clips,similar){
         }
     });
 
-    /* Same header behavior as index.html. */
     const header = document.getElementById("header");
     const searchBtn = document.getElementById("headerSearchBtn");
     const searchBox = document.getElementById("headerSearchBox");
@@ -2073,7 +2055,7 @@ function initInteractions(movie,clips,similar){
         dot.onclick = () => showClip(Number(dot.dataset.index));
     });
 
-    /* Cast slider: native touch swipe + desktop mouse drag. */
+    /* Cast slider */
     const castRow = document.querySelector(".cast-row");
     if(castRow){
         let dragging = false;
@@ -2138,14 +2120,8 @@ async function loadMovie(){
         if(error) throw error;
         if(!data) throw new Error("Movie not found");
 
-        /*
-           IMPORTANT: render Supabase data FIRST.
-           TMDB is only an enhancement and must never make the whole page
-           sit on "Loading movie..." when TMDB/network is slow or blocked.
-        */
         render(data,null,[]);
 
-        /* Fetch optional TMDB + similar movies in the background. */
         const tmdbPromise = fetchTMDB(data);
         const similarPromise = (async()=>{
             try{
@@ -2166,7 +2142,6 @@ async function loadMovie(){
 
         const [tmdb,similar] = await Promise.all([tmdbPromise,similarPromise]);
 
-        /* Only repaint when extra data actually arrived. */
         if(tmdb || similar.length) render(data,tmdb,similar);
 
     }catch(error){
