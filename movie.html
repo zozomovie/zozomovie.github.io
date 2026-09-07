@@ -1129,6 +1129,27 @@ function getTMDBToken(){
 
 const WATCH_PAGE = "quality.html";
 
+// ==========================================
+// MOVIE PAGE CLEAN URL MASKING & REFRESH SUPPORT
+// ==========================================
+async function applyMovieUrlMask(movieTitle, categoryType, fullId) {
+    if (!fullId) return;
+    
+    let typePath = "movie";
+    if (categoryType && categoryType.toLowerCase().includes("series")) {
+        typePath = "series";
+    }
+
+    let slug = (movieTitle || "title").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    let shortId = fullId.split('-')[0] || fullId.substring(0, 8);
+
+    let maskedUrl = `${window.location.protocol}//${window.location.host}/${typePath}/${slug}/${shortId}.html?id=${fullId}`;
+    
+    if (window.history.pushState) {
+        window.history.pushState({ path: maskedUrl }, '', maskedUrl);
+    }
+}
+
 const params = new URLSearchParams(location.search);
 const movieId = params.get("id");
 
@@ -1856,7 +1877,6 @@ function render(movie,tmdb,similar){
 ========================================================= */
 
 function initInteractions(movie,clips,similar){
-    // Download Now Button Action (FIXED REDIRECT)
     const downloadNowBtn = document.getElementById("downloadNowBtn");
     if(downloadNowBtn){
         downloadNowBtn.onclick = (e) => {
@@ -2111,6 +2131,9 @@ async function loadMovie(){
 
         render(data,null,[]);
 
+        // APPLY URL MASKING HERE
+        applyMovieUrlMask(data.title, data.category, movieId);
+
         const tmdbPromise = fetchTMDB(data);
         const similarPromise = (async()=>{
             try{
@@ -2151,23 +2174,6 @@ function showError(title,text){
 }
 
 loadMovie();
-    async function applyMovieUrlMask(movieTitle, categoryType, fullId) {
-    if (!fullId) return;
-    
-    let typePath = "movie";
-    if (categoryType && categoryType.toLowerCase().includes("series")) {
-        typePath = "series";
-    }
-
-    let slug = (movieTitle || "title").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    let shortId = fullId.split('-')[0] || fullId.substring(0, 8);
-
-    let maskedUrl = `${window.location.protocol}//${window.location.host}/${typePath}/${slug}/${shortId}.html?id=${fullId}`;
-    
-    if (window.history.pushState) {
-        window.history.pushState({ path: maskedUrl }, '', maskedUrl);
-    }
-}
 </script>
 </body>
 </html>
