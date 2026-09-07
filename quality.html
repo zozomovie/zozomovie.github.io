@@ -231,5 +231,33 @@ async function loadQualities() {
 
 loadQualities();
 </script>
+    <script>
+// 1. Disable Right Click
+document.addEventListener('contextmenu', event => event.preventDefault());
+
+// 2. Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U (View Source), Ctrl+S (Save)
+document.addEventListener('keydown', function(event) {
+    if (
+        event.keyCode === 123 || // F12
+        (event.ctrlKey && event.shiftKey && (event.keyCode === 73 || event.keyCode === 74 || event.keyCode === 67)) || // Ctrl+Shift+I/J/C
+        (event.ctrlKey && (event.keyCode === 85 || event.keyCode === 83 || event.keyCode === 80)) // Ctrl+U, Ctrl+S, Ctrl+P
+    ) {
+        event.preventDefault();
+        alert("Developer tools are restricted on CINEFLIX!");
+        return false;
+    }
+});
+
+// 3. Detect DevTools Open (Optional console cleaner/debugger trap)
+setInterval(function() {
+    const before = new Date().getTime();
+    debugger; // Yeh code devtools khulne par execution pause kar deta hai
+    const after = new Date().getTime();
+    if (after - before > 100) {
+        // DevTools detected, user ko index par bhej sakte hain
+        window.location.replace("/https://zozomovie.github.io");
+    }
+}, 1000);
+</script>
 </body>
 </html>
