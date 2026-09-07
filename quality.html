@@ -113,7 +113,7 @@ body{
 <body>
 
 <nav class="navbar">
-    <a href="index.html" class="logo">CINEFLIX</a>
+    <a href="zozomovie.github.io" class="logo">CINEFLIX</a>
 </nav>
 
 <main class="page">
@@ -130,7 +130,7 @@ body{
 
 <script>
 // ==========================================
-// DIRECT ACCESS PROTECTION & URL MASKING (FIXED)
+// REFRESH SAFE DIRECT ACCESS PROTECTION
 // ==========================================
 const params = new URLSearchParams(window.location.search);
 const movieId = params.get("id");
@@ -138,18 +138,12 @@ const movieId = params.get("id");
 (function protectAndMaskQualityPage() {
     if (!movieId) return;
 
-    const isReloaded = (
-        (window.performance && window.performance.navigation && window.performance.navigation.type === 1) ||
-        (performance.getEntriesByType && performance.getEntriesByType("navigation")[0]?.type === "reload")
-    );
-
-    // Session token check
+    // Session token check (SessionStorage survives F5 reloads)
     const hasAccess = sessionStorage.getItem(`access_quality_${movieId}`) || sessionStorage.getItem(`auth_movie_${movieId}`);
 
-    // If NOT reloaded AND NO session token -> Block Direct Copy Paste
-    if (!isReloaded && !hasAccess) {
+    if (!hasAccess) {
         alert("Direct URL access prohibited!");
-        window.location.href = "index.html";
+        window.location.href = "zozomovie.github.io";
         return;
     }
 
