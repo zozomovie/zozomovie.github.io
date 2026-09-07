@@ -2450,6 +2450,43 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 });
 </script>
+<script>
+// Check if user came from blocked direct URL access
+window.addEventListener("DOMContentLoaded", () => {
+    if (sessionStorage.getItem("direct_access_blocked") === "true") {
+        // Flag remove karein taaki har refresh par na dikhe
+        sessionStorage.removeItem("direct_access_blocked");
 
+        // UI Notification Banner Create karein
+        const toast = document.createElement("div");
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #e50914;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-family: Inter, sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(229,9,20,0.4);
+            z-index: 99999;
+            transition: all 0.3s ease;
+            opacity: 1;
+        `;
+        toast.textContent = "You can't access direct URL!";
+        document.body.appendChild(toast);
+
+        // 3 Seconds baad automatically hide kar dein
+        setTimeout(() => {
+            toast.style.opacity = "0";
+            toast.style.top = "10px";
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+});
+</script>
 </body>
 </html>
