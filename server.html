@@ -373,7 +373,7 @@ async function fetchAndRenderServers() {
         console.warn("Backend scrape fallback active:", e);
     }
 
-    // 4th Button par hamesha movie ka dynamic FilesDL URL asign hoga
+    // Main FilesDL Direct Link (Jo 4th position par set Hoga)
     const mainFilesDlLink = {
         server_name: "Cloud Direct",
         url: serverUrl
@@ -381,30 +381,31 @@ async function fetchAndRenderServers() {
 
     let finalServers = [];
 
-    if (scrapedServers.length >= 3) {
-        // Top 3 scraped servers pehle rakhna (1, 2, 3)
-        finalServers = scrapedServers.slice(0, 3);
-        
-        // 4th button pe main FilesDL URL rakhna
-        finalServers.push(mainFilesDlLink);
-        
-        // Remaining scraped servers 5th aur 6th button pe
+    if (scrapedServers.length >= 2) {
+        // 1st button ko remove karke direct 2nd aur 3rd server position 1 aur 2 pe set karna
+        finalServers.push(scrapedServers[0]); 
+        finalServers.push(scrapedServers[1]);
+        if (scrapedServers[2]) finalServers.push(scrapedServers[2]);
+
+        // 4th button par main FilesDL URL
+        finalServers.splice(3, 0, mainFilesDlLink);
+
+        // Remaining servers
         if (scrapedServers[3]) finalServers.push(scrapedServers[3]);
         if (scrapedServers[4]) finalServers.push(scrapedServers[4]);
     } else {
-        // Fallback layout
+        // Default Fallback
         finalServers = [
             { server_name: "Direct Download (10Gbps)", url: serverUrl },
             { server_name: "Download Pixeldrain -1", url: serverUrl },
             { server_name: "Download - HubCloud", url: serverUrl },
             mainFilesDlLink, // 4th Button
-            { server_name: "Login To Download - GDFLIX", url: serverUrl },
-            { server_name: "Download - GoFile.io", url: serverUrl }
+            { server_name: "Login To Download - GDFLIX", url: serverUrl }
         ];
     }
 
-    // Render 6 Buttons Exact UI Layout
-    container.innerHTML = finalServers.slice(0, 6).map((srv, idx) => {
+    // Render exact buttons list
+    container.innerHTML = finalServers.slice(0, 5).map((srv, idx) => {
         const num = (idx + 1).toString().padStart(2, '0');
         const is4th = idx === 3;
         const displayName = is4th ? `${srv.server_name} - Direct Host` : srv.server_name;
