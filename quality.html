@@ -129,19 +129,14 @@ body{
 </main>
 
 <script>
-// ==========================================
-// CLEAN URL MASKING: /download/movie-title
-// ==========================================
 const params = new URLSearchParams(window.location.search);
-let movieId = params.get("id");
+let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
 
-// Refresh support logic via SessionStorage
 if (movieId) {
     sessionStorage.setItem("active_movie_id", movieId);
-    const rawTitle = params.get("movie") || params.get("title") || "download";
+    sessionStorage.setItem("last_active_page", "quality");
+    const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
     sessionStorage.setItem("active_movie_slug", rawTitle);
-} else {
-    movieId = sessionStorage.getItem("active_movie_id");
 }
 
 (function protectAndMaskQualityPage() {
@@ -159,8 +154,7 @@ if (movieId) {
         return;
     }
 
-    // Exact Target Display: https://zozomovie.github.io/download/movie-title
-    const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
+    const rawTitle = sessionStorage.getItem("active_movie_slug") || "download";
     const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     
     if (window.history.pushState && movieSlug) {
@@ -185,13 +179,11 @@ function navigateToServer(qIndex, title, qualityName) {
     sessionStorage.setItem("active_q_index", qIndex);
     sessionStorage.setItem("active_movie_title", title);
     sessionStorage.setItem("active_quality_name", qualityName);
+    sessionStorage.setItem("last_active_page", "server");
 
     window.location.href = `/server.html?ref=${random13}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
 }
 
-// ==========================================
-// SUPABASE QUALITY FETCHING
-// ==========================================
 const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
