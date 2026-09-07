@@ -199,16 +199,46 @@ body{
 </main>
 
 <script>
+// ==========================================
+// DIRECT ACCESS PROTECTION & URL MASKING
+// ==========================================
 const params = new URLSearchParams(window.location.search);
 const movieId = params.get("id");
 const qIndex = parseInt(params.get("q_index") || "0", 10);
 const movieTitle = params.get("title") || "Movie Download";
 const qualityName = params.get("quality") || "HD Quality";
+const randomRef = params.get("ref") || "server";
+
+(function protectAndMaskServerPage() {
+    const isReloaded = (
+        (window.performance && window.performance.navigation && window.performance.navigation.type === 1) ||
+        (performance.getEntriesByType && performance.getEntriesByType("navigation")[0]?.type === "reload")
+    );
+
+    const hasAccess = sessionStorage.getItem(`access_server_${movieId}_${qIndex}`);
+
+    if (!isReloaded && !hasAccess) {
+        alert("Direct server access prohibited!");
+        window.location.href = "index.html";
+        return;
+    }
+
+    // Custom URL Masking: /q7cx9vgs8lv8_h
+    if (window.history.pushState && randomRef) {
+        const customServerUrl = window.location.protocol + "//" + window.location.host + '/' + randomRef;
+        window.history.pushState({ path: customServerUrl }, '', customServerUrl);
+    }
+})();
 
 document.getElementById("movieTitle").textContent = movieTitle;
 document.getElementById("qualityText").textContent = qualityName;
 
 function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+
+// Initialize Supabase client
+const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function loadServersFromSupabase() {
     const container = document.getElementById("serverContainer");
@@ -254,11 +284,6 @@ async function loadServersFromSupabase() {
         container.innerHTML = `<div class="loading-msg">Error loading servers: ${esc(err.message)}</div>`;
     }
 }
-
-// Initialize Supabase client
-const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
-const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 loadServersFromSupabase();
 </script>
