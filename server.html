@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cineflix - Select Download Server</title>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{
     margin:0;
@@ -12,11 +12,9 @@
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
 }
-
 html{
     min-height:100%;
 }
-
 body{
     min-height:100vh;
     font-family:Inter,Arial,Helvetica,sans-serif;
@@ -26,7 +24,6 @@ body{
         radial-gradient(circle at 100% 35%, rgba(229,9,20,.08), transparent 30%),
         #050505;
 }
-
 .navbar{
     width:100%;
     height:64px;
@@ -40,9 +37,7 @@ body{
     background:rgba(5,5,5,.76);
     border-bottom:1px solid rgba(255,255,255,.065);
     backdrop-filter:blur(20px);
-    -webkit-backdrop-filter:blur(20px);
 }
-
 .logo{
     color:#fff;
     font-size:21px;
@@ -50,66 +45,38 @@ body{
     letter-spacing:1.8px;
     text-decoration:none;
 }
-
 .logo span{
     color:#e50914;
 }
-
-.nav-links{
-    display:flex;
-    align-items:center;
-    gap:30px;
-}
-
-.nav-links a{
-    color:#777;
-    text-decoration:none;
-    font-size:13px;
-    font-weight:700;
-    transition:.2s;
-}
-
-.nav-links a:hover, .nav-links a.active{
-    color:#fff;
-}
-
 .page{
     width:100%;
     max-width:760px;
     margin:0 auto;
     padding:34px 22px 55px;
 }
-
 .movie-header{
     margin-bottom:26px;
 }
-
 .movie-title{
     max-width:700px;
     color:#fff;
     font-size:clamp(22px,3.2vw,32px);
     line-height:1.2;
     font-weight:850;
-    letter-spacing:-.7px;
-    word-break:break-word;
 }
-
 .file-info{
     margin-top:9px;
     display:flex;
     align-items:center;
-    flex-wrap:wrap;
     gap:8px;
     color:#777;
     font-size:13px;
     font-weight:650;
 }
-
 .file-quality{
     color:#e50914;
     font-weight:800;
 }
-
 .section-label{
     width:100%;
     display:flex;
@@ -122,21 +89,18 @@ body{
     letter-spacing:1.5px;
     text-transform:uppercase;
 }
-
 .section-label::after{
     content:"";
     height:1px;
     flex:1;
     background:rgba(255,255,255,.07);
 }
-
 .server-list{
     width:100%;
     display:grid;
     grid-template-columns:1fr;
     gap:10px;
 }
-
 .server-card{
     width:100%;
     height:57px;
@@ -144,22 +108,19 @@ body{
     align-items:center;
     padding:0 12px;
     position:relative;
-    overflow:hidden;
     color:#fff;
     text-decoration:none;
     cursor:pointer;
     border-radius:13px;
     border:1px solid rgba(255,255,255,.075);
     background:linear-gradient(105deg, rgba(255,255,255,.047), rgba(255,255,255,.015));
-    transition:transform .18s ease, border-color .18s ease, background .18s ease;
+    transition:transform .18s ease, border-color .18s ease;
 }
-
 .server-card:hover{
     transform:translateY(-2px);
     border-color:rgba(229,9,20,.34);
     background:linear-gradient(105deg, rgba(229,9,20,.075), rgba(255,255,255,.02));
 }
-
 .server-number{
     width:27px;
     height:27px;
@@ -174,31 +135,12 @@ body{
     font-size:9px;
     font-weight:900;
 }
-
-.server-icon{
-    width:31px;
-    height:31px;
-    min-width:31px;
-    margin-left:9px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:9px;
-    background:rgba(229,9,20,.085);
-    color:#e50914;
-}
-
-.server-icon svg{
-    width:17px;
-    height:17px;
-}
-
 .server-content{
     flex:1;
     min-width:0;
-    margin-left:10px;
+    margin-left:12px;
+    text-align:left;
 }
-
 .server-name{
     color:#e9e9e9;
     font-size:13.5px;
@@ -207,109 +149,33 @@ body{
     overflow:hidden;
     text-overflow:ellipsis;
 }
-
 .server-desc{
     margin-top:2px;
     color:#666;
     font-size:9.5px;
 }
-
-.server-arrow{
-    width:26px;
-    height:26px;
-    min-width:26px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:50%;
-    color:#777;
-    background:rgba(255,255,255,.045);
-}
-
-.server-arrow svg{
-    width:13px;
-    height:13px;
-}
-
-/* POPUP MODAL */
-.popup-overlay{
-    position:fixed;
-    inset:0;
-    z-index:9999;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    background:rgba(0,0,0,.72);
-    backdrop-filter:blur(9px);
-    opacity:0;
-    visibility:hidden;
-    transition:opacity .22s ease, visibility .22s ease;
-}
-
-.popup-overlay.show{
-    opacity:1;
-    visibility:visible;
-}
-
-.popup{
-    width:315px;
-    min-height:145px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    border-radius:21px;
-    border:1px solid rgba(255,255,255,.09);
-    background:linear-gradient(145deg, #1d1d1d, #0b0b0b);
-    text-align:center;
-    padding:20px;
-}
-
-.spinner{
-    width:32px;
-    height:32px;
-    margin-bottom:13px;
-    border:3px solid rgba(255,255,255,.12);
-    border-top-color:#e50914;
-    border-radius:50%;
-    animation:spin .7s linear infinite;
-}
-
-@keyframes spin{to{transform:rotate(360deg)}}
-
-.popup-text{
-    color:#fff;
-    font-size:13px;
-    font-weight:800;
-}
-
-.popup-sub{
-    margin-top:4px;
-    color:#666;
-    font-size:10px;
-}
-
 .loading-msg{
     text-align:center;
     padding:40px 0;
     color:#888;
     font-size:13px;
 }
-
-@media(max-width:600px){
-    .page{padding:23px 13px 40px;}
+.spinner{
+    width:32px;
+    height:32px;
+    margin:0 auto 10px;
+    border:3px solid rgba(255,255,255,.1);
+    border-top-color:#e50914;
+    border-radius:50%;
+    animation:spin .7s linear infinite;
 }
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
-
 <body>
 
 <nav class="navbar">
     <a href="index.html" class="logo">CINE<span>FLIX</span></a>
-    <div class="nav-links">
-        <a href="index.html">Home</a>
-    </div>
 </nav>
 
 <main class="page">
@@ -327,133 +193,74 @@ body{
     <div class="server-list" id="serverContainer">
         <div class="loading-msg">
             <div class="spinner"></div>
-            Fetching live servers from host...
+            Fetching servers from database...
         </div>
     </div>
 </main>
 
-<div class="popup-overlay" id="popupOverlay">
-    <div class="popup" id="popup">
-        <div class="spinner"></div>
-        <div class="popup-text" id="popupText">Please wait...</div>
-        <div class="popup-sub" id="popupSub">Connecting to server...</div>
-    </div>
-</div>
-
 <script>
 const params = new URLSearchParams(window.location.search);
+const movieId = params.get("id");
+const qIndex = parseInt(params.get("q_index") || "0", 10);
 const movieTitle = params.get("title") || "Movie Download";
-const qualityText = params.get("quality") || "HD Quality";
-const serverUrl = params.get("server_url") || "";
+const qualityName = params.get("quality") || "HD Quality";
 
 document.getElementById("movieTitle").textContent = movieTitle;
-document.getElementById("qualityText").textContent = qualityText;
+document.getElementById("qualityText").textContent = qualityName;
 
 function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 
-async function fetchAndRenderServers() {
+async function loadServersFromSupabase() {
     const container = document.getElementById("serverContainer");
 
-    if (!serverUrl || serverUrl === "#") {
-        container.innerHTML = `<div class="loading-msg">No download link provided.</div>`;
+    if (!movieId) {
+        container.innerHTML = `<div class="loading-msg">Movie ID missing.</div>`;
         return;
     }
-
-    let scrapedServers = [];
 
     try {
-        const response = await fetch(`http://localhost:3001/scrape-servers?url=${encodeURIComponent(serverUrl)}`);
-        const data = await response.json();
+        const { data, error } = await supabaseClient
+            .from("movies")
+            .select("qualities_data")
+            .eq("id", movieId)
+            .single();
 
-        if (data.success && Array.isArray(data.servers) && data.servers.length > 0) {
-            scrapedServers = data.servers;
+        if (error || !data || !data.qualities_data) {
+            throw new Error("Servers data not found.");
         }
-    } catch (e) {
-        console.warn("Backend scrape fallback active:", e);
+
+        const selectedQualityObj = data.qualities_data[qIndex];
+        const servers = selectedQualityObj?.servers || [];
+
+        if (servers.length === 0) {
+            container.innerHTML = `<div class="loading-msg">No servers available.</div>`;
+            return;
+        }
+
+        container.innerHTML = servers.map((srv, idx) => {
+            const num = (idx + 1).toString().padStart(2, '0');
+            return `
+                <a href="${esc(srv.url)}" target="_blank" class="server-card">
+                    <div class="server-number">${num}</div>
+                    <div class="server-content">
+                        <div class="server-name">${esc(srv.server_name)}</div>
+                        <div class="server-desc">High speed connection</div>
+                    </div>
+                </a>
+            `;
+        }).join("");
+
+    } catch (err) {
+        container.innerHTML = `<div class="loading-msg">Error loading servers: ${esc(err.message)}</div>`;
     }
-
-    // Pehle Cloud Direct button ko filter out karna (taaki duplicate na ho)
-    const cleanedScraped = scrapedServers.filter(s => 
-        !s.server_name.toLowerCase().includes("cloud direct")
-    );
-
-    // Main Direct Host Link
-    const mainFilesDlLink = {
-        server_name: "Cloud Direct - Direct Host",
-        url: serverUrl
-    };
-
-    let finalServers = [];
-
-    if (cleanedScraped.length >= 3) {
-        // Position 01, 02, 03 pe scraped items
-        finalServers.push(cleanedScraped[0]);
-        finalServers.push(cleanedScraped[1]);
-        finalServers.push(cleanedScraped[2]);
-
-        // Position 04 pe main FilesDL Link
-        finalServers.push(mainFilesDlLink);
-
-        // Position 05 aur 06 pe baaki scraped items
-        if (cleanedScraped[3]) finalServers.push(cleanedScraped[3]);
-        if (cleanedScraped[4]) finalServers.push(cleanedScraped[4]);
-    } else {
-        // Fallback Layout (Exactly 6 Items)
-        finalServers = [
-            { server_name: "Direct Download (10Gbps)", url: serverUrl },
-            { server_name: "Download Pixeldrain -1", url: serverUrl },
-            { server_name: "Download - HubCloud", url: serverUrl },
-            mainFilesDlLink, // 04 Position
-            { server_name: "Login To Download - GDFLIX", url: serverUrl },
-            { server_name: "Download - GoFile.io", url: serverUrl }
-        ];
-    }
-
-    // Exact 6 buttons render karega
-    container.innerHTML = finalServers.slice(0, 6).map((srv, idx) => {
-        const num = (idx + 1).toString().padStart(2, '0');
-
-        return `
-            <a href="#" class="server-card" onclick="triggerDownload(event, '${esc(srv.url)}')">
-                <div class="server-number">${num}</div>
-                <div class="server-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
-                </div>
-                <div class="server-content">
-                    <div class="server-name">${esc(srv.server_name)}</div>
-                    <div class="server-desc">High speed connection</div>
-                </div>
-                <div class="server-arrow">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
-                </div>
-            </a>
-        `;
-    }).join("");
 }
 
-function triggerDownload(e, link) {
-    e.preventDefault();
+// Initialize Supabase client
+const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    if(!link || link === "#") {
-        alert("Server link unavailable.");
-        return;
-    }
-
-    const overlay = document.getElementById("popupOverlay");
-    const popupText = document.getElementById("popupText");
-    const popupSub = document.getElementById("popupSub");
-
-    overlay.classList.add("show");
-    popupText.textContent = "Connecting to Server...";
-    popupSub.textContent = "Opening host mirror...";
-
-    setTimeout(() => {
-        overlay.classList.remove("show");
-        window.open(link, "_blank");
-    }, 1000);
-}
-
-fetchAndRenderServers();
+loadServersFromSupabase();
 </script>
 
 </body>
