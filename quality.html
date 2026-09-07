@@ -130,15 +130,27 @@ body{
 
 <script>
 // ==========================================
-// REFRESH SAFE DIRECT ACCESS PROTECTION
+// CLEAN URL MASKING: /download/movie-title
 // ==========================================
 const params = new URLSearchParams(window.location.search);
-const movieId = params.get("id");
+let movieId = params.get("id");
+
+// Refresh support logic via SessionStorage
+if (movieId) {
+    sessionStorage.setItem("active_movie_id", movieId);
+    const rawTitle = params.get("movie") || params.get("title") || "download";
+    sessionStorage.setItem("active_movie_slug", rawTitle);
+} else {
+    movieId = sessionStorage.getItem("active_movie_id");
+}
 
 (function protectAndMaskQualityPage() {
-    if (!movieId) return;
+    if (!movieId) {
+        alert("Direct URL access prohibited!");
+        window.location.href = "zozomovie.github.io";
+        return;
+    }
 
-    // Session token check (SessionStorage survives F5 reloads)
     const hasAccess = sessionStorage.getItem(`access_quality_${movieId}`) || sessionStorage.getItem(`auth_movie_${movieId}`);
 
     if (!hasAccess) {
@@ -147,28 +159,34 @@ const movieId = params.get("id");
         return;
     }
 
- // Address Bar URL Masking with Query Retention
-const rawTitle = params.get("movie") || params.get("title") || "download";
-const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-
-if (window.history.pushState && movieSlug && movieId) {
-    const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug + '?id=' + movieId;
-    window.history.pushState({ path: customUrl }, '', customUrl);
-}
+    // Exact Target Display: https://zozomovie.github.io/download/movie-title
+    const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
+    const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    
+    if (window.history.pushState && movieSlug) {
+        const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug;
+        window.history.pushState({ path: customUrl }, '', customUrl);
+    }
 })();
 
-function generateRandomHash(length = 12) {
+function generateRandomString(length = 13) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let res = '';
     for (let i = 0; i < length; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
-    return res + '_h';
+    return res;
 }
 
 function navigateToServer(qIndex, title, qualityName) {
-    const randomRef = generateRandomHash(12);
+    const random13 = generateRandomString(13);
+    
     sessionStorage.setItem(`access_server_${movieId}_${qIndex}`, 'granted');
     sessionStorage.setItem(`auth_server_${movieId}_${qIndex}`, 'true');
-    window.location.href = `/server.html?ref=${randomRef}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
+    sessionStorage.setItem("active_server_ref", random13);
+    sessionStorage.setItem("active_q_index", qIndex);
+    sessionStorage.setItem("active_movie_title", title);
+    sessionStorage.setItem("active_quality_name", qualityName);
+
+    window.location.href = `/server.html?ref=${random13}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
 }
 
 // ==========================================
