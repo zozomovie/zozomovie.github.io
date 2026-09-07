@@ -2151,6 +2151,23 @@ function showError(title,text){
 }
 
 loadMovie();
+    async function applyMovieUrlMask(movieTitle, categoryType, fullId) {
+    if (!fullId) return;
+    
+    let typePath = "movie";
+    if (categoryType && categoryType.toLowerCase().includes("series")) {
+        typePath = "series";
+    }
+
+    let slug = (movieTitle || "title").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    let shortId = fullId.split('-')[0] || fullId.substring(0, 8);
+
+    let maskedUrl = `${window.location.protocol}//${window.location.host}/${typePath}/${slug}/${shortId}.html?id=${fullId}`;
+    
+    if (window.history.pushState) {
+        window.history.pushState({ path: maskedUrl }, '', maskedUrl);
+    }
+}
 </script>
 </body>
 </html>
