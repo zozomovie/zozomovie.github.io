@@ -221,11 +221,11 @@ const randomRef = params.get("ref") || "server";
         return;
     }
 
-    // Custom URL Masking: /q7cx9vgs8lv8_h
-    if (window.history.pushState && randomRef) {
-        const customServerUrl = window.location.protocol + "//" + window.location.host + '/' + randomRef;
-        window.history.pushState({ path: customServerUrl }, '', customServerUrl);
-    }
+// Address Bar URL Masking with Query Retention
+if (window.history.pushState && randomRef && movieId) {
+    const customServerUrl = window.location.protocol + "//" + window.location.host + '/' + randomRef + '?id=' + movieId + '&q_index=' + qIndex + '&title=' + encodeURIComponent(movieTitle) + '&quality=' + encodeURIComponent(qualityName);
+    window.history.pushState({ path: customServerUrl }, '', customServerUrl);
+}
 })();
 
 document.getElementById("movieTitle").textContent = movieTitle;
