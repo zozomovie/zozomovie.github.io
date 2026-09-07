@@ -169,7 +169,8 @@ function generateRandomHash(length = 12) {
 function navigateToServer(qIndex, title, qualityName) {
     const randomRef = generateRandomHash(12);
     sessionStorage.setItem(`access_server_${movieId}_${qIndex}`, 'granted');
-    window.location.href = `server.html?ref=${randomRef}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
+    // Root path '/server.html' use kiya gaya hai taaki 404 error na aaye
+    window.location.href = `/server.html?ref=${randomRef}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
 }
 
 // ==========================================
