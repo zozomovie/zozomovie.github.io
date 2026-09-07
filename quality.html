@@ -80,6 +80,7 @@ body{
     border-radius:15px;
     background:linear-gradient(135deg, rgba(255,255,255,.052), rgba(255,255,255,.018));
     transition:transform .18s ease, border-color .2s ease, background .2s ease;
+    cursor:pointer;
 }
 .quality-button:hover{
     transform:translateY(-2px);
@@ -128,12 +129,55 @@ body{
 </main>
 
 <script>
+// ==========================================
+// DIRECT ACCESS PROTECTION & URL MASKING
+// ==========================================
+const params = new URLSearchParams(window.location.search);
+const movieId = params.get("id");
+
+(function protectAndMaskQualityPage() {
+    const isReloaded = (
+        (window.performance && window.performance.navigation && window.performance.navigation.type === 1) ||
+        (performance.getEntriesByType && performance.getEntriesByType("navigation")[0]?.type === "reload")
+    );
+
+    const hasAccess = sessionStorage.getItem(`access_quality_${movieId}`);
+
+    if (!isReloaded && !hasAccess) {
+        alert("Direct URL access prohibited!");
+        window.location.href = "index.html";
+        return;
+    }
+
+    // Custom URL Masking: /download/Movie-Title
+    const rawTitle = params.get("movie") || params.get("title") || "download";
+    const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    
+    if (window.history.pushState && movieSlug) {
+        const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug;
+        window.history.pushState({ path: customUrl }, '', customUrl);
+    }
+})();
+
+function generateRandomHash(length = 12) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let res = '';
+    for (let i = 0; i < length; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+    return res + '_h';
+}
+
+function navigateToServer(qIndex, title, qualityName) {
+    const randomRef = generateRandomHash(12);
+    sessionStorage.setItem(`access_server_${movieId}_${qIndex}`, 'granted');
+    window.location.href = `server.html?ref=${randomRef}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
+}
+
+// ==========================================
+// SUPABASE QUALITY FETCHING
+// ==========================================
 const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const params = new URLSearchParams(window.location.search);
-const movieId = params.get("id");
 
 async function loadQualities() {
     const container = document.getElementById("qualityContainer");
@@ -151,7 +195,8 @@ async function loadQualities() {
 
         if (error || !data) throw new Error("Movie not found.");
 
-        document.getElementById("movieTitle").textContent = data.title || "Download Movie";
+        const mTitle = data.title || "Download Movie";
+        document.getElementById("movieTitle").textContent = mTitle;
         const qualities = data.qualities_data || [];
 
         if (qualities.length === 0) {
@@ -160,12 +205,13 @@ async function loadQualities() {
         }
 
         container.innerHTML = qualities.map((q, idx) => {
-            const redirectUrl = `server.html?id=${movieId}&q_index=${idx}&title=${encodeURIComponent(data.title)}&quality=${encodeURIComponent(q.quality_name)}`;
+            const escapedTitle = mTitle.replace(/'/g, "\\'");
+            const escapedQuality = q.quality_name.replace(/'/g, "\\'");
             return `
-                <a class="quality-button" href="${redirectUrl}">
+                <div class="quality-button" onclick="navigateToServer(${idx}, '${escapedTitle}', '${escapedQuality}')">
                     <span class="quality-name">${q.quality_name}</span>
                     <span>➔</span>
-                </a>
+                </div>
             `;
         }).join("");
 
