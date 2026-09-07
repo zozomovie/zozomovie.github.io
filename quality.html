@@ -147,14 +147,14 @@ const movieId = params.get("id");
         return;
     }
 
-    // Custom URL Masking: /download/movie-title
-    const rawTitle = params.get("movie") || params.get("title") || "download";
-    const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    
-    if (window.history.pushState && movieSlug) {
-        const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug;
-        window.history.pushState({ path: customUrl }, '', customUrl);
-    }
+ // Address Bar URL Masking with Query Retention
+const rawTitle = params.get("movie") || params.get("title") || "download";
+const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
+if (window.history.pushState && movieSlug && movieId) {
+    const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug + '?id=' + movieId;
+    window.history.pushState({ path: customUrl }, '', customUrl);
+}
 })();
 
 function generateRandomHash(length = 12) {
