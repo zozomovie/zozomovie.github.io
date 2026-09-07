@@ -1132,43 +1132,6 @@ const WATCH_PAGE = "quality.html";
 const params = new URLSearchParams(location.search);
 const movieId = params.get("id");
 
-// ==========================================
-// INSTANT URL MASKING (Page khulte hi mask ho jayega)
-// ==========================================
-(function instantMaskMovieUrl() {
-    if (!movieId) return;
-    sessionStorage.setItem("active_movie_id", movieId);
-    sessionStorage.setItem("last_active_page", "movie");
-
-    let shortId = movieId.split('-')[0] || movieId.substring(0, 8);
-    let initialUrl = `${window.location.protocol}//${window.location.host}/movie/details/${shortId}.html?id=${movieId}`;
-    
-    if (window.history.pushState) {
-        window.history.pushState({ path: initialUrl }, '', initialUrl);
-    }
-})();
-
-// ==========================================
-// PROPER TITLE MASKING FUNCTION
-// ==========================================
-async function applyMovieUrlMask(movieTitle, categoryType, fullId) {
-    if (!fullId) return;
-    
-    let typePath = "movie";
-    if (categoryType && categoryType.toLowerCase().includes("series")) {
-        typePath = "series";
-    }
-
-    let slug = (movieTitle || "title").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    let shortId = fullId.split('-')[0] || fullId.substring(0, 8);
-
-    let maskedUrl = `${window.location.protocol}//${window.location.host}/${typePath}/${slug}/${shortId}.html?id=${fullId}`;
-    
-    if (window.history.pushState) {
-        window.history.pushState({ path: maskedUrl }, '', maskedUrl);
-    }
-}
-
 const app = document.getElementById("app");
 
 const esc = value => String(value ?? "")
@@ -1632,6 +1595,7 @@ function normalizeClips(movie,tmdb){
 function openQualityPage(mId, mTitle) {
     if (!mId) return;
 
+    // Both Session Storage keys stored for compatibility
     sessionStorage.setItem(`access_quality_${mId}`, 'granted');
     sessionStorage.setItem(`auth_movie_${mId}`, 'granted');
 
@@ -1892,6 +1856,7 @@ function render(movie,tmdb,similar){
 ========================================================= */
 
 function initInteractions(movie,clips,similar){
+    // Download Now Button Action (FIXED REDIRECT)
     const downloadNowBtn = document.getElementById("downloadNowBtn");
     if(downloadNowBtn){
         downloadNowBtn.onclick = (e) => {
@@ -2146,9 +2111,6 @@ async function loadMovie(){
 
         render(data,null,[]);
 
-        // 🌟 YEH LINE MISING THI: Supabase data aate hi URL proper movie title se mask ho jayega
-        applyMovieUrlMask(data.title, data.category, movieId);
-
         const tmdbPromise = fetchTMDB(data);
         const similarPromise = (async()=>{
             try{
@@ -2189,6 +2151,23 @@ function showError(title,text){
 }
 
 loadMovie();
+    async function applyMovieUrlMask(movieTitle, categoryType, fullId) {
+    if (!fullId) return;
+    
+    let typePath = "movie";
+    if (categoryType && categoryType.toLowerCase().includes("series")) {
+        typePath = "series";
+    }
+
+    let slug = (movieTitle || "title").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    let shortId = fullId.split('-')[0] || fullId.substring(0, 8);
+
+    let maskedUrl = `${window.location.protocol}//${window.location.host}/${typePath}/${slug}/${shortId}.html?id=${fullId}`;
+    
+    if (window.history.pushState) {
+        window.history.pushState({ path: maskedUrl }, '', maskedUrl);
+    }
+}
 </script>
 </body>
 </html>
