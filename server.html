@@ -175,7 +175,7 @@ body{
 <body>
 
 <nav class="navbar">
-    <a href="/index.html" class="logo">CINE<span>FLIX</span></a>
+    <a href="/zozomovie.github.io" class="logo">CINE<span>FLIX</span></a>
 </nav>
 
 <main class="page">
@@ -199,9 +199,6 @@ body{
 </main>
 
 <script>
-// ==========================================
-// CLEAN URL MASKING: /random13digit/server.html
-// ==========================================
 const params = new URLSearchParams(window.location.search);
 let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
 let qIndex = parseInt(params.get("q_index") || sessionStorage.getItem("active_q_index") || "0", 10);
@@ -209,10 +206,15 @@ let movieTitle = params.get("title") || sessionStorage.getItem("active_movie_tit
 let qualityName = params.get("quality") || sessionStorage.getItem("active_quality_name") || "HD Quality";
 let randomRef = params.get("ref") || sessionStorage.getItem("active_server_ref") || "v8x9a2k1m4z0p";
 
+if (movieId) {
+    sessionStorage.setItem("active_movie_id", movieId);
+    sessionStorage.setItem("last_active_page", "server");
+}
+
 (function protectAndMaskServerPage() {
     if (!movieId) {
         alert("Direct server access prohibited!");
-        window.location.href = "/index.html";
+        window.location.href = "/zozomovie.github.io";
         return;
     }
 
@@ -220,13 +222,12 @@ let randomRef = params.get("ref") || sessionStorage.getItem("active_server_ref")
 
     if (!hasAccess) {
         alert("Direct server access prohibited!");
-        window.location.href = "/index.html";
+        window.location.href = "/zozomovie.github.io";
         return;
     }
 
-    // Exact Target Display: https://zozomovie.github.io/randomTextAndnuber13digit/server.html
     if (window.history.pushState && randomRef) {
-        const customServerUrl = window.location.protocol + "//" + window.location.host + '/' + randomRef + '/server.html';
+        const customServerUrl = window.location.protocol + "//" + window.location.host + '/' + randomRef + '_h';
         window.history.pushState({ path: customServerUrl }, '', customServerUrl);
     }
 })();
