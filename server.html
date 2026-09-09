@@ -288,6 +288,63 @@ async function loadServersFromSupabase() {
 
 loadServersFromSupabase();
 </script>
+<script>
+// Supabase Setup
+const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+async function loadDirectFreshLinks() {
+    // 1. Storage se Movie ID aur Quality Index read karein
+    const activeMovieId = sessionStorage.getItem("active_movie_id");
+    let selectedQualityIndex = parseInt(sessionStorage.getItem("selected_quality_index") || "0", 10);
+
+    if (!activeMovieId) {
+        window.location.replace("/index.html");
+        return;
+    }
+
+    try {
+        // 2. Direct Supabase se live, non-cached data mangwayein
+        const { data: movie, error } = await supabaseClient
+            .from('movies')
+            .select('qualities_data')
+            .eq('id', activeMovieId)
+            .single();
+
+        if (error || !movie || !movie.qualities_data) {
+            console.error("Database fetch error:", error);
+            return;
+        }
+
+        const currentQuality = movie.qualities_data[selectedQualityIndex] || movie.qualities_data[0];
+
+        if (currentQuality && Array.isArray(currentQuality.servers)) {
+            // UI Render Function Call
+            renderServerButtons(currentQuality.servers);
+        }
+
+    } catch (err) {
+        console.error("Live fetch failed:", err);
+    }
+}
+
+function renderServerButtons(servers) {
+    const container = document.getElementById("serverListContainer") || document.querySelector(".server-list");
+    if (!container) return;
+
+    container.innerHTML = servers.map((srv, index) => `
+        <a href="${srv.url}" target="_blank" class="server-btn">
+            <span class="num">0${index + 1}</span>
+            <div class="info">
+                <strong>${srv.server_name || 'Download Server'}</strong>
+                <small>High speed connection</small>
+            </div>
+        </a>
+    `).join('');
+}
+
+document.addEventListener("DOMContentLoaded", loadDirectFreshLinks);
+</script>
 </body>
 </html>
