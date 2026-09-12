@@ -1343,7 +1343,7 @@ async function fetchTMDB(movie){
 
     const tmdbFetch = async (url) => {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 8000);
+        const timer = setTimeout(() => controller.abort(), 15000);
         try {
             return await fetch(url,{headers,cache:"no-store",signal:controller.signal});
         } finally {
@@ -1398,28 +1398,30 @@ async function fetchTMDB(movie){
         detailUrl.searchParams.set("append_to_response","credits,images,videos");
         detailUrl.searchParams.set("include_image_language","en,null");
 
-        const response = await tmdbFetch(detailUrl.toString());
+        const imageUrl = new URL(
+            `https://api.themoviedb.org/3/movie/${encodeURIComponent(movieIdToFetch)}/images`
+        );
+        imageUrl.searchParams.set("include_image_language","en,null");
+
+        /* Fetch details + backdrops together. This avoids the mobile browser
+           being left on the initial one-image fallback while the second
+           request is still waiting. */
+        const [response,imageResponse] = await Promise.all([
+            tmdbFetch(detailUrl.toString()),
+            tmdbFetch(imageUrl.toString())
+        ]);
         if(!response.ok) return null;
 
         const data = await response.json();
-
-        /* Fetch TMDB backdrops separately as a reliable fallback.
-           Some browsers/TMDB responses may omit images from the combined
-           detail response, which previously made mobile fall back to 1 image. */
-        try{
-            const imageUrl = new URL(
-                `https://api.themoviedb.org/3/movie/${encodeURIComponent(movieIdToFetch)}/images`
-            );
-            imageUrl.searchParams.set("include_image_language","en,null");
-            const imageResponse = await tmdbFetch(imageUrl.toString());
-            if(imageResponse.ok){
+        if(imageResponse.ok){
+            try{
                 const imageData = await imageResponse.json();
                 if(Array.isArray(imageData?.backdrops)){
                     data.images = data.images || {};
                     data.images.backdrops = imageData.backdrops;
                 }
-            }
-        }catch{}
+            }catch{}
+        }
 
         return data;
     }catch(error){
@@ -1614,6 +1616,10 @@ function normalizeClips(movie,tmdb){
     }).slice(3,8);
 
     if(uniqueBackdrops.length) return uniqueBackdrops;
+
+    /* During the initial render TMDB is still loading. Do not create a
+       fake 1/1 carousel; wait for the real TMDB backdrop list. */
+    if(!tmdb) return [];
 
     /* Fallback only when TMDB has no backdrops. */
     if(tmdb?.backdrop_path){
@@ -1837,7 +1843,7 @@ function render(movie,tmdb,similar){
                     <div class="section-head">
                         <h2 class="section-title">${icons.clips} Movie Clips</h2>
                         <div class="section-side">
-                            <span id="clipCounter">1–2.5 / ${clips.length}</span>
+                            <span id="clipCounter">${clips.length ? `1–2.5 / ${clips.length}` : "Loading…"}</span>
                         </div>
                     </div>
 
