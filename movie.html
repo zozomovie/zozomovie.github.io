@@ -504,6 +504,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     width:100%;
     overflow:hidden;
     border-radius:20px;
+    touch-action:pan-y;
 }
 .clip-track{
     display:flex;
@@ -1052,11 +1053,12 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .section-title svg{width:23px;height:23px}
     .section-side{font-size:11px}
 
-    .clips-wrap{border-radius:15px}
+    .clips-wrap{border-radius:14px}
     .clip-track{gap:0}
-    .clip-slide{flex-basis:100%;min-height:190px;aspect-ratio:16/9;border-radius:15px}
-    .clip-quote{left:13px;right:13px;bottom:13px;font-size:9px}
-    .clip-dots{margin-top:8px;gap:6px}
+    .clip-slide{flex-basis:100%;width:100%;min-height:0;height:176px;aspect-ratio:auto;border-radius:14px}
+    .clip-slide img{object-fit:cover;object-position:center center}
+    .clip-quote{display:none}
+    .clip-dots{margin-top:7px;gap:6px}
     .clip-dot{width:6px;height:6px}
     .clip-dot.active{width:20px}
     .clip-arrow{width:39px;height:39px}
@@ -1589,7 +1591,7 @@ function normalizeClips(movie,tmdb){
         if(!x.image || seen.has(x.image)) return false;
         seen.add(x.image);
         return true;
-    }).slice(2,7);
+    }).slice(3,8);
 
     if(uniqueBackdrops.length) return uniqueBackdrops;
 
@@ -1814,9 +1816,7 @@ function render(movie,tmdb,similar){
                     <div class="section-head">
                         <h2 class="section-title">${icons.clips} Movie Clips</h2>
                         <div class="section-side">
-                            <span id="clipCounter">1 / ${clips.length}</span>
-                            <button class="circle-btn clip-mini-prev" aria-label="Previous clip">${icons.back}</button>
-                            <button class="circle-btn clip-mini-next" aria-label="Next clip">${icons.chevron}</button>
+                            <span id="clipCounter">1–2.5 / ${clips.length}</span>
                         </div>
                     </div>
 
@@ -2035,8 +2035,6 @@ function initInteractions(movie,clips,similar){
     const counter = document.getElementById("clipCounter");
     const prevBtn = document.getElementById("clipPrev");
     const nextBtn = document.getElementById("clipNext");
-    const miniPrev = document.querySelector(".clip-mini-prev");
-    const miniNext = document.querySelector(".clip-mini-next");
 
     function getClipStep(){
         if(!track) return 0;
@@ -2067,8 +2065,12 @@ function initInteractions(movie,clips,similar){
             dot.classList.toggle("active",i===index);
         });
         if(counter){
-            const end=Math.min(index+visible,clips.length);
-            counter.textContent=`${index+1}–${end} / ${clips.length}`;
+            if(window.matchMedia("(max-width: 600px)").matches){
+                counter.textContent=`${index+1} / ${clips.length}`;
+            }else{
+                const end=Math.min(index+2,clips.length);
+                counter.textContent=`${index+1}–2.5 / ${clips.length}`;
+            }
         }
     }
 
@@ -2088,19 +2090,41 @@ function initInteractions(movie,clips,similar){
         showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
     });
 
-    miniPrev?.addEventListener("click",()=>{
-        const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
-        showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
-    });
-
-    miniNext?.addEventListener("click",()=>{
-        const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
-        showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
-    });
-
     dots.forEach(dot=>{
         dot.onclick=()=>showClip(Number(dot.dataset.index));
     });
+
+    /* Smooth touch / mouse swipe for Movie Clips */
+    let swipeStartX=0, swipeStartY=0, swiping=false, swipeMoved=false;
+    clipsWrap?.addEventListener("pointerdown",e=>{
+        if(e.pointerType === "mouse" && e.button !== 0) return;
+        swipeStartX=e.clientX;
+        swipeStartY=e.clientY;
+        swiping=true;
+        swipeMoved=false;
+    },{passive:true});
+    clipsWrap?.addEventListener("pointermove",e=>{
+        if(!swiping) return;
+        const dx=e.clientX-swipeStartX;
+        const dy=e.clientY-swipeStartY;
+        if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)){
+            swipeMoved=true;
+            e.preventDefault?.();
+        }
+    },{passive:false});
+    const endSwipe=e=>{
+        if(!swiping) return;
+        const dx=e.clientX-swipeStartX;
+        const dy=e.clientY-swipeStartY;
+        swiping=false;
+        if(Math.abs(dx)>=45 && Math.abs(dx)>Math.abs(dy)*1.15){
+            const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
+            if(dx<0) showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
+            else showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
+        }
+    };
+    clipsWrap?.addEventListener("pointerup",endSwipe,{passive:true});
+    clipsWrap?.addEventListener("pointercancel",()=>{swiping=false},{passive:true});
 
     let clipResizeTimer;
     window.addEventListener("resize",()=>{
