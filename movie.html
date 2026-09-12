@@ -497,87 +497,114 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 }
 
 /* =========================
-   CLIPS
+   TMDB BACKDROP CLIPS — RESPONSIVE CAROUSEL
 ========================= */
 .clips-wrap{
     position:relative;
-}
-.clip-card{
-    position:relative;
     width:100%;
-    aspect-ratio:16/6.25;
-    min-height:260px;
     overflow:hidden;
-    border-radius:19px;
-    border:1px solid rgba(255,255,255,.1);
-    background:#09131e;
-    box-shadow:0 15px 40px rgba(0,0,0,.25);
+    border-radius:20px;
 }
-.clip-card img{
+.clip-track{
+    display:flex;
+    gap:14px;
     width:100%;
-    height:100%;
-    object-fit:cover;
-    display:block;
-    filter:brightness(.78) saturate(.95);
+    transform:translate3d(0,0,0);
+    transition:transform .48s cubic-bezier(.22,.61,.36,1);
+    will-change:transform;
 }
-.clip-card::after{
+.clip-slide{
+    position:relative;
+    flex:0 0 calc(50% - 7px);
+    aspect-ratio:16/8.5;
+    min-height:240px;
+    overflow:hidden;
+    border-radius:17px;
+    border:1px solid rgba(255,255,255,.11);
+    background:#09131e;
+    box-shadow:0 12px 32px rgba(0,0,0,.25);
+    scroll-snap-align:start;
+}
+.clip-slide::after{
     content:"";
     position:absolute;
     inset:0;
+    pointer-events:none;
     background:
-        linear-gradient(180deg,transparent 35%,rgba(0,0,0,.78) 100%),
-        linear-gradient(90deg,rgba(0,0,0,.2),transparent 50%,rgba(0,0,0,.22));
+        linear-gradient(180deg,transparent 48%,rgba(0,0,0,.58) 100%),
+        linear-gradient(90deg,rgba(0,0,0,.08),transparent 55%,rgba(0,0,0,.18));
 }
+.clip-slide img{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:cover;
+    transition:transform .6s ease,filter .35s ease;
+    filter:brightness(.9) saturate(.98);
+}
+.clip-slide:hover img{transform:scale(1.025);filter:brightness(.96) saturate(1.02)}
 .clip-quote{
     position:absolute;
     z-index:2;
-    left:50%;
-    bottom:43px;
-    transform:translateX(-50%);
-    width:85%;
-    text-align:center;
-    color:#e9edf4;
-    font-size:clamp(12px,1.3vw,16px);
-    letter-spacing:.25em;
-    font-weight:500;
+    left:18px;
+    right:18px;
+    bottom:15px;
+    color:#fff;
+    font-size:12px;
+    line-height:1.35;
+    font-weight:600;
+    text-shadow:0 2px 10px rgba(0,0,0,.7);
 }
 .clip-dots{
-    position:absolute;
-    z-index:4;
-    left:50%;
-    bottom:18px;
-    transform:translateX(-50%);
     display:flex;
-    gap:13px;
+    justify-content:center;
+    align-items:center;
+    gap:7px;
+    margin-top:10px;
+    min-height:7px;
 }
 .clip-dot{
-    width:33px;
-    height:5px;
+    width:7px;
+    height:7px;
+    padding:0;
     border:0;
-    border-radius:10px;
-    background:rgba(255,255,255,.22);
+    border-radius:50%;
+    background:rgba(255,255,255,.28);
     cursor:pointer;
+    transition:width .25s ease,background .25s ease,transform .25s ease;
 }
-.clip-dot.active{background:#e9f2ff}
+.clip-dot.active{
+    width:22px;
+    border-radius:10px;
+    background:#fff;
+}
 .clip-arrow{
     position:absolute;
-    z-index:5;
+    z-index:6;
     top:50%;
     transform:translateY(-50%);
-    width:49px;
-    height:49px;
+    width:46px;
+    height:46px;
     border-radius:50%;
-    border:1px solid rgba(255,255,255,.15);
-    background:rgba(3,10,16,.52);
-    color:#e9eff8;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(8,13,19,.62);
+    color:#fff;
     display:grid;
     place-items:center;
     cursor:pointer;
-    backdrop-filter:blur(10px);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    box-shadow:0 8px 22px rgba(0,0,0,.3);
+    transition:.2s ease;
 }
-.clip-arrow:hover{background:rgba(255,255,255,.13)}
-.clip-arrow svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
-.clip-prev{left:8px}.clip-next{right:8px}
+.clip-arrow:hover{background:rgba(255,255,255,.17);transform:translateY(-50%) scale(1.04)}
+.clip-arrow:active{transform:translateY(-50%) scale(.95)}
+.clip-arrow svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2}
+.clip-prev{left:9px}.clip-next{right:9px}
+@media(max-width:900px){
+    .clip-slide{flex-basis:calc(50% - 6px);aspect-ratio:16/8.8;min-height:210px;border-radius:15px}
+    .clip-track{gap:12px}
+}
 
 /* =========================
    CAST
@@ -1025,21 +1052,14 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .section-title svg{width:23px;height:23px}
     .section-side{font-size:11px}
 
-    .clip-card{
-        min-height:190px;
-        aspect-ratio:16/9;
-        border-radius:15px;
-    }
-    .clip-quote{
-        bottom:34px;
-        font-size:9px;
-        letter-spacing:.16em;
-    }
-    .clip-dots{bottom:13px;gap:8px}
-    .clip-dot{width:23px;height:4px}
-    .clip-arrow{
-        width:39px;height:39px;
-    }
+    .clips-wrap{border-radius:15px}
+    .clip-track{gap:0}
+    .clip-slide{flex-basis:100%;min-height:190px;aspect-ratio:16/9;border-radius:15px}
+    .clip-quote{left:13px;right:13px;bottom:13px;font-size:9px}
+    .clip-dots{margin-top:8px;gap:6px}
+    .clip-dot{width:6px;height:6px}
+    .clip-dot.active{width:20px}
+    .clip-arrow{width:39px;height:39px}
     .clip-arrow svg{width:18px;height:18px}
     .clip-prev{left:6px}.clip-next{right:6px}
 
@@ -1549,44 +1569,46 @@ function normalizeCast(movie,tmdb){
 ========================================================= */
 
 function normalizeClips(movie,tmdb){
-    let raw = first(
-        movie.clips,
-        movie.stills,
-        movie.screenshots,
-        movie.gallery,
-        movie.images,
-        []
-    );
+    /*
+       Movie Clips intentionally use TMDB's BACKDROPS first.
+       The TMDB detail request already includes `images`, so this gives
+       the section the same multi-banner feel as the reference carousel.
+    */
+    const tmdbBackdrops = Array.isArray(tmdb?.images?.backdrops)
+        ? tmdb.images.backdrops
+            .filter(x=>x && x.file_path)
+            .map(x=>({
+                image:tmdbImage(x.file_path,"original"),
+                quote:""
+            }))
+        : [];
 
-    let list = arr(raw);
+    /* Keep only valid unique TMDB backdrop URLs. */
+    const seen = new Set();
+    const uniqueBackdrops = tmdbBackdrops.filter(x=>{
+        if(!x.image || seen.has(x.image)) return false;
+        seen.add(x.image);
+        return true;
+    }).slice(0,18);
 
-    const clips = list.map(item=>{
+    if(uniqueBackdrops.length) return uniqueBackdrops;
+
+    /* Fallback only when TMDB has no backdrops. */
+    if(tmdb?.backdrop_path){
+        return [{image:tmdbImage(tmdb.backdrop_path,"original"),quote:""}];
+    }
+
+    let raw = first(movie.clips,movie.stills,movie.screenshots,movie.gallery,movie.images,[]);
+    const list = arr(raw);
+    const own = list.map(item=>{
         if(typeof item === "string") return {image:item,quote:""};
         return {
-            image:first(
-                imageFrom(item.image),
-                imageFrom(item.url),
-                imageFrom(item.src),
-                tmdbImage(item.file_path,"original"),
-                ""
-            ),
+            image:first(imageFrom(item.image),imageFrom(item.url),imageFrom(item.src),tmdbImage(item.file_path,"original"),""),
             quote:first(item.quote,item.caption,item.text,"")
         };
     }).filter(x=>x.image);
 
-    if(clips.length) return clips;
-
-    if(tmdb?.backdrop_path){
-        return [{
-            image:tmdbImage(tmdb.backdrop_path,"original"),
-            quote:""
-        }];
-    }
-
-    return [{
-        image:getPoster(movie,tmdb),
-        quote:""
-    }];
+    return own.length ? own : [{image:getPoster(movie,tmdb),quote:""}];
 }
 
 /* =========================================================
@@ -1798,22 +1820,26 @@ function render(movie,tmdb,similar){
                         </div>
                     </div>
 
-                    <div class="clips-wrap">
-                        <div class="clip-card">
-                            <img id="clipImage" src="${esc(clips[0]?.image || poster)}" alt="${esc(title)}" loading="lazy" decoding="async">
-                            <div class="clip-quote" id="clipQuote">${esc(clips[0]?.quote || "")}</div>
-
-                            <button class="clip-arrow clip-prev" id="clipPrev" aria-label="Previous">
-                                ${icons.back}
-                            </button>
-                            <button class="clip-arrow clip-next" id="clipNext" aria-label="Next">
-                                ${icons.chevron}
-                            </button>
-
-                            <div class="clip-dots" id="clipDots">
-                                ${clips.map((_,i)=>`<button class="clip-dot ${i===0?"active":""}" data-index="${i}"></button>`).join("")}
-                            </div>
+                    <div class="clips-wrap" id="clipsWrap">
+                        <div class="clip-track" id="clipTrack">
+                            ${clips.map((clip,i)=>`
+                                <article class="clip-slide" data-index="${i}">
+                                    <img src="${esc(clip.image)}" alt="${esc(title)} backdrop ${i+1}" loading="${i<2?"eager":"lazy"}" decoding="async">
+                                    ${clip.quote ? `<div class="clip-quote">${esc(clip.quote)}</div>` : ""}
+                                </article>
+                            `).join("")}
                         </div>
+
+                        <button class="clip-arrow clip-prev" id="clipPrev" aria-label="Previous backdrop">
+                            ${icons.back}
+                        </button>
+                        <button class="clip-arrow clip-next" id="clipNext" aria-label="Next backdrop">
+                            ${icons.chevron}
+                        </button>
+                    </div>
+
+                    <div class="clip-dots" id="clipDots">
+                        ${clips.map((_,i)=>`<button class="clip-dot ${i===0?"active":""}" data-index="${i}" aria-label="Backdrop ${i+1}"></button>`).join("")}
                     </div>
                 </section>
 
@@ -2002,46 +2028,116 @@ function initInteractions(movie,clips,similar){
         });
     };
 
-    /* Clips */
+    /* TMDB Backdrop Clips Carousel */
     let clipIndex = 0;
-
-    const image = document.getElementById("clipImage");
-    const quote = document.getElementById("clipQuote");
-    const counter = document.getElementById("clipCounter");
+    const track = document.getElementById("clipTrack");
     const dots = [...document.querySelectorAll(".clip-dot")];
+    const counter = document.getElementById("clipCounter");
+    const prevBtn = document.getElementById("clipPrev");
+    const nextBtn = document.getElementById("clipNext");
+    const miniPrev = document.querySelector(".clip-mini-prev");
+    const miniNext = document.querySelector(".clip-mini-next");
 
-    function showClip(index){
-        if(!clips.length) return;
-
-        if(index < 0) index = clips.length - 1;
-        if(index >= clips.length) index = 0;
-
-        clipIndex = index;
-
-        image.style.opacity = "0";
-
-        setTimeout(()=>{
-            image.src = clips[index].image;
-            quote.textContent = clips[index].quote || "";
-            counter.textContent = `${index+1} / ${clips.length}`;
-            dots.forEach((d,i)=>d.classList.toggle("active",i===index));
-            image.style.opacity = "1";
-        },100);
+    function getClipStep(){
+        if(!track) return 0;
+        const slide = track.querySelector(".clip-slide");
+        if(!slide) return 0;
+        const gap = parseFloat(getComputedStyle(track).gap) || 0;
+        return slide.getBoundingClientRect().width + gap;
     }
 
-    image.style.transition = ".25s";
-    image.addEventListener("error",()=>{
-        image.src = poster;
+    function getVisibleSlides(){
+        return window.matchMedia("(max-width: 600px)").matches ? 1 : 2;
+    }
+
+    function showClip(index){
+        if(!clips.length || !track) return;
+
+        const maxIndex = Math.max(0, clips.length - getVisibleSlides());
+        index = Math.max(0,Math.min(index,maxIndex));
+        clipIndex = index;
+
+        track.style.transform = `translate3d(${-getClipStep()*index}px,0,0)`;
+
+        /* On desktop each position shows two backdrops, on mobile one. */
+        const visible=getVisibleSlides();
+        const dotMaxIndex=Math.max(0,clips.length-visible);
+        dots.forEach((dot,i)=>{
+            dot.style.display=i<=dotMaxIndex?"block":"none";
+            dot.classList.toggle("active",i===index);
+        });
+        if(counter){
+            const end=Math.min(index+visible,clips.length);
+            counter.textContent=`${index+1}–${end} / ${clips.length}`;
+        }
+    }
+
+    track?.querySelectorAll("img").forEach(img=>{
+        img.addEventListener("error",()=>{
+            if(img.src !== poster) img.src = poster;
+        },{once:true});
     });
 
-    document.getElementById("clipPrev").onclick = () => showClip(clipIndex-1);
-    document.getElementById("clipNext").onclick = () => showClip(clipIndex+1);
+    prevBtn?.addEventListener("click",()=>{
+        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
+    });
 
-    document.querySelector(".clip-mini-prev").onclick = () => showClip(clipIndex-1);
-    document.querySelector(".clip-mini-next").onclick = () => showClip(clipIndex+1);
+    nextBtn?.addEventListener("click",()=>{
+        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
+    });
+
+    miniPrev?.addEventListener("click",()=>{
+        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
+    });
+
+    miniNext?.addEventListener("click",()=>{
+        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
+    });
 
     dots.forEach(dot=>{
-        dot.onclick = () => showClip(Number(dot.dataset.index));
+        dot.onclick=()=>showClip(Number(dot.dataset.index));
+    });
+
+    let clipResizeTimer;
+    window.addEventListener("resize",()=>{
+        clearTimeout(clipResizeTimer);
+        clipResizeTimer=setTimeout(()=>showClip(clipIndex),120);
+    },{passive:true});
+
+    /* Auto-slide, like a marketplace banner carousel. */
+    let clipAutoTimer=setInterval(()=>{
+        if(document.hidden || !clips.length) return;
+        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
+    },5000);
+
+    const clipsWrap=document.getElementById("clipsWrap");
+    clipsWrap?.addEventListener("mouseenter",()=>clearInterval(clipAutoTimer));
+    clipsWrap?.addEventListener("mouseleave",()=>{
+        clearInterval(clipAutoTimer);
+        clipAutoTimer=setInterval(()=>{
+            if(document.hidden || !clips.length) return;
+            const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+            showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
+        },5000);
+    });
+
+    showClip(0);
+
+    /* Keyboard clip navigation */
+    document.addEventListener("keydown",e=>{
+        if(e.key==="ArrowLeft"){
+            const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+            showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
+        }
+        if(e.key==="ArrowRight"){
+            const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+            showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
+        }
     });
 
     /* Cast slider */
