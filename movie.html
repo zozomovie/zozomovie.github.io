@@ -1343,7 +1343,7 @@ async function fetchTMDB(movie){
 
     const tmdbFetch = async (url) => {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 2200);
+        const timer = setTimeout(() => controller.abort(), 8000);
         try {
             return await fetch(url,{headers,cache:"no-store",signal:controller.signal});
         } finally {
