@@ -226,10 +226,10 @@ if (movieId) {
         return;
     }
 
-  if (window.history.pushState && randomRef) {
-        const customServerUrl = window.location.protocol + "//" + window.location.host + '/server.html/' + randomRef + '_h';
-        window.history.pushState({ path: customServerUrl }, '', customServerUrl);
-    }
+ if (window.history.replaceState && randomRef) {
+    const customServerUrl = window.location.protocol + "//" + window.location.host + '/server.html/' + randomRef + '_h';
+    window.history.replaceState({ path: customServerUrl }, '', customServerUrl);
+}
 })();
 
 document.getElementById("movieTitle").textContent = movieTitle;
