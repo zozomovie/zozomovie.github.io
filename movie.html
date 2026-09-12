@@ -603,8 +603,15 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .clip-arrow svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2}
 .clip-prev{left:9px}.clip-next{right:9px}
 @media(max-width:900px){
-    .clip-slide{flex-basis:calc(100% - 12px);aspect-ratio:16/8.8;min-height:210px;border-radius:15px}
+    .clip-slide{flex:0 0 100%;width:100%;aspect-ratio:16/8.8;min-height:210px;border-radius:15px}
     .clip-track{gap:12px}
+}
+@media(max-width:600px){
+    .clips-wrap{width:100%;min-height:0}
+    .clip-track{width:100%;gap:0}
+    .clip-slide{flex:0 0 100%;width:100%;min-width:100%;min-height:0;height:176px;aspect-ratio:auto}
+    .clip-slide img{object-fit:cover}
+    .clip-dots{margin-top:9px}
 }
 
 /* =========================
@@ -1619,16 +1626,31 @@ function normalizeClips(movie,tmdb){
        The TMDB detail request already includes `images`, so this gives
        the section the same multi-banner feel as the reference carousel.
     */
+    /* First use the 5 backdrop URLs saved in Supabase by the admin page.
+       This makes the public Movie page work on mobile without needing the
+       private TMDB token in the phone browser. */
+    const saved = arr(first(movie.images, movie.backdrop_images, movie.tmdb_backdrops, []))
+        .map(item=>{
+            if(typeof item === "string") return {image:item,quote:""};
+            return {image:first(imageFrom(item?.image),imageFrom(item?.url),imageFrom(item?.src),""),quote:""};
+        })
+        .filter(x=>x.image);
+
+    const savedSeen = new Set();
+    const savedUnique = saved.filter(x=>{
+        if(savedSeen.has(x.image)) return false;
+        savedSeen.add(x.image);
+        return true;
+    }).slice(0,5);
+
+    if(savedUnique.length) return savedUnique;
+
     const tmdbBackdrops = Array.isArray(tmdb?.images?.backdrops)
         ? tmdb.images.backdrops
             .filter(x=>x && x.file_path)
-            .map(x=>({
-                image:tmdbImage(x.file_path,"original"),
-                quote:""
-            }))
+            .map(x=>({image:tmdbImage(x.file_path,"original"),quote:""}))
         : [];
 
-    /* Keep only valid unique TMDB backdrop URLs. */
     const seen = new Set();
     const uniqueBackdrops = tmdbBackdrops.filter(x=>{
         if(!x.image || seen.has(x.image)) return false;
@@ -1638,8 +1660,6 @@ function normalizeClips(movie,tmdb){
 
     if(uniqueBackdrops.length) return uniqueBackdrops;
 
-    /* During the initial render TMDB is still loading. Do not create a
-       fake 1/1 carousel; wait for the real TMDB backdrop list. */
     if(!tmdb) return [];
 
     /* Fallback only when TMDB has no backdrops. */
