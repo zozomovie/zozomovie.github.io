@@ -515,7 +515,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 }
 .clip-slide{
     position:relative;
-    flex:0 0 calc(50% - 7px);
+    flex:0 0 calc((100% - 28px) / 2.5);
     aspect-ratio:16/8.5;
     min-height:240px;
     overflow:hidden;
@@ -602,7 +602,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .clip-arrow svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2}
 .clip-prev{left:9px}.clip-next{right:9px}
 @media(max-width:900px){
-    .clip-slide{flex-basis:calc(50% - 6px);aspect-ratio:16/8.8;min-height:210px;border-radius:15px}
+    .clip-slide{flex-basis:calc(100% - 12px);aspect-ratio:16/8.8;min-height:210px;border-radius:15px}
     .clip-track{gap:12px}
 }
 
@@ -1589,7 +1589,7 @@ function normalizeClips(movie,tmdb){
         if(!x.image || seen.has(x.image)) return false;
         seen.add(x.image);
         return true;
-    }).slice(0,18);
+    }).slice(2,7);
 
     if(uniqueBackdrops.length) return uniqueBackdrops;
 
@@ -2047,13 +2047,13 @@ function initInteractions(movie,clips,similar){
     }
 
     function getVisibleSlides(){
-        return window.matchMedia("(max-width: 600px)").matches ? 1 : 2;
+        return window.matchMedia("(max-width: 600px)").matches ? 1 : 2.5;
     }
 
     function showClip(index){
         if(!clips.length || !track) return;
 
-        const maxIndex = Math.max(0, clips.length - getVisibleSlides());
+        const maxIndex = Math.max(0, Math.floor(clips.length - getVisibleSlides()));
         index = Math.max(0,Math.min(index,maxIndex));
         clipIndex = index;
 
@@ -2079,22 +2079,22 @@ function initInteractions(movie,clips,similar){
     });
 
     prevBtn?.addEventListener("click",()=>{
-        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
         showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
     });
 
     nextBtn?.addEventListener("click",()=>{
-        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
         showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
     });
 
     miniPrev?.addEventListener("click",()=>{
-        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
         showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
     });
 
     miniNext?.addEventListener("click",()=>{
-        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
         showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
     });
 
@@ -2111,7 +2111,7 @@ function initInteractions(movie,clips,similar){
     /* Auto-slide, like a marketplace banner carousel. */
     let clipAutoTimer=setInterval(()=>{
         if(document.hidden || !clips.length) return;
-        const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+        const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
         showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
     },5000);
 
@@ -2121,7 +2121,7 @@ function initInteractions(movie,clips,similar){
         clearInterval(clipAutoTimer);
         clipAutoTimer=setInterval(()=>{
             if(document.hidden || !clips.length) return;
-            const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+            const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
             showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
         },5000);
     });
@@ -2131,11 +2131,11 @@ function initInteractions(movie,clips,similar){
     /* Keyboard clip navigation */
     document.addEventListener("keydown",e=>{
         if(e.key==="ArrowLeft"){
-            const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+            const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
             showClip(clipIndex<=0 ? maxIndex : clipIndex-1);
         }
         if(e.key==="ArrowRight"){
-            const maxIndex=Math.max(0,clips.length-getVisibleSlides());
+            const maxIndex=Math.max(0,Math.floor(clips.length-getVisibleSlides()));
             showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
         }
     });
