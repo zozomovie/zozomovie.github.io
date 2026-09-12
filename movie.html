@@ -2095,6 +2095,7 @@ function initInteractions(movie,clips,similar){
     });
 
     /* Smooth touch / mouse swipe for Movie Clips */
+    const clipsWrap=document.getElementById("clipsWrap");
     let swipeStartX=0, swipeStartY=0, swiping=false, swipeMoved=false;
     clipsWrap?.addEventListener("pointerdown",e=>{
         if(e.pointerType === "mouse" && e.button !== 0) return;
@@ -2139,7 +2140,6 @@ function initInteractions(movie,clips,similar){
         showClip(clipIndex>=maxIndex ? 0 : clipIndex+1);
     },5000);
 
-    const clipsWrap=document.getElementById("clipsWrap");
     clipsWrap?.addEventListener("mouseenter",()=>clearInterval(clipAutoTimer));
     clipsWrap?.addEventListener("mouseleave",()=>{
         clearInterval(clipAutoTimer);
