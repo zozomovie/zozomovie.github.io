@@ -1622,64 +1622,141 @@ function normalizeCast(movie,tmdb){
 
 function normalizeClips(movie,tmdb){
     /*
-       Movie Clips intentionally use TMDB's BACKDROPS first.
-       The TMDB detail request already includes `images`, so this gives
-       the section the same multi-banner feel as the reference carousel.
+       MOBILE-SAFE BACKDROP CAROUSEL
+
+       Priority:
+       1) Images already saved in Supabase (works without TMDB token)
+       2) Other movie-owned clip/gallery/still fields
+       3) TMDB backdrops
+       4) TMDB main backdrop
+       5) Movie poster
+
+       Important: never return [] just because TMDB is unavailable.
+       This is what caused the mobile browser to show no images when
+       the phone did not have a cached TMDB token.
     */
-    /* First use the 5 backdrop URLs saved in Supabase by the admin page.
-       This makes the public Movie page work on mobile without needing the
-       private TMDB token in the phone browser. */
-    const saved = arr(first(movie.images, movie.backdrop_images, movie.tmdb_backdrops, []))
+
+    const toImageList = raw => {
+        if(!raw) return [];
+
+        /* Handle JSON strings, arrays, and objects such as
+           {backdrops:[...]} or {images:[...]}. */
+        if(typeof raw === "string"){
+            try{
+                const parsed = JSON.parse(raw);
+                return toImageList(parsed);
+            }catch(e){
+                return raw.split(",").map(x=>x.trim()).filter(Boolean);
+            }
+        }
+
+        if(Array.isArray(raw)) return raw;
+
+        if(typeof raw === "object"){
+            if(Array.isArray(raw.backdrops)) return raw.backdrops;
+            if(Array.isArray(raw.images)) return raw.images;
+            if(Array.isArray(raw.clips)) return raw.clips;
+            return [raw];
+        }
+
+        return [];
+    };
+
+    const normalizeList = raw => toImageList(raw)
         .map(item=>{
-            if(typeof item === "string") return {image:item,quote:""};
-            return {image:first(imageFrom(item?.image),imageFrom(item?.url),imageFrom(item?.src),""),quote:""};
+            if(typeof item === "string"){
+                return {image:item,quote:""};
+            }
+
+            return {
+                image:first(
+                    imageFrom(item?.image),
+                    imageFrom(item?.url),
+                    imageFrom(item?.src),
+                    imageFrom(item?.file_path),
+                    ""
+                ),
+                quote:first(item?.quote,item?.caption,item?.text,"")
+            };
         })
         .filter(x=>x.image);
 
+    /* 1. SUPABASE-SAVED IMAGES — no TMDB token required */
+    const savedSources = [
+        movie.images,
+        movie.backdrop_images,
+        movie.tmdb_backdrops
+    ];
+
+    let saved = [];
+    for(const source of savedSources){
+        const list = normalizeList(source);
+        if(list.length) saved.push(...list);
+    }
+
     const savedSeen = new Set();
     const savedUnique = saved.filter(x=>{
-        if(savedSeen.has(x.image)) return false;
+        if(!x.image || savedSeen.has(x.image)) return false;
         savedSeen.add(x.image);
         return true;
     }).slice(0,5);
 
     if(savedUnique.length) return savedUnique;
 
+    /* 2. MOVIE-OWNED CLIPS / STILLS / GALLERY — also works without TMDB */
+    const ownSources = [
+        movie.clips,
+        movie.stills,
+        movie.screenshots,
+        movie.gallery
+    ];
+
+    let own = [];
+    for(const source of ownSources){
+        const list = normalizeList(source);
+        if(list.length) own.push(...list);
+    }
+
+    const ownSeen = new Set();
+    const ownUnique = own.filter(x=>{
+        if(!x.image || ownSeen.has(x.image)) return false;
+        ownSeen.add(x.image);
+        return true;
+    }).slice(0,5);
+
+    if(ownUnique.length) return ownUnique;
+
+    /* 3. TMDB BACKDROPS */
     const tmdbBackdrops = Array.isArray(tmdb?.images?.backdrops)
         ? tmdb.images.backdrops
             .filter(x=>x && x.file_path)
-            .map(x=>({image:tmdbImage(x.file_path,"original"),quote:""}))
+            .map(x=>({
+                image:tmdbImage(x.file_path,"original"),
+                quote:""
+            }))
         : [];
 
-    const seen = new Set();
+    const tmdbSeen = new Set();
     const uniqueBackdrops = tmdbBackdrops.filter(x=>{
-        if(!x.image || seen.has(x.image)) return false;
-        seen.add(x.image);
+        if(!x.image || tmdbSeen.has(x.image)) return false;
+        tmdbSeen.add(x.image);
         return true;
-    }).slice(3,8);
+    }).slice(0,5);
 
     if(uniqueBackdrops.length) return uniqueBackdrops;
 
-    if(!tmdb) return [];
-
-    /* Fallback only when TMDB has no backdrops. */
+    /* 4. TMDB MAIN BACKDROP */
     if(tmdb?.backdrop_path){
-        return [{image:tmdbImage(tmdb.backdrop_path,"original"),quote:""}];
+        return [{
+            image:tmdbImage(tmdb.backdrop_path,"original"),
+            quote:""
+        }];
     }
 
-    let raw = first(movie.clips,movie.stills,movie.screenshots,movie.gallery,movie.images,[]);
-    const list = arr(raw);
-    const own = list.map(item=>{
-        if(typeof item === "string") return {image:item,quote:""};
-        return {
-            image:first(imageFrom(item.image),imageFrom(item.url),imageFrom(item.src),tmdbImage(item.file_path,"original"),""),
-            quote:first(item.quote,item.caption,item.text,"")
-        };
-    }).filter(x=>x.image);
-
-    return own.length ? own : [{image:getPoster(movie,tmdb),quote:""}];
+    /* 5. FINAL POSTER FALLBACK */
+    const poster = getPoster(movie,tmdb);
+    return poster ? [{image:poster,quote:""}] : [];
 }
-
 /* =========================================================
    REDIRECT TO QUALITY PAGE WITH SESSION ACCESS (UPDATED)
 ========================================================= */
@@ -1892,7 +1969,7 @@ function render(movie,tmdb,similar){
                         <div class="clip-track" id="clipTrack">
                             ${clips.map((clip,i)=>`
                                 <article class="clip-slide" data-index="${i}">
-                                    <img src="${esc(clip.image)}" alt="${esc(title)} backdrop ${i+1}" loading="${i<2?"eager":"lazy"}" decoding="async">
+                                    <img src="${esc(clip.image)}" alt="${esc(title)} backdrop ${i+1}" loading="eager" decoding="async">
                                     ${clip.quote ? `<div class="clip-quote">${esc(clip.quote)}</div>` : ""}
                                 </article>
                             `).join("")}
@@ -2142,8 +2219,10 @@ function initInteractions(movie,clips,similar,tmdb){
 
     track?.querySelectorAll("img").forEach(img=>{
         img.addEventListener("error",()=>{
-            if(img.src !== poster) img.src = poster;
-        },{once:true});
+            if(img.dataset.fallbackDone === "1") return;
+            img.dataset.fallbackDone = "1";
+            img.src = poster;
+        });
     });
 
     prevBtn?.addEventListener("click",()=>{
