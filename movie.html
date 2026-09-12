@@ -1714,10 +1714,11 @@ function render(movie,tmdb,similar){
                         <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
                     </button>
 
-                    <video class="player-video" id="playerVideo"
-                           controls
-                           playsinline
-                           preload="metadata"></video>
+                    <iframe class="player-video" id="playerVideo"
+                            title="Movie Trailer"
+                            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                            allowfullscreen
+                            referrerpolicy="strict-origin-when-cross-origin"></iframe>
 
                     <div class="player-loading hidden" id="playerLoading">
                         <div class="loader"></div>
@@ -1867,7 +1868,7 @@ function render(movie,tmdb,similar){
         </div>
     `;
 
-    initInteractions(movie,clips,similar);
+    initInteractions(movie,clips,similar,tmdb);
 
     const backdropImg = document.getElementById("backdropImg");
     if(backdropImg){
@@ -1881,7 +1882,7 @@ function render(movie,tmdb,similar){
    INTERACTIONS
 ========================================================= */
 
-function initInteractions(movie,clips,similar){
+function initInteractions(movie,clips,similar,tmdb){
     // Download Now Button Action (FIXED REDIRECT)
     const downloadNowBtn = document.getElementById("downloadNowBtn");
     if(downloadNowBtn){
@@ -1920,69 +1921,67 @@ function initInteractions(movie,clips,similar){
     const playerLoading = document.getElementById("playerLoading");
     const playerEmpty = document.getElementById("playerEmpty");
 
-    function getVideoSource(movie){
-        return first(
-            movie.video_url,
-            movie.videoUrl,
-            movie.video,
-            movie.source_code,
-            movie.source_url,
-            movie.stream_url,
-            movie.streamUrl,
-            movie.file_url,
-            movie.download_url,
-            movie.url
-        );
+    function youtubeTrailerUrl(movie, tmdb){
+        const saved = first(movie?.trailer_url, movie?.trailerUrl, movie?.trailer, "");
+        const videos = Array.isArray(tmdb?.videos?.results) ? tmdb.videos.results : [];
+
+        const pick = videos.find(v =>
+            v && v.site === "YouTube" && v.key &&
+            String(v.type || "").toLowerCase() === "trailer" &&
+            String(v.official ?? true) !== "false"
+        ) || videos.find(v =>
+            v && v.site === "YouTube" && v.key &&
+            String(v.type || "").toLowerCase() === "trailer"
+        ) || videos.find(v => v && v.site === "YouTube" && v.key);
+
+        let key = "";
+        if(saved){
+            try{
+                const u = new URL(saved);
+                if(/youtube\.com$|www\.youtube\.com$/i.test(u.hostname)){
+                    key = u.searchParams.get("v") || ((u.pathname.match(/\/embed\/([^/]+)/)||[])[1] || "");
+                }else if(/youtu\.be$/i.test(u.hostname)){
+                    key = u.pathname.slice(1).split("/")[0];
+                }
+            }catch{}
+        }
+        key = key || pick?.key || "";
+        return key ? `https://www.youtube.com/embed/${encodeURIComponent(key)}?autoplay=1&rel=0&modestbranding=1&playsinline=1` : "";
     }
 
     function closePlayer(){
         playerOverlay.classList.remove("open");
         playerOverlay.setAttribute("aria-hidden","true");
-        playerVideo.pause();
-        playerVideo.removeAttribute("src");
-        playerVideo.load();
+        playerVideo.src = "about:blank";
         document.body.style.overflow="";
         playerLoading.classList.add("hidden");
         playerEmpty.classList.add("hidden");
     }
 
     function openPlayer(){
-        const source=getVideoSource(movie);
+        const trailer = youtubeTrailerUrl(movie,tmdb);
 
         playerOverlay.classList.add("open");
         playerOverlay.setAttribute("aria-hidden","false");
         document.body.style.overflow="hidden";
+        playerEmpty.classList.add("hidden");
 
-        if(!source){
+        if(!trailer){
+            playerVideo.src="about:blank";
+            playerLoading.classList.add("hidden");
             playerEmpty.innerHTML=`
                 <div>
-                    <strong>Video source not available</strong>
-                    This movie does not have a video URL saved yet.
+                    <strong>Trailer not available</strong>
+                    TMDB does not have a YouTube trailer for this movie.
                 </div>`;
             playerEmpty.classList.remove("hidden");
             return;
         }
 
-        playerEmpty.classList.add("hidden");
         playerLoading.classList.remove("hidden");
+        playerVideo.src=trailer;
 
-        playerVideo.src=source;
-        playerVideo.load();
-
-        const hideLoader=()=>playerLoading.classList.add("hidden");
-        playerVideo.addEventListener("loadeddata",hideLoader,{once:true});
-        playerVideo.addEventListener("canplay",hideLoader,{once:true});
-        playerVideo.addEventListener("error",()=>{
-            playerLoading.classList.add("hidden");
-            playerEmpty.innerHTML=`
-                <div>
-                    <strong>Unable to play this video</strong>
-                    The saved video source could not be loaded in this player.
-                </div>`;
-            playerEmpty.classList.remove("hidden");
-        },{once:true});
-
-        playerVideo.play().catch(()=>{});
+        setTimeout(()=>playerLoading.classList.add("hidden"),700);
     }
 
     document.getElementById("watchBtn").onclick=openPlayer;
