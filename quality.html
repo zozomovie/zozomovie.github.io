@@ -157,10 +157,10 @@ if (movieId) {
     const rawTitle = sessionStorage.getItem("active_movie_slug") || "download";
     const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     
-    if (window.history.pushState && movieSlug) {
-        const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug;
-        window.history.pushState({ path: customUrl }, '', customUrl);
-    }
+   if (window.history.replaceState && movieSlug) {
+    const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug;
+    window.history.replaceState({ path: customUrl }, '', customUrl);
+}
 })();
 
 function generateRandomString(length = 13) {
