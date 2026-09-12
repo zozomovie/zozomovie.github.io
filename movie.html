@@ -1401,7 +1401,27 @@ async function fetchTMDB(movie){
         const response = await tmdbFetch(detailUrl.toString());
         if(!response.ok) return null;
 
-        return await response.json();
+        const data = await response.json();
+
+        /* Fetch TMDB backdrops separately as a reliable fallback.
+           Some browsers/TMDB responses may omit images from the combined
+           detail response, which previously made mobile fall back to 1 image. */
+        try{
+            const imageUrl = new URL(
+                `https://api.themoviedb.org/3/movie/${encodeURIComponent(movieIdToFetch)}/images`
+            );
+            imageUrl.searchParams.set("include_image_language","en,null");
+            const imageResponse = await tmdbFetch(imageUrl.toString());
+            if(imageResponse.ok){
+                const imageData = await imageResponse.json();
+                if(Array.isArray(imageData?.backdrops)){
+                    data.images = data.images || {};
+                    data.images.backdrops = imageData.backdrops;
+                }
+            }
+        }catch{}
+
+        return data;
     }catch(error){
         return null;
     }
