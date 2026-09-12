@@ -1332,8 +1332,29 @@ function getBackdrop(movie,tmdb){
    TMDB
 ========================================================= */
 
+async function getTMDBTokenAsync(){
+    const local = getTMDBToken();
+    if(local) return local;
+    try{
+        const {data,error} = await supabaseClient
+            .from("admin_settings")
+            .select("tmdb_token,updated_at")
+            .order("updated_at",{ascending:false})
+            .limit(1);
+        if(!error && Array.isArray(data) && data[0]?.tmdb_token){
+            const token = String(data[0].tmdb_token).trim();
+            try{
+                localStorage.setItem("cineflix_tmdb_token",token);
+                sessionStorage.setItem("cineflix_tmdb_token",token);
+            }catch{}
+            return token;
+        }
+    }catch{}
+    return "";
+}
+
 async function fetchTMDB(movie){
-    const token = getTMDBToken();
+    const token = await getTMDBTokenAsync();
     if(!token) return null;
 
     const headers = {
@@ -1343,7 +1364,7 @@ async function fetchTMDB(movie){
 
     const tmdbFetch = async (url) => {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15000);
+        const timer = setTimeout(() => controller.abort(), 8000);
         try {
             return await fetch(url,{headers,cache:"no-store",signal:controller.signal});
         } finally {
@@ -1403,25 +1424,25 @@ async function fetchTMDB(movie){
         );
         imageUrl.searchParams.set("include_image_language","en,null");
 
-        /* Fetch details + backdrops together. This avoids the mobile browser
-           being left on the initial one-image fallback while the second
-           request is still waiting. */
-        const [response,imageResponse] = await Promise.all([
-            tmdbFetch(detailUrl.toString()),
-            tmdbFetch(imageUrl.toString())
-        ]);
+        /* Do not block the movie page on the optional /images request.
+           The detail endpoint already includes images. */
+        const response = await tmdbFetch(detailUrl.toString());
         if(!response.ok) return null;
 
         const data = await response.json();
-        if(imageResponse.ok){
+
+        /* Enrich backdrops in the background when the dedicated images
+           endpoint responds. This can never keep the page stuck on loading. */
+        tmdbFetch(imageUrl.toString()).then(async imageResponse=>{
+            if(!imageResponse?.ok) return;
             try{
                 const imageData = await imageResponse.json();
-                if(Array.isArray(imageData?.backdrops)){
+                if(Array.isArray(imageData?.backdrops) && imageData.backdrops.length){
                     data.images = data.images || {};
                     data.images.backdrops = imageData.backdrops;
                 }
             }catch{}
-        }
+        }).catch(()=>{});
 
         return data;
     }catch(error){
@@ -1843,7 +1864,7 @@ function render(movie,tmdb,similar){
                     <div class="section-head">
                         <h2 class="section-title">${icons.clips} Movie Clips</h2>
                         <div class="section-side">
-                            <span id="clipCounter">${clips.length ? `1–2.5 / ${clips.length}` : "Loading…"}</span>
+                            <span id="clipCounter">${clips.length ? `1–2.5 / ${clips.length}` : ""}</span>
                         </div>
                     </div>
 
