@@ -1429,7 +1429,9 @@ async function fetchTMDB(movie){
         const imageUrl = new URL(
             `https://api.themoviedb.org/3/movie/${encodeURIComponent(movieIdToFetch)}/images`
         );
-        imageUrl.searchParams.set("include_image_language","en,null");
+        /* Do NOT filter the gallery by language here. TMDB can otherwise
+           return only a single matching backdrop on some mobile/browser
+           requests. We want the complete backdrop gallery. */
 
         /* Do not block the movie page on the optional /images request.
            The detail endpoint already includes images. */
@@ -1731,14 +1733,20 @@ function normalizeClips(movie,tmdb){
     if(ownUnique.length >= 5) return ownUnique;
 
     /* 3. TMDB BACKDROPS */
-    const tmdbBackdrops = Array.isArray(tmdb?.images?.backdrops)
-        ? tmdb.images.backdrops
-            .filter(x=>x && x.file_path)
-            .map(x=>({
-                image:tmdbImage(x.file_path,"original"),
-                quote:""
-            }))
+    const allTmdbBackdrops = Array.isArray(tmdb?.images?.backdrops)
+        ? tmdb.images.backdrops.filter(x=>x && x.file_path)
         : [];
+
+    /* Use the middle 5 backdrops (4th–8th). If TMDB has fewer than 8,
+       gracefully use the best available 5 instead of falling to 1/1. */
+    const selectedTmdbBackdrops = allTmdbBackdrops.length >= 8
+        ? allTmdbBackdrops.slice(3,8)
+        : allTmdbBackdrops.slice(0,5);
+
+    const tmdbBackdrops = selectedTmdbBackdrops.map(x=>({
+        image:tmdbImage(x.file_path,"original"),
+        quote:""
+    }));
 
     const tmdbSeen = new Set();
     const uniqueBackdrops = tmdbBackdrops.filter(x=>{
