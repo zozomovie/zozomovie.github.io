@@ -246,6 +246,65 @@ body{
     stroke-width:2;
 }
 
+/* Desktop: keep the real search field visible in the header. */
+@media(min-width:801px){
+    .search-box{
+        width:315px;
+        opacity:1;
+    }
+    #searchBtn{
+        display:none;
+    }
+}
+
+@media(min-width:801px) and (max-width:1100px){
+    .search-box{width:255px;}
+    .header-right{gap:10px;}
+}
+
+@media(max-width:800px){
+    .header-right{position:static;}
+    .search-box{
+        position:absolute;
+        top:62px;
+        left:15px;
+        right:15px;
+        width:auto;
+        opacity:0;
+        visibility:hidden;
+        transform:translateY(-8px) scale(.985);
+        transform-origin:top center;
+        pointer-events:none;
+        transition:opacity .18s ease,transform .22s ease,visibility .22s ease;
+    }
+    .search-box.open{
+        width:auto;
+        opacity:1;
+        visibility:visible;
+        transform:translateY(0) scale(1);
+        pointer-events:auto;
+    }
+    .search-box input{
+        height:44px;
+        border-radius:13px;
+        font-size:13px;
+        padding-left:14px;
+        padding-right:52px;
+    }
+    .search-submit{
+        width:34px;
+        height:34px;
+        top:5px;
+        right:5px;
+        border-radius:10px;
+    }
+    .search-suggestions{
+        top:51px;
+        max-height:min(390px,58vh);
+        border-radius:13px;
+    }
+}
+
 .search-suggestions{
     position:absolute;
     top:48px;
@@ -1295,14 +1354,6 @@ body{
 
     .header-right{
         gap:5px;
-    }
-
-    .search-box.open{
-        position:absolute;
-        top:58px;
-        left:15px;
-        right:15px;
-        width:auto;
     }
 
     .profile{
@@ -2587,7 +2638,7 @@ function renderSuggestions(items){
         button.addEventListener("click",()=>{
             searchInput.value=movie.title;
             searchSuggestions.classList.remove("show");
-            performSearch(movie.title);
+            goToSearchPage(movie.title);
         });
         searchSuggestions.appendChild(button);
     });
@@ -2618,72 +2669,22 @@ async function loadSearchSuggestions(query){
     }
 }
 
-async function performSearch(rawQuery){
+function goToSearchPage(rawQuery){
     const query=String(rawQuery||"").trim();
     if(!query) return;
 
-    lastSearchQuery=query;
-    searchSuggestions.classList.remove("show");
-    mainContent.style.display="none";
-    searchResults.classList.add("show");
-    searchGrid.innerHTML="";
-    noResults.style.display="none";
-
-    const local=getLocalSearchMatches(query);
-    let results=local;
-
-    // Search the real Supabase movie table as well, so newly added titles
-    // are found even if the home rows have not finished loading.
-    try{
-        const {data,error}=await supabaseClient
-            .from("movies")
-            .select("id,title,year,rating,poster_url,genres,category")
-            .ilike("title",`%${query}%`)
-            .order("sort_order",{ascending:true})
-            .order("created_at",{ascending:false})
-            .limit(80);
-
-        if(error) throw error;
-
-        const remote=(Array.isArray(data)?data:[])
-            .map(mapSearchRow)
-            .filter(m=>m.id && m.image);
-
-        const merged=[...remote,...local];
-        const seen=new Set();
-        results=merged.filter(movie=>{
-            const key=String(movie.id);
-            if(seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-    }catch(error){
-        console.error("CINEFLIX real search failed:",error);
-    }
-
-    if(lastSearchQuery!==query) return;
-
-    results.forEach(movie=>searchGrid.appendChild(createMovieCard(movie)));
-    attachLikeEvents(searchGrid);
-    attachMovieCardNavigation(searchGrid);
-
-    noResults.style.display=results.length ? "none" : "block";
-
-    const title=searchResults.querySelector(".section-title");
-    if(title) title.textContent=`Search Results for “${query}”`;
-
-    const url=new URL(window.location.href);
-    url.searchParams.set("search",query);
-    history.replaceState({},"",url.pathname+url.search+url.hash);
-
-    searchResults.scrollIntoView({behavior:"smooth",block:"start"});
+    // Dedicated search route: /search/?query=Movie%20Name
+    // The search page renders its own instant skeleton while fetching real data.
+    const target = "search/?query=" + encodeURIComponent(query);
+    window.location.assign(target);
 }
 
 searchBtn.onclick=()=>{
-    setSearchOpen(!searchBox.classList.contains("open"));
+    const isOpen=searchBox.classList.contains("open");
+    setSearchOpen(!isOpen);
 };
 
-searchSubmit.addEventListener("click",()=>performSearch(searchInput.value));
+searchSubmit.addEventListener("click",()=>goToSearchPage(searchInput.value));
 
 searchInput.addEventListener("input",()=>{
     clearTimeout(searchTimer);
@@ -2703,7 +2704,7 @@ searchInput.addEventListener("input",()=>{
 searchInput.addEventListener("keydown",e=>{
     if(e.key==="Enter"){
         e.preventDefault();
-        performSearch(searchInput.value);
+        goToSearchPage(searchInput.value);
     }
     if(e.key==="Escape") setSearchOpen(false);
 });
@@ -2720,13 +2721,10 @@ requestMovieBtn?.addEventListener("click",()=>{
 });
 
 function runUrlSearch(){
-    if(urlSearchStarted) return;
     const q=new URLSearchParams(window.location.search).get("search");
     if(!q) return;
-    urlSearchStarted = true;
-    setSearchOpen(true);
-    searchInput.value=q;
-    performSearch(q);
+    const target="search/?query="+encodeURIComponent(q);
+    window.location.replace(target);
 }
 
 /* =========================================================
@@ -2925,31 +2923,6 @@ window.addEventListener("DOMContentLoaded", () => {
         }, 3000);
     }
 });
-/* Reliable header search click fallback for dynamically updated layouts. */
-document.addEventListener("click", e=>{
-    const btn=e.target.closest("#searchBtn");
-    if(!btn) return;
-    const box=document.getElementById("searchBox");
-    const input=document.getElementById("searchInput");
-    if(!box) return;
-
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    const open=box.classList.contains("open");
-    box.classList.toggle("open",!open);
-    btn.innerHTML=!open
-        ? '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>'
-        : '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>';
-    btn.setAttribute("aria-label",!open ? "Close search" : "Open search");
-
-    if(!open){
-        requestAnimationFrame(()=>input?.focus());
-    }else{
-        if(input) input.value="";
-        document.getElementById("searchSuggestions")?.classList.remove("show");
-    }
-}, true);
 
 </script>
 </body>
