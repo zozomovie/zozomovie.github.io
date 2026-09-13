@@ -1,671 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<title>CINEFLIX — Download Servers</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cineflix - Select Download Server</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-
 <style>
-
 *{
     margin:0;
     padding:0;
     box-sizing:border-box;
-
     -webkit-tap-highlight-color:transparent;
 }
-
 html{
     min-height:100%;
-    background:#050505;
 }
-
 body{
-
     min-height:100vh;
-
+    font-family:Inter,Arial,Helvetica,sans-serif;
     color:#fff;
-
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
-
     background:
-
-        radial-gradient(
-            ellipse 80% 40% at 50% -10%,
-            rgba(229,9,20,.12),
-            transparent 70%
-        ),
-
-        radial-gradient(
-            circle at 100% 40%,
-            rgba(229,9,20,.055),
-            transparent 35%
-        ),
-
+        radial-gradient(circle at 50% -10%, rgba(255,255,255,.055), transparent 30%),
+        radial-gradient(circle at 100% 35%, rgba(229,9,20,.08), transparent 30%),
         #050505;
 }
-
-
-/* =========================
-   NAVBAR
-========================= */
-
 .navbar{
-
-    height:64px;
-
     width:100%;
-
+    height:64px;
+    padding:0 6%;
     display:flex;
     align-items:center;
-
-    padding:
-        0 clamp(18px,5vw,65px);
-
+    justify-content:space-between;
     position:sticky;
     top:0;
     z-index:100;
-
-    background:
-        rgba(5,5,5,.78);
-
-    border-bottom:
-        1px solid rgba(255,255,255,.06);
-
-    backdrop-filter:
-        blur(20px);
-
-    -webkit-backdrop-filter:
-        blur(20px);
+    background:rgba(5,5,5,.76);
+    border-bottom:1px solid rgba(255,255,255,.065);
+    backdrop-filter:blur(20px);
 }
-
 .logo{
-
     color:#fff;
-
-    text-decoration:none;
-
     font-size:21px;
-
-    font-weight:950;
-
-    letter-spacing:1.4px;
+    font-weight:900;
+    letter-spacing:1.8px;
+    text-decoration:none;
 }
-
 .logo span{
     color:#e50914;
 }
-
-
-/* =========================
-   PAGE
-========================= */
-
 .page{
-
-    width:min(760px,92%);
-
+    width:100%;
+    max-width:760px;
     margin:0 auto;
-
-    padding:
-        52px 0 75px;
+    padding:34px 22px 55px;
 }
-
-
-/* =========================
-   MOVIE HEADER
-========================= */
-
 .movie-header{
-
-    margin-bottom:30px;
+    margin-bottom:26px;
 }
-
-.eyebrow{
-
-    display:flex;
-    align-items:center;
-    gap:8px;
-
-    margin-bottom:11px;
-
-    color:#666;
-
-    font-size:9px;
-
-    font-weight:850;
-
-    letter-spacing:1.8px;
-
-    text-transform:uppercase;
-}
-
-.eyebrow-dot{
-
-    width:5px;
-    height:5px;
-
-    border-radius:50%;
-
-    background:#e50914;
-
-    box-shadow:
-        0 0 10px rgba(229,9,20,.7);
-}
-
 .movie-title{
-
     max-width:700px;
-
     color:#fff;
-
-    font-size:
-        clamp(25px,4vw,36px);
-
-    line-height:1.15;
-
+    font-size:clamp(22px,3.2vw,32px);
+    line-height:1.2;
     font-weight:850;
-
-    letter-spacing:-.7px;
-
-    word-break:break-word;
 }
-
 .file-info{
-
-    margin-top:11px;
-
+    margin-top:9px;
     display:flex;
     align-items:center;
-
-    flex-wrap:wrap;
-
     gap:8px;
-
-    color:#666;
-
-    font-size:11px;
-
+    color:#777;
+    font-size:13px;
     font-weight:650;
 }
-
 .file-quality{
-
     color:#e50914;
-
-    font-weight:850;
+    font-weight:800;
 }
-
-.separator{
-    color:#3f3f3f;
-}
-
-
-/* =========================
-   SECTION TITLE
-========================= */
-
-.section-head{
-
+.section-label{
+    width:100%;
     display:flex;
-
     align-items:center;
-
-    gap:12px;
-
+    gap:11px;
     margin-bottom:13px;
-
     color:#666;
-
-    font-size:9px;
-
-    font-weight:850;
-
-    letter-spacing:1.7px;
-
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:1.5px;
     text-transform:uppercase;
 }
-
-.section-head::after{
-
+.section-label::after{
     content:"";
-
     height:1px;
-
     flex:1;
-
-    background:
-        rgba(255,255,255,.07);
+    background:rgba(255,255,255,.07);
 }
-
-
-/* =========================
-   SERVER LIST
-========================= */
-
 .server-list{
-
-    display:flex;
-
-    flex-direction:column;
-
+    width:100%;
+    display:grid;
+    grid-template-columns:1fr;
     gap:10px;
 }
-
-
-/* =========================
-   SERVER CARD
-========================= */
-
 .server-card{
-
     width:100%;
-
-    min-height:64px;
-
+    height:57px;
     display:flex;
-
     align-items:center;
-
-    padding:
-        0 13px;
-
+    padding:0 12px;
     position:relative;
-
     color:#fff;
-
     text-decoration:none;
-
-    border-radius:15px;
-
-    border:
-        1px solid rgba(255,255,255,.07);
-
-    background:
-        linear-gradient(
-            110deg,
-            rgba(255,255,255,.047),
-            rgba(255,255,255,.015)
-        );
-
-    transition:
-
-        transform .2s ease,
-        border-color .2s ease,
-        background .2s ease,
-        box-shadow .2s ease;
+    cursor:pointer;
+    border-radius:13px;
+    border:1px solid rgba(255,255,255,.075);
+    background:linear-gradient(105deg, rgba(255,255,255,.047), rgba(255,255,255,.015));
+    transition:transform .18s ease, border-color .18s ease;
 }
-
 .server-card:hover{
-
-    transform:
-        translateY(-2px);
-
-    border-color:
-        rgba(229,9,20,.38);
-
-    background:
-        linear-gradient(
-            110deg,
-            rgba(229,9,20,.08),
-            rgba(255,255,255,.02)
-        );
-
-    box-shadow:
-        0 12px 35px rgba(0,0,0,.25);
+    transform:translateY(-2px);
+    border-color:rgba(229,9,20,.34);
+    background:linear-gradient(105deg, rgba(229,9,20,.075), rgba(255,255,255,.02));
 }
-
-.server-card:active{
-    transform:scale(.987);
-}
-
-
-/* =========================
-   SERVER NUMBER
-========================= */
-
 .server-number{
-
-    width:36px;
-    height:36px;
-
-    min-width:36px;
-
+    width:27px;
+    height:27px;
+    min-width:27px;
     display:flex;
-
     align-items:center;
     justify-content:center;
-
-    border-radius:11px;
-
+    border-radius:8px;
+    background:#101010;
+    border:1px solid rgba(255,255,255,.075);
     color:#e50914;
-
-    background:#0e0e0e;
-
-    border:
-        1px solid rgba(255,255,255,.07);
-
     font-size:9px;
-
-    font-weight:950;
-
-    letter-spacing:.3px;
+    font-weight:900;
 }
-
-
-/* =========================
-   SERVER CONTENT
-========================= */
-
 .server-content{
-
     flex:1;
-
     min-width:0;
-
-    margin-left:13px;
-
+    margin-left:12px;
     text-align:left;
 }
-
 .server-name{
-
-    color:#ededed;
-
+    color:#e9e9e9;
     font-size:13.5px;
-
     font-weight:800;
-
     white-space:nowrap;
-
     overflow:hidden;
-
     text-overflow:ellipsis;
 }
-
 .server-desc{
-
-    margin-top:3px;
-
-    color:#5e5e5e;
-
-    font-size:9px;
-}
-
-
-/* =========================
-   SERVER ARROW
-========================= */
-
-.server-arrow{
-
-    width:31px;
-    height:31px;
-
-    min-width:31px;
-
-    display:flex;
-
-    align-items:center;
-    justify-content:center;
-
-    margin-left:10px;
-
-    border-radius:9px;
-
+    margin-top:2px;
     color:#666;
-
-    background:
-        rgba(255,255,255,.035);
-
-    transition:
-        background .2s ease,
-        color .2s ease,
-        transform .2s ease;
+    font-size:9.5px;
 }
-
-.server-card:hover .server-arrow{
-
-    color:#fff;
-
-    background:#e50914;
-
-    transform:
-        translateX(2px);
-}
-
-
-/* =========================
-   LOADING
-========================= */
-
 .loading-msg{
-
-    padding:
-        50px 15px;
-
     text-align:center;
-
-    color:#777;
-
-    font-size:12px;
+    padding:40px 0;
+    color:#888;
+    font-size:13px;
 }
-
 .spinner{
-
-    width:31px;
-    height:31px;
-
-    margin:
-        0 auto 13px;
-
-    border:
-        3px solid rgba(255,255,255,.08);
-
+    width:32px;
+    height:32px;
+    margin:0 auto 10px;
+    border:3px solid rgba(255,255,255,.1);
     border-top-color:#e50914;
-
     border-radius:50%;
-
-    animation:
-        spin .7s linear infinite;
+    animation:spin .7s linear infinite;
 }
-
-@keyframes spin{
-
-    to{
-        transform:rotate(360deg);
-    }
-
-}
-
-
-/* =========================
-   ERROR
-========================= */
-
-.message-box{
-
-    padding:
-        35px 20px;
-
-    text-align:center;
-
-    color:#777;
-
-    font-size:12px;
-
-    border:
-        1px solid rgba(255,255,255,.06);
-
-    border-radius:15px;
-
-    background:
-        rgba(255,255,255,.018);
-}
-
-
-/* =========================
-   MOBILE
-========================= */
-
-@media(max-width:600px){
-
-    .navbar{
-        height:58px;
-    }
-
-    .logo{
-        font-size:20px;
-    }
-
-    .page{
-
-        width:92%;
-
-        padding:
-            42px 0 60px;
-    }
-
-    .movie-header{
-        margin-bottom:25px;
-    }
-
-    .movie-title{
-        font-size:26px;
-    }
-
-    .server-card{
-
-        min-height:62px;
-
-        padding:
-            0 11px;
-
-        border-radius:14px;
-    }
-
-    .server-number{
-
-        width:34px;
-        height:34px;
-
-        min-width:34px;
-    }
-
-}
-
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
-
 </head>
-
-
 <body>
 
-
 <nav class="navbar">
-
-    <a
-        href="/zozomovie.github.io"
-        class="logo"
-    >
-        CINE<span>FLIX</span>
-    </a>
-
+    <a href="/zozomovie.github.io" class="logo">CINE<span>FLIX</span></a>
 </nav>
 
-
 <main class="page">
-
-
-    <section class="movie-header">
-
-        <div class="eyebrow">
-
-            <span class="eyebrow-dot"></span>
-
-            Download
-
-        </div>
-
-
-        <h1
-            class="movie-title"
-            id="movieTitle"
-        >
-            Loading Movie...
-        </h1>
-
-
+    <div class="movie-header">
+        <h1 class="movie-title" id="movieTitle">Loading Movie...</h1>
         <div class="file-info">
-
-            <span
-                class="file-quality"
-                id="qualityText"
-            >
-                Selected Quality
-            </span>
-
-            <span class="separator">
-                •
-            </span>
-
-            <span>
-                Direct Mirror Servers
-            </span>
-
+            <span class="file-quality" id="qualityText">Selected Quality</span>
+            <span class="separator">•</span>
+            <span>Direct Mirror Servers</span>
         </div>
-
-    </section>
-
-
-    <div class="section-head">
-
-        Choose Download Server
-
     </div>
 
+    <div class="section-label">Choose Download Server</div>
 
-    <div
-        class="server-list"
-        id="serverContainer"
-    >
-
+    <div class="server-list" id="serverContainer">
         <div class="loading-msg">
-
             <div class="spinner"></div>
-
-            Fetching servers...
-
+            Fetching servers from database...
         </div>
-
     </div>
-
-
 </main>
 
-
-
 <script>
+const params = new URLSearchParams(window.location.search);
 
-/* ==========================================
-   SUPABASE
-========================================== */
+let movieId =
+    params.get("id") ||
+    sessionStorage.getItem("active_movie_id");
+
+let qIndex =
+    parseInt(
+        params.get("q_index") ||
+        sessionStorage.getItem("active_q_index") ||
+        "0",
+        10
+    );
+
+let movieTitle =
+    params.get("title") ||
+    sessionStorage.getItem("active_movie_title") ||
+    "Movie Download";
+
+let qualityName =
+    params.get("quality") ||
+    sessionStorage.getItem("active_quality_name") ||
+    "HD Quality";
+
+let randomRef =
+    params.get("ref") ||
+    sessionStorage.getItem("active_server_ref") ||
+    "v8x9a2k1m4z0p";
+
+if (movieId) {
+    sessionStorage.setItem("active_movie_id", movieId);
+    sessionStorage.setItem("last_active_page", "server");
+}
+
+
+/* Direct URL access enabled.
+   No sessionStorage authorization check here. */
+
+(function protectAndMaskServerPage() {
+
+    if (!movieId) {
+        return;
+    }
+
+    if (window.history.replaceState && randomRef) {
+
+        const customServerUrl =
+            window.location.protocol +
+            "//" +
+            window.location.host +
+            '/server.html/' +
+            randomRef +
+            '_h';
+
+        window.history.replaceState(
+            { path: customServerUrl },
+            '',
+            customServerUrl
+        );
+    }
+
+})();
+
+
+document.getElementById("movieTitle").textContent = movieTitle;
+document.getElementById("qualityText").textContent = qualityName;
+
+function esc(s){
+    return String(s||"").replace(
+        /[&<>"']/g,
+        c => ({
+            '&':'&amp;',
+            '<':'&lt;',
+            '>':'&gt;',
+            '"':'&quot;',
+            "'":'&#039;'
+        }[c])
+    );
+}
 
 const SUPABASE_URL =
     "https://bbqaagbypawcpszjwzii.supabase.co";
@@ -673,579 +285,105 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
     "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 
-
 const supabaseClient =
     window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_KEY
     );
 
-
-/* ==========================================
-   URL DECODER
-========================================== */
-
-function decodeData(value){
-
-    try{
-
-        let base64 =
-            value
-                .replace(/-/g,"+")
-                .replace(/_/g,"/");
-
-
-        while(
-            base64.length % 4
-        ){
-            base64 += "=";
-        }
-
-
-        return JSON.parse(
-
-            decodeURIComponent(
-
-                escape(
-                    atob(base64)
-                )
-
-            )
-
-        );
-
-    }catch(error){
-
-        return null;
-
-    }
-
-}
-
-
-/* ==========================================
-   QUERY PARAMETERS
-========================================== */
-
-const params =
-    new URLSearchParams(
-        window.location.search
-    );
-
-
-let movieId =
-    params.get("id") || null;
-
-
-let qIndex =
-    parseInt(
-        params.get("q_index") ||
-        "0",
-        10
-    );
-
-
-let randomRef =
-    params.get("ref") || null;
-
-
-/* ==========================================
-   DIRECT MASKED SERVER URL
-==========================================
-
-Example:
-
-/server.html/ENCODED_TOKEN_RANDOM_h
-
-========================================== */
-
-if(!movieId){
-
-    const path =
-        window.location.pathname;
-
-    const marker =
-        "/server.html/";
-
-    const pos =
-        path.indexOf(marker);
-
-
-    if(pos !== -1){
-
-        let value =
-            path.substring(
-                pos + marker.length
-            );
-
-
-        value =
-            value.replace(
-                /_h$/,
-                ""
-            );
-
-
-        const separator =
-            value.indexOf("_");
-
-
-        let token =
-            value;
-
-
-        if(separator !== -1){
-
-            token =
-                value.substring(
-                    0,
-                    separator
-                );
-
-            randomRef =
-                value.substring(
-                    separator + 1
-                );
-
-        }
-
-
-        const decoded =
-            decodeData(token);
-
-
-        if(decoded){
-
-            movieId =
-                decoded.i || null;
-
-            qIndex =
-                Number(
-                    decoded.q || 0
-                );
-
-        }
-
-    }
-
-}
-
-
-/* ==========================================
-   SESSION
-   NOT REQUIRED FOR ACCESS
-========================================== */
-
-if(movieId){
-
-    sessionStorage.setItem(
-        "active_movie_id",
-        movieId
-    );
-
-    sessionStorage.setItem(
-        "active_q_index",
-        qIndex
-    );
-
-    sessionStorage.setItem(
-        "last_active_page",
-        "server"
-    );
-
-}
-
-
-/* ==========================================
-   HTML ESCAPE
-========================================== */
-
-function escapeHtml(value){
-
-    return String(value || "")
-        .replace(
-            /[&<>"']/g,
-            function(char){
-
-                return {
-
-                    "&":"&amp;",
-                    "<":"&lt;",
-                    ">":"&gt;",
-                    '"':"&quot;",
-                    "'":"&#039;"
-
-                }[char];
-
-            }
-        );
-
-}
-
-
-/* ==========================================
-   LOAD SERVER DATA
-========================================== */
-
-async function loadServers(){
+async function loadServersFromSupabase() {
 
     const container =
-        document.getElementById(
-            "serverContainer"
-        );
+        document.getElementById("serverContainer");
 
-
-    const titleElement =
-        document.getElementById(
-            "movieTitle"
-        );
-
-
-    const qualityElement =
-        document.getElementById(
-            "qualityText"
-        );
-
-
-    if(!movieId){
-
-        container.innerHTML = `
-            <div class="message-box">
-                Movie ID missing.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    try{
-
-        const {
-            data,
-            error
-        } = await supabaseClient
-
-            .from("movies")
-
-            .select(
-                "title, qualities_data"
-            )
-
-            .eq(
-                "id",
-                movieId
-            )
-
-            .single();
-
-
-        if(
-            error ||
-            !data
-        ){
-
-            throw new Error(
-                "Movie not found."
-            );
-
-        }
-
-
-        const movieTitle =
-            data.title ||
-            "Movie Download";
-
-
-        titleElement.textContent =
-            movieTitle;
-
-
-        const qualities =
-            Array.isArray(
-                data.qualities_data
-            )
-                ? data.qualities_data
-                : [];
-
-
-        const selectedQuality =
-            qualities[qIndex];
-
-
-        if(!selectedQuality){
-
-            qualityElement.textContent =
-                "Quality unavailable";
-
-            container.innerHTML = `
-                <div class="message-box">
-                    Selected quality was not found.
-                </div>
-            `;
-
-            return;
-
-        }
-
-
-        const qualityName =
-            selectedQuality.quality_name ||
-            "HD Quality";
-
-
-        qualityElement.textContent =
-            qualityName;
-
-
-        const servers =
-            Array.isArray(
-                selectedQuality.servers
-            )
-                ? selectedQuality.servers
-                : [];
-
-
-        if(!servers.length){
-
-            container.innerHTML = `
-                <div class="message-box">
-                    No servers available.
-                </div>
-            `;
-
-            return;
-
-        }
-
+    if (!movieId) {
 
         container.innerHTML =
-            servers.map(
-                (server,index) => {
+            `<div class="loading-msg">
+                Movie ID missing.
+            </div>`;
 
-                    const number =
-                        String(index + 1)
-                            .padStart(
-                                2,
-                                "0"
-                            );
-
-
-                    const serverName =
-                        server.server_name ||
-                        `Server ${index + 1}`;
-
-
-                    const serverUrl =
-                        server.url || "#";
-
-
-                    return `
-
-                        <a
-                            href="${escapeHtml(serverUrl)}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="server-card"
-                        >
-
-                            <div
-                                class="server-number"
-                            >
-                                ${number}
-                            </div>
-
-
-                            <div
-                                class="server-content"
-                            >
-
-                                <div
-                                    class="server-name"
-                                >
-                                    ${escapeHtml(
-                                        serverName
-                                    )}
-                                </div>
-
-
-                                <div
-                                    class="server-desc"
-                                >
-                                    High speed connection
-                                </div>
-
-                            </div>
-
-
-                            <div
-                                class="server-arrow"
-                            >
-                                →
-                            </div>
-
-                        </a>
-
-                    `;
-
-                }
-            )
-            .join("");
-
-
-    }catch(error){
-
-        console.error(error);
-
-
-        container.innerHTML = `
-            <div class="message-box">
-                Error loading servers.
-            </div>
-        `;
-
-    }
-
-}
-
-
-/* ==========================================
-   CREATE DIRECT-ACCESS URL
-========================================== */
-
-function createServerToken(){
-
-    return btoa(
-
-        unescape(
-
-            encodeURIComponent(
-
-                JSON.stringify({
-
-                    i:movieId,
-
-                    q:qIndex
-
-                })
-
-            )
-
-        )
-
-    )
-
-    .replace(/\+/g,"-")
-    .replace(/\//g,"_")
-    .replace(/=+$/,"");
-
-}
-
-
-/* ==========================================
-   MASK SERVER URL
-========================================== */
-
-function maskServerUrl(){
-
-    if(!movieId)
         return;
-
-
-    /*
-    If opened using query URL,
-    convert it to masked URL.
-    */
-
-    if(
-        params.get("id") ||
-        params.get("q_index")
-    ){
-
-        const token =
-            createServerToken();
-
-
-        const ref =
-            randomRef ||
-            generateRandomString(13);
-
-
-        const customUrl =
-            window.location.origin +
-            "/server.html/" +
-            token +
-            "_" +
-            ref +
-            "_h";
-
-
-        window.history.replaceState(
-
-            {
-                path:customUrl
-            },
-
-            "",
-
-            customUrl
-
-        );
-
     }
 
-}
+    try {
 
+        const { data, error } =
+            await supabaseClient
+                .from("movies")
+                .select("qualities_data")
+                .eq("id", movieId)
+                .single();
 
-/* ==========================================
-   RANDOM STRING
-========================================== */
-
-function generateRandomString(
-    length=13
-){
-
-    const chars =
-        "abcdefghijklmnopqrstuvwxyz0123456789";
-
-
-    let result = "";
-
-
-    for(
-        let i=0;
-        i<length;
-        i++
-    ){
-
-        result +=
-            chars.charAt(
-                Math.floor(
-                    Math.random() *
-                    chars.length
-                )
+        if (
+            error ||
+            !data ||
+            !data.qualities_data
+        ) {
+            throw new Error(
+                "Servers data not found."
             );
+        }
 
+        const selectedQualityObj =
+            data.qualities_data[qIndex];
+
+        const servers =
+            selectedQualityObj?.servers || [];
+
+        if (servers.length === 0) {
+
+            container.innerHTML =
+                `<div class="loading-msg">
+                    No servers available.
+                </div>`;
+
+            return;
+        }
+
+        container.innerHTML =
+            servers.map((srv, idx) => {
+
+                const num =
+                    (idx + 1)
+                    .toString()
+                    .padStart(2, '0');
+
+                return `
+                    <a
+                        href="${esc(srv.url)}"
+                        target="_blank"
+                        class="server-card"
+                    >
+                        <div class="server-number">
+                            ${num}
+                        </div>
+
+                        <div class="server-content">
+                            <div class="server-name">
+                                ${esc(srv.server_name)}
+                            </div>
+
+                            <div class="server-desc">
+                                High speed connection
+                            </div>
+                        </div>
+                    </a>
+                `;
+
+            }).join("");
+
+    } catch (err) {
+
+        container.innerHTML =
+            `<div class="loading-msg">
+                Error loading servers:
+                ${esc(err.message)}
+            </div>`;
     }
-
-
-    return result;
-
 }
 
-
-/* ==========================================
-   START
-========================================== */
-
-loadServers();
-
-
-setTimeout(
-    maskServerUrl,
-    150
-);
+loadServersFromSupabase();
 
 </script>
 
