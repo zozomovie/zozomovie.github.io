@@ -49,7 +49,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .backdrop{
     position:absolute;
     z-index:0;
-    top:72px;
+    top:64px;
     left:0;
     width:100%;
     height:min(748px,78vw);
@@ -99,7 +99,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     top:0;
     left:0;
     width:100%;
-    height:72px;
+    height:64px;
     z-index:1000;
     display:flex;
     align-items:center;
@@ -868,6 +868,101 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     }
 }
 
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer{
+    border-top:1px solid rgba(255,255,255,.10);
+    margin-top:70px;
+    padding:42px 5% 48px;
+    color:#8f8f96;
+    background:
+        linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,0)),
+        #09090b;
+}
+
+.footer > *{
+    max-width:1180px;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.footer-logo{
+    font-weight:900;
+    color:#f1f1f3;
+    font-size:20px;
+    letter-spacing:-.6px;
+    margin-bottom:12px;
+}
+
+.footer p{
+    font-size:12px;
+    line-height:1.7;
+    max-width:600px;
+}
+
+.footer-links{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:22px;
+}
+
+.footer-links a{
+    color:#d9d9de;
+    text-decoration:none;
+    font-size:12px;
+    font-weight:700;
+    padding:10px 14px;
+    border:1px solid rgba(255,255,255,.13);
+    border-radius:10px;
+    background:rgba(255,255,255,.045);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+    transition:transform .2s ease,border-color .2s ease,background .2s ease,color .2s ease;
+}
+
+.footer-links a:hover{
+    color:#fff;
+    border-color:rgba(229,9,20,.65);
+    background:rgba(229,9,20,.13);
+    transform:translateY(-2px);
+}
+
+@media(max-width:900px){
+    .footer{
+        margin-top:55px;
+        padding:36px 4% 42px;
+    }
+}
+
+@media(max-width:600px){
+    .footer{
+        margin-top:42px;
+        padding:32px 15px 34px;
+    }
+
+    .footer-logo{
+        font-size:18px;
+    }
+
+    .footer p{
+        font-size:11px;
+        line-height:1.65;
+    }
+
+    .footer-links{
+        gap:8px;
+        margin-top:18px;
+    }
+
+    .footer-links a{
+        font-size:11px;
+        padding:9px 11px;
+        border-radius:9px;
+    }
+}
+
 /* =========================
    LOADING / ERROR
 ========================= */
@@ -935,7 +1030,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 }
 .skeleton-header{
     position:relative;z-index:2;
-    height:72px;display:flex;align-items:center;
+    height:64px;display:flex;align-items:center;
     padding:0 4%;gap:14px;
 }
 .skeleton-logo{width:148px;height:30px;border-radius:8px}
@@ -1289,6 +1384,22 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
                     <div class="skel skeleton-clips"></div>
                 </section>
             </main>
+
+                <footer class="footer">
+                    <div class="footer-logo">CINEFLIX</div>
+                    <p>
+                        Discover movies, series and stories worth watching.
+                        A premium cinematic streaming experience designed for
+                        every screen.
+                    </p>
+                    <div class="footer-links">
+                        <a href="https://zozomovie.github.io/#">About</a>
+                        <a href="https://zozomovie.github.io/#">Privacy</a>
+                        <a href="https://zozomovie.github.io/#">Terms</a>
+                        <a href="https://zozomovie.github.io/#">Help Center</a>
+                        <a href="https://zozomovie.github.io/#">Contact</a>
+                    </div>
+                </footer>
         </div>
     </div>
 </div>
@@ -2006,16 +2117,7 @@ function render(movie,tmdb,similar){
                             <path d="m20 20-4-4"/>
                         </svg>
                     </button>
-
-                    <button class="icon-btn" id="headerNotificationBtn" aria-label="Notifications">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
-                            <path d="M10 21h4"/>
-                        </svg>
-                    </button>
-
-                    <div class="profile">S</div>
-                </div>
+</div>
             </header>
 
             <div class="player-overlay" id="playerOverlay" aria-hidden="true">
@@ -2173,6 +2275,22 @@ function render(movie,tmdb,similar){
                 </section>` : ""}
 
             </main>
+
+                <footer class="footer">
+                    <div class="footer-logo">CINEFLIX</div>
+                    <p>
+                        Discover movies, series and stories worth watching.
+                        A premium cinematic streaming experience designed for
+                        every screen.
+                    </p>
+                    <div class="footer-links">
+                        <a href="https://zozomovie.github.io/#">About</a>
+                        <a href="https://zozomovie.github.io/#">Privacy</a>
+                        <a href="https://zozomovie.github.io/#">Terms</a>
+                        <a href="https://zozomovie.github.io/#">Help Center</a>
+                        <a href="https://zozomovie.github.io/#">Contact</a>
+                    </div>
+                </footer>
         </div>
     `;
 
@@ -2573,11 +2691,7 @@ function showSkeleton(){
                         <button class="icon-btn" aria-label="Search">
                             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
                         </button>
-                        <button class="icon-btn" aria-label="Notifications">
-                            <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-                        </button>
-                        <div class="profile">S</div>
-                    </div>
+</div>
                 </header>
                 <main class="skeleton-content">
                     <section class="skeleton-hero">
