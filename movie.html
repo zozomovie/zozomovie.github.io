@@ -886,13 +886,23 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
+
+/* Real header stays visible while the content skeleton loads. */
+.skeleton-real-header{
+    z-index:1001;
+}
+.skeleton-real-header .logo,
+.skeleton-real-header .icon-btn{
+    pointer-events:none;
+}
+
 /* =========================
    REAL PAGE SKELETON
 ========================= */
 .skeleton-page{
     position:relative;
     min-height:100vh;
-    overflow:hidden;
+    overflow:visible;
     background:#02070d;
 }
 .skel{
@@ -923,7 +933,6 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     content:"";position:absolute;inset:0;
     background:linear-gradient(180deg,rgba(2,7,13,.05),rgba(2,7,13,.18) 45%,#02070d 100%);
 }
-.skeleton-real-header{position:fixed!important;z-index:1001!important}
 .skeleton-header{
     position:relative;z-index:2;
     height:72px;display:flex;align-items:center;
@@ -944,7 +953,7 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     padding-bottom:55px;
 }
 .skeleton-hero{max-width:690px}
-.skeleton-title{width:auto;min-height:45px;border-radius:10px;margin-bottom:13px}.skeleton-title.actual-title{background:none!important;animation:none!important;overflow:visible;color:#fff;font-size:clamp(30px,4vw,48px);font-weight:900;line-height:1.08;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 4px 20px rgba(0,0,0,.45)}.skeleton-title.actual-title:after{display:none}
+.skeleton-title{width:62%;height:45px;border-radius:10px;margin-bottom:13px}
 .skeleton-subtitle{width:28%;height:9px;border-radius:8px;margin-bottom:17px}
 .skeleton-meta{display:flex;gap:9px;align-items:center;margin-bottom:16px}
 .skeleton-meta span{width:48px;height:12px;border-radius:8px}.skeleton-meta span:nth-child(2){width:38px}.skeleton-meta span:nth-child(3){width:105px}.skeleton-meta span:nth-child(4){width:65px}
@@ -953,12 +962,11 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .skeleton-button{width:150px;height:46px;border-radius:25px}.skeleton-button.small{width:48px}
 .skeleton-info{border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(10,24,37,.65);overflow:hidden}
 .skeleton-info-head{height:58px;padding:0 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.07)}
-.skeleton-info-head .info-static-icon{width:22px;height:22px;display:grid;place-items:center;color:#dbe7f5;flex:0 0 22px}.skeleton-info-head .info-static-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}.skeleton-info-head strong{font-size:16px;color:#eef3f8}.skeleton-info-item .info-static-icon{display:grid;place-items:center;color:#dbe7f5}.skeleton-info-item .info-static-icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.8}
 .skeleton-info-head .skel:first-child{width:22px;height:22px;border-radius:50%}.skeleton-info-head .skel:last-child{width:150px;height:16px;border-radius:8px}
 .skeleton-info-grid{display:grid;grid-template-columns:repeat(2,1fr)}
 .skeleton-info-item{height:92px;padding:20px;display:flex;gap:12px;border-top:1px solid rgba(255,255,255,.055)}
 .skeleton-info-item:nth-child(odd){border-right:1px solid rgba(255,255,255,.055)}
-.skeleton-info-icon{width:28px;height:28px;border-radius:8px;flex:0 0 28px}.skeleton-info-lines{flex:1}.skeleton-info-label{font-size:12px;color:#aeb9c7;margin-bottom:7px}.skeleton-info-lines i{display:block;height:10px;border-radius:6px;margin-bottom:10px}.skeleton-info-lines i:first-child{width:130px}.skeleton-info-lines i:last-child{width:0;height:0;margin:0}
+.skeleton-info-icon{width:28px;height:28px;border-radius:8px;flex:0 0 28px}.skeleton-info-lines{flex:1}.skeleton-info-lines i{display:block;height:9px;border-radius:6px;margin-bottom:10px}.skeleton-info-lines i:first-child{width:75px}.skeleton-info-lines i:last-child{width:130px}
 .skeleton-section{margin-top:28px}
 .skeleton-section-head{display:flex;align-items:center;justify-content:space-between;margin:0 5px 13px}
 .skeleton-heading{width:145px;height:22px;border-radius:8px}.skeleton-side{width:52px;height:12px;border-radius:7px}
@@ -975,18 +983,18 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     .skeleton-nav{display:none}
     .skeleton-search{width:34px}
     .skeleton-content{width:calc(100% - 28px);padding-top:120px}
-    .skeleton-title{min-height:35px}.skeleton-title.actual-title{font-size:28px;max-width:92%}
+    .skeleton-title{width:78%;height:35px}
     .skeleton-subtitle{width:35%;height:8px}
     .skeleton-description{width:100%;height:55px}
     .skeleton-actions{margin-bottom:18px}
     .skeleton-info{border-radius:14px}
-    .skeleton-info-head{height:43px;padding:0 12px}.skeleton-info-head strong{font-size:13px}.skeleton-info-head .info-static-icon{width:20px;height:20px;flex-basis:20px}.skeleton-info-head .info-static-icon svg{width:20px;height:20px}.skeleton-info-grid{grid-template-columns:repeat(2,1fr)}
+    .skeleton-info-head{height:43px;padding:0 12px}.skeleton-info-grid{grid-template-columns:repeat(2,1fr)}
     .skeleton-info-item{height:75px;padding:12px 9px;gap:8px}.skeleton-info-icon{width:20px;height:20px;flex-basis:20px}.skeleton-info-lines i:first-child{width:55px}.skeleton-info-lines i:last-child{width:90px}
     .skeleton-section{margin-top:18px}.skeleton-heading{width:125px;height:19px}.skeleton-cast{gap:17px}.skeleton-person{flex-basis:82px}.skeleton-photo{width:72px;height:72px}.skeleton-download{height:52px;border-radius:13px}.skeleton-clips{height:176px;border-radius:14px}
 }
 @media(max-width:600px){
     .skeleton-content{width:calc(100% - 28px);padding-top:120px}
-    .skeleton-title{min-height:31px}.skeleton-title.actual-title{font-size:25px}.skeleton-subtitle{width:32%}
+    .skeleton-title{width:72%;height:31px}.skeleton-subtitle{width:32%}
     .skeleton-meta span{height:9px}.skeleton-meta span:nth-child(3){width:80px}.skeleton-meta span:nth-child(4){width:48px}
     .skeleton-description{height:52px}.skeleton-button{height:48px;flex:1;width:auto}.skeleton-button.small{flex:0 0 48px}
 }
@@ -2463,33 +2471,12 @@ function initInteractions(movie,clips,similar,tmdb){
         }
     });
 
-    /* Cast slider */
+    /* Cast slider
+       Native horizontal scrolling is used so vertical swipes continue
+       scrolling the whole movie page normally on mobile. */
     const castRow = document.querySelector(".cast-row");
     if(castRow){
-        let dragging = false;
-        let startX = 0;
-        let startScroll = 0;
-
-        castRow.addEventListener("pointerdown",(e)=>{
-            if(e.pointerType === "mouse"){
-                dragging = true;
-                startX = e.clientX;
-                startScroll = castRow.scrollLeft;
-                castRow.setPointerCapture?.(e.pointerId);
-            }
-        });
-
-        castRow.addEventListener("pointermove",(e)=>{
-            if(!dragging) return;
-            castRow.scrollLeft = startScroll - (e.clientX - startX);
-        });
-
-        const stopCastDrag = ()=>{
-            dragging = false;
-        };
-        castRow.addEventListener("pointerup",stopCastDrag);
-        castRow.addEventListener("pointercancel",stopCastDrag);
-        castRow.addEventListener("lostpointercapture",stopCastDrag);
+        castRow.style.touchAction = "pan-x pan-y";
     }
 
     /* Similar */
@@ -2530,9 +2517,7 @@ async function loadMovie(){
         if(error) throw error;
         if(!data) throw new Error("Movie not found");
 
-        // Keep the skeleton visible, but immediately hydrate it with the clicked movie's
-        // Supabase title/backdrop and the fixed Movie Information card structure.
-        showSkeleton(data);
+        render(data,null,[]);
 
         const tmdbPromise = fetchTMDB(data);
         const similarPromise = (async()=>{
@@ -2562,84 +2547,58 @@ async function loadMovie(){
     }
 }
 
-function showSkeleton(movie=null){
-    const title = movie ? first(movie.title,movie.name,movie.original_title,movie.original_name,"Movie") : "";
-    const backdrop = movie ? getBackdrop(movie,null) : "";
-    const infoLabels = [
-        ["Release Date",icons.calendar],
-        ["Type",icons.globe],
-        ["Category",icons.tag],
-        ["Runtime",icons.clock],
-        ["Language",icons.globe],
-        ["Audio",icons.audio],
-        ["Quality",icons.hd],
-        ["Subtitles",icons.subtitles]
-    ];
-
+function showSkeleton(){
     app.innerHTML = `
-        <div class="skeleton-page" aria-hidden="true">
-            <div class="skeleton-backdrop" style="${backdrop ? `background-image:linear-gradient(180deg,rgba(2,7,13,.08),rgba(2,7,13,.18) 45%,#02070d 100%),url('${esc(backdrop)}');background-size:cover;background-position:center top;` : ""}"></div>
-
-            <!-- Real header: never skeletonized. -->
-            <header class="header" id="loadingHeader">
-                <a href="index.html" class="logo" aria-label="CINEFLIX Home">
-                    <span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M7 3v18l14-9L7 3z"/></svg></span>
-                    CINEFLIX
-                </a>
-                <nav class="nav">
-                    <a href="index.html" class="active">Home</a>
-                    <a href="index.html#movies">Movies</a>
-                    <a href="index.html#series">Series</a>
-                    <a href="index.html#trending">Trending</a>
-                    <a href="index.html#genres">Genres</a>
-                </nav>
-                <div class="header-right">
-                    <div class="search-box"></div>
-                    <button class="icon-btn" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
-                    <button class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></button>
-                    <div class="profile">S</div>
-                </div>
-            </header>
-
-            <main class="skeleton-content">
-                <section class="skeleton-hero">
-                    ${title ? `<div class="skeleton-title actual-title">${esc(title)}</div>` : `<div class="skel skeleton-title"></div>`}
-                    <div class="skel skeleton-subtitle"></div>
-                    <div class="skel skeleton-meta"><span></span><span></span><span></span><span></span></div>
-                    <div class="skel skeleton-description"></div>
-                    <div class="skeleton-actions"><div class="skel skeleton-button"></div><div class="skel skeleton-button small"></div></div>
-                </section>
-
-                <section class="skeleton-info">
-                    <div class="skeleton-info-head">
-                        <span class="info-static-icon">${icons.info}</span>
-                        <strong>Movie Information</strong>
-                        <span class="skeleton-side" style="margin-left:auto"></span>
+        <div class="loading">
+            <div class="skeleton-page" aria-hidden="true">
+                <div class="skeleton-backdrop"></div>
+                <header class="header skeleton-real-header" id="loadingHeader">
+                    <a href="index.html" class="logo" aria-label="CINEFLIX Home">
+                        <span class="logo-mark">
+                            <svg viewBox="0 0 24 24"><path d="M7 3v18l14-9L7 3z"/></svg>
+                        </span>
+                        CINEFLIX
+                    </a>
+                    <nav class="nav">
+                        <a href="index.html" class="active">Home</a>
+                        <a href="index.html#movies">Movies</a>
+                        <a href="index.html#series">Series</a>
+                        <a href="index.html#trending">Trending</a>
+                        <a href="index.html#genres">Genres</a>
+                    </nav>
+                    <div class="header-right">
+                        <div class="search-box" id="loadingHeaderSearchBox">
+                            <input type="text" placeholder="Search movies..." autocomplete="off">
+                        </div>
+                        <button class="icon-btn" aria-label="Search">
+                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                        </button>
+                        <button class="icon-btn" aria-label="Notifications">
+                            <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+                        </button>
+                        <div class="profile">S</div>
                     </div>
-                    <div class="skeleton-info-grid">
-                        ${infoLabels.map(([label,icon])=>`
-                            <div class="skeleton-info-item">
-                                <span class="skeleton-info-icon info-static-icon">${icon}</span>
-                                <div class="skeleton-info-lines">
-                                    <div class="skeleton-info-label">${label}</div>
-                                    <i class="skel"></i>
-                                </div>
-                            </div>`).join("")}
-                    </div>
-                </section>
-
-                <section class="skeleton-section">
-                    <div class="skeleton-section-head"><span class="skel skeleton-heading"></span><span class="skel skeleton-side"></span></div>
-                    <div class="skeleton-cast">${Array.from({length:5}).map(()=>`<div class="skeleton-person"><div class="skel skeleton-photo"></div><div class="skel skeleton-name"></div><div class="skel skeleton-role"></div></div>`).join("")}</div>
-                </section>
-                <div class="skel skeleton-download"></div><div class="skel skeleton-download-sub"></div>
-                <section class="skeleton-section"><div class="skeleton-section-head"><span class="skel skeleton-heading"></span><span class="skel skeleton-side"></span></div><div class="skel skeleton-clips"></div></section>
-            </main>
+                </header>
+                <main class="skeleton-content">
+                    <section class="skeleton-hero">
+                        <div class="skel skeleton-title"></div><div class="skel skeleton-subtitle"></div>
+                        <div class="skeleton-meta"><span class="skel"></span><span class="skel"></span><span class="skel"></span><span class="skel"></span></div>
+                        <div class="skel skeleton-description"></div>
+                        <div class="skeleton-actions"><div class="skel skeleton-button"></div><div class="skel skeleton-button small"></div></div>
+                    </section>
+                    <section class="skeleton-info"><div class="skeleton-info-head"><span class="skel"></span><span class="skel"></span></div>
+                        <div class="skeleton-info-grid">${Array.from({length:6}).map(()=>`<div class="skeleton-info-item"><span class="skel skeleton-info-icon"></span><div class="skeleton-info-lines"><i class="skel"></i><i class="skel"></i></div></div>`).join("")}</div>
+                    </section>
+                    <section class="skeleton-section"><div class="skeleton-section-head"><span class="skel skeleton-heading"></span><span class="skel skeleton-side"></span></div>
+                        <div class="skeleton-cast">${Array.from({length:5}).map(()=>`<div class="skeleton-person"><div class="skel skeleton-photo"></div><div class="skel skeleton-name"></div><div class="skel skeleton-role"></div></div>`).join("")}</div>
+                    </section>
+                    <div class="skel skeleton-download"></div><div class="skel skeleton-download-sub"></div>
+                    <section class="skeleton-section"><div class="skeleton-section-head"><span class="skel skeleton-heading"></span><span class="skel skeleton-side"></span></div><div class="skel skeleton-clips"></div></section>
+                </main>
+            </div>
         </div>`;
-
-    const loadingHeader = document.getElementById("loadingHeader");
-    if(loadingHeader) loadingHeader.classList.add("skeleton-real-header");
 }
+
 function showError(title,text){
     app.innerHTML = `
         <div class="loading">
