@@ -886,6 +886,16 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
+
+/* Real header stays visible while the content skeleton loads. */
+.skeleton-real-header{
+    z-index:1001;
+}
+.skeleton-real-header .logo,
+.skeleton-real-header .icon-btn{
+    pointer-events:none;
+}
+
 /* =========================
    REAL PAGE SKELETON
 ========================= */
@@ -2563,11 +2573,33 @@ function showSkeleton(){
         <div class="loading">
             <div class="skeleton-page" aria-hidden="true">
                 <div class="skeleton-backdrop"></div>
-                <div class="skeleton-header">
-                    <div class="skel skeleton-logo"></div>
-                    <div class="skeleton-nav"><span class="skel"></span><span class="skel"></span><span class="skel"></span><span class="skel"></span><span class="skel"></span></div>
-                    <div class="skeleton-right"><div class="skel skeleton-search"></div><div class="skel skeleton-circle"></div><div class="skel skeleton-circle"></div></div>
-                </div>
+                <header class="header skeleton-real-header" id="loadingHeader">
+                    <a href="index.html" class="logo" aria-label="CINEFLIX Home">
+                        <span class="logo-mark">
+                            <svg viewBox="0 0 24 24"><path d="M7 3v18l14-9L7 3z"/></svg>
+                        </span>
+                        CINEFLIX
+                    </a>
+                    <nav class="nav">
+                        <a href="index.html" class="active">Home</a>
+                        <a href="index.html#movies">Movies</a>
+                        <a href="index.html#series">Series</a>
+                        <a href="index.html#trending">Trending</a>
+                        <a href="index.html#genres">Genres</a>
+                    </nav>
+                    <div class="header-right">
+                        <div class="search-box" id="loadingHeaderSearchBox">
+                            <input type="text" placeholder="Search movies..." autocomplete="off">
+                        </div>
+                        <button class="icon-btn" aria-label="Search">
+                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                        </button>
+                        <button class="icon-btn" aria-label="Notifications">
+                            <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+                        </button>
+                        <div class="profile">S</div>
+                    </div>
+                </header>
                 <main class="skeleton-content">
                     <section class="skeleton-hero">
                         <div class="skel skeleton-title"></div><div class="skel skeleton-subtitle"></div>
