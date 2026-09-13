@@ -919,97 +919,195 @@ body{
 }
 
 /* =========================================================
-   FOOTER
+   CLEAN RESPONSIVE FOOTER
 ========================================================= */
-
 .footer{
-    border-top:1px solid rgba(255,255,255,.10);
-    margin-top:70px;
-    padding:34px 5% 4px;
-    color:#8f8f96;
+    width:100%;
+    margin-top:48px;
+    padding:34px 5% 8px;
+    border-top:1px solid rgba(255,255,255,.09);
     background:
         linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,0)),
         #09090b;
+    color:#8f8f96;
 }
 
-.footer > *{
-    max-width:1180px;
-    margin-left:auto;
-    margin-right:auto;
+.footer-inner{
+    width:min(1180px,100%);
+    margin:0 auto;
+}
+
+.footer-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:35px;
+}
+
+.footer-brand{
+    flex:1 1 360px;
 }
 
 .footer-logo{
-    font-weight:900;
-    color:#f1f1f3;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:#f5f5f7;
     font-size:20px;
-    letter-spacing:-.6px;
-    margin-bottom:12px;
+    font-weight:900;
+    letter-spacing:-.7px;
+    margin-bottom:10px;
+}
+
+.footer-logo-mark{
+    width:28px;
+    height:28px;
+    border-radius:7px;
+    background:#e50914;
+    display:grid;
+    place-items:center;
+    box-shadow:0 5px 18px rgba(229,9,20,.22);
+}
+
+.footer-logo-mark svg{
+    width:16px;
+    height:16px;
+    fill:#fff;
 }
 
 .footer p{
-    font-size:12px;
-    line-height:1.7;
-    max-width:600px;
+    max-width:560px;
+    margin:0;
+    color:#8d8d95;
+    font-size:11px;
+    line-height:1.65;
 }
 
 .footer-links{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-top:22px;
+    flex:0 1 650px;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:9px;
 }
 
 .footer-links a{
-    color:#d9d9de;
+    min-height:58px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:10px 9px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:11px;
+    background:rgba(255,255,255,.035);
+    color:#d8d8dd;
     text-decoration:none;
-    font-size:12px;
+    font-size:11px;
     font-weight:700;
-    padding:10px 14px;
-    border:1px solid rgba(255,255,255,.13);
-    border-radius:10px;
-    background:rgba(255,255,255,.045);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-    transition:transform .2s ease,border-color .2s ease,background .2s ease,color .2s ease;
+    white-space:nowrap;
+    transition:
+        transform .2s ease,
+        border-color .2s ease,
+        background .2s ease,
+        color .2s ease;
+}
+
+.footer-links a svg{
+    width:17px;
+    height:17px;
+    flex:0 0 17px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+}
+
+.footer-links a .copyright-icon{
+    fill:none;
 }
 
 .footer-links a:hover{
     color:#fff;
-    border-color:rgba(229,9,20,.65);
-    background:rgba(229,9,20,.13);
+    border-color:rgba(229,9,20,.58);
+    background:rgba(229,9,20,.10);
     transform:translateY(-2px);
 }
 
-@media(max-width:900px){
+.footer-bottom{
+    margin-top:20px;
+    padding-top:12px;
+    border-top:1px solid rgba(255,255,255,.055);
+    text-align:center;
+    color:#66666e;
+    font-size:9px;
+    line-height:1.5;
+}
+
+@media(max-width:1000px){
     .footer{
-        margin-top:55px;
-        padding:30px 4% 4px;
+        padding:30px 4% 7px;
+    }
+
+    .footer-top{
+        display:block;
+    }
+
+    .footer-brand{
+        margin-bottom:20px;
+    }
+
+    .footer p{
+        max-width:680px;
+    }
+
+    .footer-links{
+        width:100%;
+        grid-template-columns:repeat(5,minmax(0,1fr));
     }
 }
 
-@media(max-width:600px){
+@media(max-width:700px){
     .footer{
-        margin-top:42px;
-        padding:28px 15px 4px;
+        margin-top:38px;
+        padding:27px 15px 5px;
     }
 
     .footer-logo{
         font-size:18px;
     }
 
+    .footer-logo-mark{
+        width:26px;
+        height:26px;
+    }
+
     .footer p{
-        font-size:11px;
-        line-height:1.65;
+        font-size:10.5px;
     }
 
     .footer-links{
+        grid-template-columns:repeat(2,minmax(0,1fr));
         gap:8px;
-        margin-top:18px;
     }
 
     .footer-links a{
-        font-size:11px;
-        padding:9px 11px;
-        border-radius:9px;
+        min-height:52px;
+        font-size:10.5px;
+        border-radius:10px;
+    }
+
+    .footer-links a:last-child{
+        grid-column:1 / -1;
+        max-width:50%;
+        width:100%;
+        justify-self:center;
+    }
+
+    .footer-bottom{
+        margin-top:16px;
+        padding-top:10px;
+        font-size:8.5px;
     }
 }
 
@@ -1673,23 +1771,74 @@ body{
 ======================================================= -->
 
 <footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <span class="footer-logo-mark">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M7 3v18l14-9L7 3z"/>
+                        </svg>
+                    </span>
+                    CINEFLIX
+                </div>
+                <p>
+                    Discover movies, series and stories worth watching.
+                    A premium cinematic streaming experience designed for
+                    every screen.
+                </p>
+            </div>
 
-    <div class="footer-logo">CINEFLIX</div>
+            <div class="footer-links">
+                <a href="https://zozomovie.github.io/#" aria-label="About">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 10v6"/>
+                        <path d="M12 7h.01"/>
+                    </svg>
+                    <span>About</span>
+                </a>
 
-    <p>
-        Discover movies, series and stories worth watching.
-        A premium cinematic streaming experience designed for
-        every screen.
-    </p>
+                <a href="https://zozomovie.github.io/#" aria-label="Privacy">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3 20 6v5c0 5-3.2 8.2-8 10-4.8-1.8-8-5-8-10V6l8-3z"/>
+                        <path d="m9 12 2 2 4-4"/>
+                    </svg>
+                    <span>Privacy</span>
+                </a>
 
-    <div class="footer-links">
-        <a href="https://zozomovie.github.io/#">About</a>
-        <a href="https://zozomovie.github.io/#">Privacy</a>
-        <a href="https://zozomovie.github.io/#">Terms</a>
-        <a href="https://zozomovie.github.io/#">Help Center</a>
-        <a href="https://zozomovie.github.io/#">Contact</a>
+                <a href="https://zozomovie.github.io/#" aria-label="Terms">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 3h9l3 3v15H6z"/>
+                        <path d="M15 3v4h4"/>
+                        <path d="M9 12h6M9 16h5"/>
+                    </svg>
+                    <span>Terms</span>
+                </a>
+
+                <a href="https://zozomovie.github.io/#" aria-label="Disclaimer">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m12 3 10 18H2L12 3z"/>
+                        <path d="M12 9v5"/>
+                        <path d="M12 17h.01"/>
+                    </svg>
+                    <span>Disclaimer</span>
+                </a>
+
+                <a href="https://zozomovie.github.io/#" aria-label="Copyright">
+                    <svg class="copyright-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M15.5 9.5a4 4 0 1 0 0 5"/>
+                    </svg>
+                    <span>Copyright</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            © 2026 CINEFLIX. All rights reserved.
+        </div>
     </div>
-
 </footer>
 
 
