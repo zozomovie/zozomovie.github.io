@@ -172,22 +172,103 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     gap:18px;
 }
 .header .search-box{
+    position:relative;
     width:0;
     opacity:0;
-    overflow:hidden;
-    transition:.3s;
+    overflow:visible;
+    transition:width .28s ease,opacity .2s ease;
 }
-.header .search-box.open{width:210px;opacity:1}
+.header .search-box.open{width:315px;opacity:1}
 .header .search-box input{
     width:100%;
-    height:38px;
+    height:40px;
     border:1px solid rgba(255,255,255,.18);
-    background:rgba(0,0,0,.7);
+    background:linear-gradient(135deg,rgba(18,28,39,.97),rgba(5,12,18,.97));
     color:#fff;
     outline:none;
-    border-radius:8px;
-    padding:0 13px;
+    border-radius:12px;
+    padding:0 50px 0 14px;
     font-size:13px;
+    box-shadow:0 10px 35px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.04);
+}
+.header .search-box input:focus{
+    border-color:rgba(255,255,255,.34);
+    box-shadow:0 10px 35px rgba(0,0,0,.32),0 0 0 3px rgba(229,9,20,.10);
+}
+.header .search-submit{
+    position:absolute;
+    right:5px;
+    top:5px;
+    width:30px;
+    height:30px;
+    border:0;
+    border-radius:9px;
+    background:linear-gradient(135deg,#e50914,#ff3340);
+    color:#fff;
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+    box-shadow:0 5px 16px rgba(229,9,20,.24);
+}
+.header .search-submit svg{
+    width:16px;
+    height:16px;
+    stroke:currentColor;
+    fill:none;
+    stroke-width:2;
+}
+.header .search-suggestions{
+    position:absolute;
+    top:48px;
+    left:0;
+    width:100%;
+    max-height:390px;
+    overflow-y:auto;
+    padding:6px;
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:14px;
+    background:rgba(7,16,24,.98);
+    backdrop-filter:blur(18px);
+    box-shadow:0 18px 45px rgba(0,0,0,.5);
+    display:none;
+    z-index:1200;
+}
+.header .search-suggestions.show{display:block}
+.header .search-suggestion{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:7px;
+    border:0;
+    border-radius:10px;
+    background:transparent;
+    color:#fff;
+    text-align:left;
+    cursor:pointer;
+}
+.header .search-suggestion:hover{background:rgba(255,255,255,.08)}
+.header .search-suggestion img{
+    width:38px;
+    height:54px;
+    flex:0 0 38px;
+    object-fit:cover;
+    border-radius:6px;
+}
+.header .search-suggestion-info{min-width:0}
+.header .search-suggestion-title{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.header .search-suggestion-meta{
+    display:block;
+    margin-top:4px;
+    color:#8f9aaa;
+    font-size:10px;
 }
 .icon-btn{
     width:38px;
@@ -1050,6 +1131,9 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
         left:15px;
         right:15px;
         width:auto;
+    }
+    .header .search-suggestions{
+        top:48px;
     }
     .profile{width:32px;height:32px}
 
@@ -2183,10 +2267,14 @@ function render(movie,tmdb,similar){
 
                 <div class="header-right">
                     <div class="search-box" id="headerSearchBox">
-                        <input type="text" id="headerSearchInput" placeholder="Search movies..." autocomplete="off">
+                        <input type="text" id="headerSearchInput" placeholder="Search movies & series..." autocomplete="off">
+                        <button class="search-submit" id="headerSearchSubmit" aria-label="Search" type="button">
+                            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                        </button>
+                        <div class="search-suggestions" id="headerSearchSuggestions"></div>
                     </div>
 
-                    <button class="icon-btn" id="headerSearchBtn" aria-label="Search">
+                    <button class="icon-btn" id="headerSearchBtn" aria-label="Open search" type="button">
                         <svg viewBox="0 0 24 24">
                             <circle cx="11" cy="11" r="7"/>
                             <path d="m20 20-4-4"/>
@@ -2565,18 +2653,97 @@ function initInteractions(movie,clips,similar,tmdb){
     const searchBtn = document.getElementById("headerSearchBtn");
     const searchBox = document.getElementById("headerSearchBox");
     const searchInput = document.getElementById("headerSearchInput");
+    const searchSubmit = document.getElementById("headerSearchSubmit");
+    const searchSuggestions = document.getElementById("headerSearchSuggestions");
+    let searchTimer = null;
+
+    const searchIcon = `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`;
+    const closeIcon = `<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>`;
+
+    const closeMovieSearch = () => {
+        searchBox?.classList.remove("open");
+        if(searchBtn){
+            searchBtn.innerHTML=searchIcon;
+            searchBtn.setAttribute("aria-label","Open search");
+        }
+        if(searchInput) searchInput.value="";
+        searchSuggestions?.classList.remove("show");
+        if(searchSuggestions) searchSuggestions.innerHTML="";
+    };
+
+    const openMovieSearch = () => {
+        searchBox?.classList.add("open");
+        if(searchBtn){
+            searchBtn.innerHTML=closeIcon;
+            searchBtn.setAttribute("aria-label","Close search");
+        }
+        setTimeout(()=>searchInput?.focus(),80);
+    };
+
+    const goToSearch = (q) => {
+        q=String(q||"").trim();
+        if(q) location.href = `index.html?search=${encodeURIComponent(q)}`;
+    };
+
+    const renderMovieSearchSuggestions = (rows) => {
+        if(!searchSuggestions) return;
+        searchSuggestions.innerHTML="";
+        rows.slice(0,8).forEach(movie=>{
+            const b=document.createElement("button");
+            b.type="button";
+            b.className="search-suggestion";
+            b.innerHTML=`<img src="${movie.poster_url||""}" alt="${movie.title||""}"><span class="search-suggestion-info"><span class="search-suggestion-title">${movie.title||""}</span><span class="search-suggestion-meta">${movie.year||""}${movie.year&&movie.category?" • ":""}${movie.category||"Movie"}</span></span>`;
+            b.addEventListener("click",()=>goToSearch(movie.title));
+            searchSuggestions.appendChild(b);
+        });
+        searchSuggestions.classList.toggle("show",rows.length>0);
+    };
+
+    const loadMovieSearchSuggestions = async (q) => {
+        if(!q || !searchSuggestions) return;
+        try{
+            const {data,error}=await supabaseClient
+                .from("movies")
+                .select("id,title,year,poster_url,category")
+                .ilike("title",`%${q}%`)
+                .order("title",{ascending:true})
+                .limit(8);
+            if(error) throw error;
+            renderMovieSearchSuggestions(Array.isArray(data)?data:[]);
+        }catch(error){
+            console.error("CINEFLIX header search failed:",error);
+            searchSuggestions.classList.remove("show");
+        }
+    };
 
     searchBtn?.addEventListener("click",()=>{
-        searchBox?.classList.toggle("open");
-        if(searchBox?.classList.contains("open")){
-            setTimeout(()=>searchInput?.focus(),120);
+        if(searchBox?.classList.contains("open")) closeMovieSearch();
+        else openMovieSearch();
+    });
+
+    searchSubmit?.addEventListener("click",()=>goToSearch(searchInput?.value));
+
+    searchInput?.addEventListener("input",()=>{
+        clearTimeout(searchTimer);
+        const q=searchInput.value.trim();
+        if(!q){
+            searchSuggestions?.classList.remove("show");
+            return;
         }
+        searchTimer=setTimeout(()=>loadMovieSearchSuggestions(q),120);
     });
 
     searchInput?.addEventListener("keydown",(e)=>{
         if(e.key === "Enter"){
-            const q = searchInput.value.trim();
-            if(q) location.href = `index.html?search=${encodeURIComponent(q)}`;
+            e.preventDefault();
+            goToSearch(searchInput.value);
+        }
+        if(e.key === "Escape") closeMovieSearch();
+    });
+
+    document.addEventListener("click",e=>{
+        if(searchBox && !searchBox.contains(e.target) && !searchBtn?.contains(e.target)){
+            searchSuggestions?.classList.remove("show");
         }
     });
 
