@@ -2925,6 +2925,32 @@ window.addEventListener("DOMContentLoaded", () => {
         }, 3000);
     }
 });
+/* Reliable header search click fallback for dynamically updated layouts. */
+document.addEventListener("click", e=>{
+    const btn=e.target.closest("#searchBtn");
+    if(!btn) return;
+    const box=document.getElementById("searchBox");
+    const input=document.getElementById("searchInput");
+    if(!box) return;
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const open=box.classList.contains("open");
+    box.classList.toggle("open",!open);
+    btn.innerHTML=!open
+        ? '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+        : '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>';
+    btn.setAttribute("aria-label",!open ? "Close search" : "Open search");
+
+    if(!open){
+        requestAnimationFrame(()=>input?.focus());
+    }else{
+        if(input) input.value="";
+        document.getElementById("searchSuggestions")?.classList.remove("show");
+    }
+}, true);
+
 </script>
 </body>
 </html>
