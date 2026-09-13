@@ -1,4 +1,4 @@
-cinema<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
    <script>(function(s){s.dataset.zone='11727292',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
@@ -170,10 +170,21 @@ body{
     display:flex;
     align-items:center;
     gap:18px;
+    position:relative;
+    z-index:1002;
+}
+
+.icon-btn{
+    position:relative;
+    z-index:1003;
+    cursor:pointer;
+    pointer-events:auto;
+    flex:0 0 auto;
 }
 
  .search-box{
     position:relative;
+    z-index:1004;
     width:0;
     opacity:0;
     overflow:visible;
@@ -182,6 +193,7 @@ body{
 
 .search-box.open{
     width:315px;
+    z-index:1004;
     opacity:1;
 }
 
@@ -2667,9 +2679,9 @@ async function performSearch(rawQuery){
     searchResults.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
-searchBtn.addEventListener("click",()=>{
+searchBtn.onclick=()=>{
     setSearchOpen(!searchBox.classList.contains("open"));
-});
+};
 
 searchSubmit.addEventListener("click",()=>performSearch(searchInput.value));
 
