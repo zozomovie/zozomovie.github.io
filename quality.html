@@ -3,1024 +3,247 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>CINEFLIX — Select Quality</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-
 *{
     margin:0;
     padding:0;
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
 }
-
 html{
     min-height:100%;
     background:#050505;
 }
-
 body{
     min-height:100vh;
     color:#fff;
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
-
+    font-family:Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background:
-        radial-gradient(
-            ellipse 80% 45% at 50% -15%,
-            rgba(229,9,20,.16),
-            transparent 70%
-        ),
-        #050505;
+        radial-gradient(ellipse 90% 42% at 50% -12%, rgba(229,9,20,.17), transparent 65%),
+        linear-gradient(180deg, #080808 0%, #050505 100%);
 }
-
-
-/* =========================
-   NAVBAR
-========================= */
-
 .navbar{
-    height:64px;
     width:100%;
-
+    height:64px;
     display:flex;
     align-items:center;
-
-    padding:0 clamp(18px,5vw,65px);
-
+    justify-content:space-between;
+    padding:0 clamp(16px,5vw,60px);
     position:sticky;
     top:0;
-    z-index:100;
-
-    background:rgba(5,5,5,.78);
-
-    border-bottom:
-        1px solid rgba(255,255,255,.06);
-
-    backdrop-filter:blur(20px);
-    -webkit-backdrop-filter:blur(20px);
+    z-index:1000;
+    background:rgba(5,5,5,.84);
+    border-bottom:1px solid rgba(255,255,255,.055);
+    backdrop-filter:blur(18px);
 }
-
 .logo{
     color:#e50914;
     text-decoration:none;
-
-    font-size:23px;
-    font-weight:950;
-
-    letter-spacing:-1.3px;
+    font-size:25px;
+    font-weight:900;
+    letter-spacing:-1.2px;
 }
-
-
-/* =========================
-   PAGE
-========================= */
-
 .page{
-    width:min(680px,92%);
-
+    width:min(620px,92%);
     margin:0 auto;
-
-    padding:
-        58px 0 80px;
-}
-
-
-/* =========================
-   HEADER
-========================= */
-
-.page-header{
+    padding:30px 0 70px;
     text-align:center;
-
-    margin-bottom:32px;
 }
-
-.small-label{
-    display:inline-flex;
-    align-items:center;
-    gap:7px;
-
-    margin-bottom:12px;
-
-    color:#777;
-
-    font-size:10px;
-    font-weight:800;
-
-    letter-spacing:1.8px;
-    text-transform:uppercase;
-}
-
-.small-label::before{
-    content:"";
-
-    width:5px;
-    height:5px;
-
-    border-radius:50%;
-
-    background:#e50914;
-
-    box-shadow:
-        0 0 10px rgba(229,9,20,.7);
-}
-
 .movie-title{
+    margin:0 auto 7px;
     color:#fff;
-
-    font-size:
-        clamp(25px,5vw,36px);
-
-    line-height:1.15;
-
-    font-weight:850;
-
-    letter-spacing:-.7px;
-
-    word-break:break-word;
+    font-size:clamp(22px,5vw,32px);
+    font-weight:800;
+    line-height:1.2;
 }
-
 .subtitle{
-    margin-top:10px;
-
-    color:#686868;
-
+    margin-bottom:25px;
+    color:#777;
     font-size:12px;
 }
-
-
-/* =========================
-   QUALITY LIST
-========================= */
-
 .quality-list{
     display:flex;
     flex-direction:column;
-
-    gap:11px;
+    gap:10px;
 }
-
-
-/* =========================
-   QUALITY CARD
-========================= */
-
 .quality-button{
     width:100%;
-    min-height:68px;
-
+    min-height:64px;
     display:flex;
     align-items:center;
-
-    padding:0 17px;
-
-    border-radius:16px;
-
-    border:
-        1px solid rgba(255,255,255,.075);
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(255,255,255,.055),
-            rgba(255,255,255,.018)
-        );
-
+    padding:0 16px;
     color:#fff;
-
+    text-decoration:none;
+    border:1px solid rgba(255,255,255,.085);
+    border-radius:15px;
+    background:linear-gradient(135deg, rgba(255,255,255,.052), rgba(255,255,255,.018));
+    transition:transform .18s ease, border-color .2s ease, background .2s ease;
     cursor:pointer;
-
-    transition:
-        transform .2s ease,
-        border-color .2s ease,
-        background .2s ease,
-        box-shadow .2s ease;
 }
-
 .quality-button:hover{
     transform:translateY(-2px);
-
-    border-color:
-        rgba(229,9,20,.42);
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(229,9,20,.105),
-            rgba(255,255,255,.025)
-        );
-
-    box-shadow:
-        0 12px 35px rgba(0,0,0,.25);
+    border-color:rgba(229,9,20,.43);
+    background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(255,255,255,.025));
 }
-
-.quality-button:active{
-    transform:scale(.985);
-}
-
-
-/* LEFT ICON */
-
-.quality-icon{
-    width:38px;
-    height:38px;
-
-    flex:none;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    margin-right:13px;
-
-    border-radius:11px;
-
-    background:#101010;
-
-    border:
-        1px solid rgba(255,255,255,.075);
-
-    color:#e50914;
-
-    font-size:14px;
-    font-weight:900;
-}
-
-
-/* TEXT */
-
-.quality-content{
-    flex:1;
-
-    min-width:0;
-
-    text-align:left;
-}
-
 .quality-name{
-    color:#f2f2f2;
-
-    font-size:14px;
-    font-weight:800;
-
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+    flex:1;
+    text-align:left;
+    font-size:15px;
+    font-weight:700;
 }
-
-.quality-desc{
-    margin-top:3px;
-
-    color:#626262;
-
-    font-size:9.5px;
-}
-
-
-/* ARROW */
-
-.quality-arrow{
-    width:31px;
-    height:31px;
-
-    flex:none;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    border-radius:9px;
-
-    color:#777;
-
-    background:rgba(255,255,255,.035);
-
-    font-size:14px;
-
-    transition:
-        color .2s ease,
-        background .2s ease,
-        transform .2s ease;
-}
-
-.quality-button:hover .quality-arrow{
-    color:#fff;
-
-    background:#e50914;
-
-    transform:translateX(2px);
-}
-
-
-/* =========================
-   LOADER
-========================= */
-
 .loader-box{
-    padding:48px 15px;
-
-    text-align:center;
-
-    color:#777;
-
-    font-size:12px;
+    padding:40px 0;
+    color:#8a8a8a;
+    font-size:13px;
 }
-
 .spinner{
-    width:31px;
-    height:31px;
-
-    margin:
-        0 auto 13px;
-
-    border:
-        3px solid rgba(255,255,255,.08);
-
+    width:32px;
+    height:32px;
+    margin:0 auto 12px;
+    border:3px solid rgba(255,255,255,.1);
     border-top-color:#e50914;
-
     border-radius:50%;
-
-    animation:
-        spin .7s linear infinite;
+    animation:spin .7s linear infinite;
 }
-
-@keyframes spin{
-
-    to{
-        transform:rotate(360deg);
-    }
-
-}
-
-
-/* =========================
-   EMPTY / ERROR
-========================= */
-
-.message-box{
-    padding:35px 20px;
-
-    text-align:center;
-
-    color:#777;
-
-    border:
-        1px solid rgba(255,255,255,.06);
-
-    border-radius:15px;
-
-    background:
-        rgba(255,255,255,.018);
-
-    font-size:12px;
-}
-
-
-/* =========================
-   MOBILE
-========================= */
-
-@media(max-width:600px){
-
-    .navbar{
-        height:58px;
-    }
-
-    .logo{
-        font-size:21px;
-    }
-
-    .page{
-        width:92%;
-
-        padding:
-            42px 0 60px;
-    }
-
-    .page-header{
-        margin-bottom:25px;
-    }
-
-    .movie-title{
-        font-size:26px;
-    }
-
-    .quality-button{
-        min-height:64px;
-
-        padding:0 13px;
-
-        border-radius:14px;
-    }
-
-    .quality-icon{
-        width:35px;
-        height:35px;
-
-        margin-right:11px;
-    }
-
-}
-
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
-
-
 <body>
 
-
 <nav class="navbar">
-
-    <a
-        href="/zozomovie.github.io"
-        class="logo"
-    >
-        CINEFLIX
-    </a>
-
+    <a href="zozomovie.github.io" class="logo">CINEFLIX</a>
 </nav>
 
-
 <main class="page">
+    <h1 class="movie-title" id="movieTitle">Select Movie Quality</h1>
+    <p class="subtitle">Choose your preferred download quality</p>
 
-
-    <header class="page-header">
-
-        <div class="small-label">
-            Download
-        </div>
-
-        <h1
-            class="movie-title"
-            id="movieTitle"
-        >
-            Select Movie Quality
-        </h1>
-
-        <p class="subtitle">
-            Choose your preferred download quality
-        </p>
-
-    </header>
-
-
-    <div
-        class="quality-list"
-        id="qualityContainer"
-    >
-
+    <div class="quality-list" id="qualityContainer">
         <div class="loader-box">
-
             <div class="spinner"></div>
-
             Loading available qualities...
-
         </div>
-
     </div>
-
-
 </main>
 
-
-
 <script>
+const params = new URLSearchParams(window.location.search);
+let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
 
-/* ==========================================
-   SUPABASE
-========================================== */
-
-const SUPABASE_URL =
-    "https://bbqaagbypawcpszjwzii.supabase.co";
-
-const SUPABASE_KEY =
-    "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
-
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    );
-
-
-/* ==========================================
-   URL ENCODING
-========================================== */
-
-function encodeData(value){
-
-    return btoa(
-        unescape(
-            encodeURIComponent(
-                JSON.stringify(value)
-            )
-        )
-    )
-    .replace(/\+/g,"-")
-    .replace(/\//g,"_")
-    .replace(/=+$/,"");
+if (movieId) {
+    sessionStorage.setItem("active_movie_id", movieId);
+    sessionStorage.setItem("last_active_page", "quality");
+    const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
+    sessionStorage.setItem("active_movie_slug", rawTitle);
 }
 
+/* Direct URL access enabled.
+   No sessionStorage authorization check here. */
 
-function decodeData(value){
+(function protectAndMaskQualityPage() {
 
-    try{
-
-        let base64 =
-            value
-                .replace(/-/g,"+")
-                .replace(/_/g,"/");
-
-        while(base64.length % 4)
-            base64 += "=";
-
-        return JSON.parse(
-            decodeURIComponent(
-                escape(
-                    atob(base64)
-                )
-            )
-        );
-
-    }catch(e){
-
-        return null;
-
-    }
-
-}
-
-
-/* ==========================================
-   GET MOVIE ID
-========================================== */
-
-const params =
-    new URLSearchParams(
-        window.location.search
-    );
-
-let movieId =
-    params.get("id") || null;
-
-
-/*
-Direct masked URL:
-
-/download/movie-name--ENCODED_ID
-*/
-
-if(!movieId){
-
-    const path =
-        window.location.pathname;
-
-    const marker =
-        "/download/";
-
-    const pos =
-        path.indexOf(marker);
-
-    if(pos !== -1){
-
-        const slug =
-            path.substring(
-                pos + marker.length
-            );
-
-        const separator =
-            slug.lastIndexOf("--");
-
-        if(separator !== -1){
-
-            const token =
-                slug.substring(
-                    separator + 2
-                );
-
-            const decoded =
-                decodeData(token);
-
-            if(decoded){
-                movieId =
-                    decoded.i || null;
-            }
-
-        }
-
-    }
-
-}
-
-
-/* ==========================================
-   SAVE SESSION
-   Only for navigation convenience.
-   NOT required for access.
-========================================== */
-
-if(movieId){
-
-    sessionStorage.setItem(
-        "active_movie_id",
-        movieId
-    );
-
-    sessionStorage.setItem(
-        "last_active_page",
-        "quality"
-    );
-
-}
-
-
-/* ==========================================
-   SUPABASE LOAD
-========================================== */
-
-async function loadQualities(){
-
-    const container =
-        document.getElementById(
-            "qualityContainer"
-        );
-
-    const titleElement =
-        document.getElementById(
-            "movieTitle"
-        );
-
-
-    if(!movieId){
-
-        container.innerHTML = `
-            <div class="message-box">
-                Movie ID missing.
-            </div>
-        `;
-
+    if (!movieId) {
         return;
     }
 
+    const rawTitle =
+        params.get("movie") ||
+        params.get("title") ||
+        sessionStorage.getItem("active_movie_slug") ||
+        "download";
 
-    try{
+    const movieSlug = rawTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
 
-        const {
-            data,
-            error
-        } = await supabaseClient
+    if (window.history.replaceState && movieSlug) {
+        const customUrl =
+            window.location.protocol +
+            "//" +
+            window.location.host +
+            '/download/' +
+            movieSlug;
 
+        window.history.replaceState(
+            { path: customUrl },
+            '',
+            customUrl
+        );
+    }
+
+})();
+
+function generateRandomString(length = 13) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let res = '';
+    for (let i = 0; i < length; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+    return res;
+}
+
+function navigateToServer(qIndex, title, qualityName) {
+    const random13 = generateRandomString(13);
+    
+    sessionStorage.setItem(`access_server_${movieId}_${qIndex}`, 'granted');
+    sessionStorage.setItem(`auth_server_${movieId}_${qIndex}`, 'true');
+    sessionStorage.setItem("active_server_ref", random13);
+    sessionStorage.setItem("active_q_index", qIndex);
+    sessionStorage.setItem("active_movie_title", title);
+    sessionStorage.setItem("active_quality_name", qualityName);
+    sessionStorage.setItem("last_active_page", "server");
+
+    window.location.href = `/server.html?ref=${random13}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
+}
+
+const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function loadQualities() {
+    const container = document.getElementById("qualityContainer");
+
+    if (!movieId) {
+        container.innerHTML = `<div class="loader-box">Movie ID missing.</div>`;
+        return;
+    }
+
+    try {
+        const { data, error } = await supabaseClient
             .from("movies")
-
-            .select(
-                "title, qualities_data"
-            )
-
-            .eq(
-                "id",
-                movieId
-            )
-
+            .select("title, qualities_data")
+            .eq("id", movieId)
             .single();
 
+        if (error || !data) throw new Error("Movie not found.");
 
-        if(error || !data){
+        const mTitle = data.title || "Download Movie";
+        document.getElementById("movieTitle").textContent = mTitle;
+        const qualities = data.qualities_data || [];
 
-            throw new Error(
-                "Movie not found."
-            );
-
-        }
-
-
-        const movieTitle =
-            data.title ||
-            "Download Movie";
-
-
-        titleElement.textContent =
-            movieTitle;
-
-
-        const qualities =
-            Array.isArray(
-                data.qualities_data
-            )
-                ? data.qualities_data
-                : [];
-
-
-        if(!qualities.length){
-
-            container.innerHTML = `
-                <div class="message-box">
-                    No qualities available for this movie.
-                </div>
-            `;
-
+        if (qualities.length === 0) {
+            container.innerHTML = `<div class="loader-box">No qualities available for this movie.</div>`;
             return;
         }
 
+        container.innerHTML = qualities.map((q, idx) => {
+            const escapedTitle = mTitle.replace(/'/g, "\\'");
+            const escapedQuality = q.quality_name.replace(/'/g, "\\'");
+            return `
+                <div class="quality-button" onclick="navigateToServer(${idx}, '${escapedTitle}', '${escapedQuality}')">
+                    <span class="quality-name">${q.quality_name}</span>
+                    <span>➔</span>
+                </div>
+            `;
+        }).join("");
 
-        container.innerHTML =
-            qualities.map(
-                (q,index) => {
-
-                    const qualityName =
-                        q.quality_name ||
-                        "Available Quality";
-
-
-                    return `
-
-                        <button
-                            type="button"
-                            class="quality-button"
-                            data-index="${index}"
-                        >
-
-                            <span class="quality-icon">
-                                HD
-                            </span>
-
-                            <span class="quality-content">
-
-                                <span class="quality-name">
-                                    ${escapeHtml(qualityName)}
-                                </span>
-
-                                <span class="quality-desc">
-                                    High quality download
-                                </span>
-
-                            </span>
-
-                            <span class="quality-arrow">
-                                →
-                            </span>
-
-                        </button>
-
-                    `;
-
-                }
-            )
-            .join("");
-
-
-        document
-            .querySelectorAll(
-                ".quality-button"
-            )
-            .forEach(button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const index =
-                            Number(
-                                button.dataset.index
-                            );
-
-                        goToServer(
-                            index,
-                            movieTitle,
-                            qualities[index]?.quality_name ||
-                            "HD Quality"
-                        );
-
-                    }
-                );
-
-            });
-
-
-    }catch(error){
-
-        container.innerHTML = `
-            <div class="message-box">
-                Error loading movie.
-            </div>
-        `;
-
-        console.error(error);
-
+    } catch (err) {
+        container.innerHTML = `<div class="loader-box">Error: ${err.message}</div>`;
     }
-
 }
-
-
-/* ==========================================
-   ESCAPE HTML
-========================================== */
-
-function escapeHtml(value){
-
-    return String(value || "")
-        .replace(
-            /[&<>"']/g,
-            function(char){
-
-                return {
-
-                    "&":"&amp;",
-                    "<":"&lt;",
-                    ">":"&gt;",
-                    '"':"&quot;",
-                    "'":"&#039;"
-
-                }[char];
-
-            }
-        );
-
-}
-
-
-/* ==========================================
-   RANDOM REF
-========================================== */
-
-function generateRandomString(
-    length = 13
-){
-
-    const chars =
-        "abcdefghijklmnopqrstuvwxyz0123456789";
-
-    let result = "";
-
-    for(
-        let i = 0;
-        i < length;
-        i++
-    ){
-
-        result +=
-            chars.charAt(
-                Math.floor(
-                    Math.random() *
-                    chars.length
-                )
-            );
-
-    }
-
-    return result;
-
-}
-
-
-/* ==========================================
-   GO TO SERVER
-========================================== */
-
-function goToServer(
-    qIndex,
-    title,
-    qualityName
-){
-
-    const randomRef =
-        generateRandomString(13);
-
-
-    sessionStorage.setItem(
-        "active_movie_id",
-        movieId
-    );
-
-    sessionStorage.setItem(
-        "active_q_index",
-        qIndex
-    );
-
-    sessionStorage.setItem(
-        "active_movie_title",
-        title
-    );
-
-    sessionStorage.setItem(
-        "active_quality_name",
-        qualityName
-    );
-
-    sessionStorage.setItem(
-        "active_server_ref",
-        randomRef
-    );
-
-
-    /*
-    URL token contains:
-
-    movie ID
-    quality index
-
-    So another browser can open it.
-    */
-
-    const token =
-        encodeData({
-
-            i: movieId,
-            q: qIndex
-
-        });
-
-
-    window.location.href =
-        "/server.html?" +
-        "id=" +
-        encodeURIComponent(movieId) +
-        "&q_index=" +
-        qIndex +
-        "&ref=" +
-        randomRef;
-
-}
-
-
-/* ==========================================
-   MASK QUALITY URL
-========================================== */
-
-function maskQualityUrl(){
-
-    if(!movieId)
-        return;
-
-
-    /*
-    Only mask when ID came from query.
-    */
-
-    if(params.get("id")){
-
-        const rawTitle =
-            params.get("movie") ||
-            params.get("title") ||
-            "download";
-
-
-        const slug =
-            rawTitle
-                .toLowerCase()
-                .replace(
-                    /[^a-z0-9]+/g,
-                    "-"
-                )
-                .replace(
-                    /(^-|-$)+/g,
-                    ""
-                );
-
-
-        const token =
-            encodeData({
-                i:movieId
-            });
-
-
-        const customUrl =
-            window.location.origin +
-            "/download/" +
-            slug +
-            "--" +
-            token;
-
-
-        window.history.replaceState(
-            {
-                path:customUrl
-            },
-            "",
-            customUrl
-        );
-
-    }
-
-}
-
 
 loadQualities();
-
-setTimeout(
-    maskQualityUrl,
-    150
-);
-
 </script>
 
 </body>
