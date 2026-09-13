@@ -1616,9 +1616,10 @@ body{min-height:100vh;}
 .search-page-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:18px;}
 .search-page-title{margin:0;font-size:21px;line-height:1.2;font-weight:800;letter-spacing:-.45px;}
 .search-page-count{color:#777;font-size:11px;font-weight:600;white-space:nowrap;}
-.search-page-grid,.search-loader{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px;padding-bottom:24px;}
-.search-page-grid .movie-card,.search-loader .loading-card{width:100%;min-width:0;}
-.search-loader .loading-card{flex:none;}
+.search-page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px;padding-bottom:24px;}
+.search-loader{display:flex;align-items:center;justify-content:center;min-height:210px;padding:24px 0;}
+.search-loader .search-spinner{width:42px;height:42px;border:3px solid rgba(255,255,255,.12);border-top-color:#e50914;border-right-color:#ff3b30;border-radius:50%;animation:searchSpin .72s linear infinite;filter:drop-shadow(0 0 10px rgba(229,9,20,.28));}
+@keyframes searchSpin{to{transform:rotate(360deg)}}
 .search-empty{display:none;text-align:center;padding:35px 15px 28px;}
 .search-empty.show{display:block;}
 .search-empty-icon{width:54px;height:54px;margin:0 auto 13px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035);color:#888;}
@@ -1629,9 +1630,9 @@ body{min-height:100vh;}
 .search-suggestions{z-index:5000;}
 .search-page + .footer{margin-top:0;}
 @media(min-width:801px){.search-page{padding-top:82px;}}
-@media(max-width:800px){.search-page{padding:91px 15px 0}.search-page-title{font-size:18px}.search-page-grid,.search-loader{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.search-page-grid .movie-card,.search-loader .loading-card{border-radius:6px}}
-@media(min-width:801px) and (max-width:1200px){.search-page-grid,.search-loader{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}}
-@media(min-width:1201px){.search-page-grid,.search-loader{grid-template-columns:repeat(7,minmax(0,1fr));gap:18px}}
+@media(max-width:800px){.search-page{padding:91px 15px 0}.search-page-title{font-size:18px}.search-page-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.search-page-grid .movie-card{border-radius:6px}.search-loader{min-height:180px;padding:18px 0}}
+@media(min-width:801px) and (max-width:1200px){.search-page-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}}
+@media(min-width:1201px){.search-page-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:18px}}
 </style></head><body>
 <header class="header" id="header">
 
@@ -1778,7 +1779,7 @@ function closeIconSVG(){return `<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 
 function setSearchOpen(open){searchBox.classList.toggle("open",open);searchBtn.innerHTML=open?closeIconSVG():searchIconSVG();searchBtn.setAttribute("aria-label",open?"Close search":"Open search");if(open)setTimeout(()=>searchInput.focus(),60);else searchSuggestions.classList.remove("show");}
 function goToSearchPage(v){const q=String(v||"").trim();if(q)window.location.assign("../search/?query="+encodeURIComponent(q));}
 function createMovieCard(m){const card=document.createElement("article");card.className="movie-card";card.dataset.id=m.id||"";card.innerHTML=`<img src="${esc(m.image)}" alt="${esc(m.title)}" loading="lazy" decoding="async"><div class="movie-gradient"></div><div class="card-actions"><button class="card-action like-btn" aria-label="Like" type="button"><svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.5-8.8 10.2-8.8 10.2S3.2 14.2 3.2 8.7A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.5z"/></svg></button><button class="card-action" aria-label="Add" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div><div class="movie-info"><div class="movie-name">${esc(m.title)}</div><div class="movie-meta"><span>${esc(m.year)}</span><span>•</span><span>${esc(m.genre)}</span><span class="movie-rating">★ ${esc(m.rating)}</span></div></div>`;card.addEventListener("click",e=>{if(e.target.closest(".card-action"))return;if(m.id)window.location.assign("../movie.html?id="+encodeURIComponent(m.id));});return card;}
-function showLoader(){searchLoader.innerHTML="";for(let i=0;i<12;i++){const c=document.createElement("div");c.className="loading-card";searchLoader.appendChild(c);}searchLoader.style.display="grid";}
+function showLoader(){searchLoader.innerHTML='<div class="search-spinner" aria-label="Loading"></div>';searchLoader.style.display="flex";}
 function mapRow(m){const g=Array.isArray(m.genres)&&m.genres.length?(typeof m.genres[0]==="string"?m.genres[0]:(m.genres[0]?.name||"Movie")):(m.category||"Movie");return {id:m.id,title:String(m.title||m.name||""),year:String(m.year||""),genre:String(g),rating:Number(m.rating||0).toFixed(1),image:m.poster_url||m.poster||m.thumbnail||"",category:m.category||"Movies"};}
 async function performSearch(q){q=String(q||"").trim();if(!q)return;searchInput.value=q;searchPageTitle.textContent=`Search Results for “${q}”`;searchPageCount.textContent="Loading...";searchEmpty.classList.remove("show");searchGrid.innerHTML="";showLoader();try{const {data,error}=await supabaseClient.from("movies").select("id,title,year,rating,poster_url,genres,category,sort_order,created_at").ilike("title",`%${q}%`).order("sort_order",{ascending:true}).order("created_at",{ascending:false}).limit(100);if(error)throw error;const results=(Array.isArray(data)?data:[]).map(mapRow).filter(m=>m.id&&m.title&&m.image);searchLoader.style.display="none";results.forEach(m=>searchGrid.appendChild(createMovieCard(m)));searchPageCount.textContent=results.length?`${results.length} result${results.length===1?"":"s"}`:"";if(!results.length)searchEmpty.classList.add("show");}catch(e){console.error("CINEFLIX search failed:",e);searchLoader.style.display="none";searchPageCount.textContent="";searchEmpty.classList.add("show");}}
 searchBtn.onclick=()=>setSearchOpen(!searchBox.classList.contains("open"));searchSubmit.onclick=()=>goToSearchPage(searchInput.value);searchInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();goToSearchPage(searchInput.value);}if(e.key==="Escape")setSearchOpen(false);});
