@@ -170,6 +170,9 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     display:flex;
     align-items:center;
     gap:18px;
+
+    position:relative;
+    z-index:1002;
 }
 .header .search-box{
     position:relative;
@@ -271,6 +274,10 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     font-size:10px;
 }
 .icon-btn{
+    position:relative;
+    z-index:1003;
+    cursor:pointer;
+    pointer-events:auto;
     width:38px;
     height:38px;
     border:0;
@@ -2716,10 +2723,12 @@ function initInteractions(movie,clips,similar,tmdb){
         }
     };
 
-    searchBtn?.addEventListener("click",()=>{
-        if(searchBox?.classList.contains("open")) closeMovieSearch();
-        else openMovieSearch();
-    });
+    if(searchBtn){
+        searchBtn.onclick=()=>{
+            if(searchBox?.classList.contains("open")) closeMovieSearch();
+            else openMovieSearch();
+        };
+    }
 
     searchSubmit?.addEventListener("click",()=>goToSearch(searchInput?.value));
 
