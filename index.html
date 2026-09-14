@@ -1135,31 +1135,32 @@ body{
     .movie-row{gap:9px;padding-right:15px;}
     .movie-card{flex-basis:calc((100% - 18px)/3);border-radius:7px;}
     .movie-card-badge{
-    position:absolute;
-    top:5px;
-    left:5px;
-    z-index:6;
-    display:inline-flex;
-    align-items:center;
-    gap:3px;
-    max-width:calc(100% - 10px);
-    padding:4px 7px;
-    border-radius:999px;
-    overflow:hidden;
-    white-space:nowrap;
-    text-overflow:ellipsis;
-    color:#fff;
-    font-size:6.8px;
-    line-height:1;
-    font-weight:900;
-    letter-spacing:.45px;
-    text-transform:uppercase;
-    border:1px solid rgba(255,255,255,.24);
-    box-shadow:0 5px 13px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.30);
-    backdrop-filter:blur(7px);
-    -webkit-backdrop-filter:blur(7px);
-    pointer-events:none;
-    transition:transform .25s ease,filter .25s ease;
+        position:absolute;
+        top:2px;
+        left:2px;
+        z-index:6;
+        display:inline-flex;
+        align-items:center;
+        gap:1.5px;
+        max-width:calc(100% - 4px);
+        padding:2.5px 4.5px;
+        border-radius:999px;
+        overflow:hidden;
+        white-space:nowrap;
+        text-overflow:ellipsis;
+        color:#fff;
+        font-size:5.2px;
+        line-height:1;
+        font-weight:900;
+        letter-spacing:.18px;
+        text-transform:uppercase;
+        border:1px solid rgba(255,255,255,.22);
+        box-shadow:0 3px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25);
+        backdrop-filter:blur(6px);
+        -webkit-backdrop-filter:blur(6px);
+        pointer-events:none;
+        transition:transform .25s ease,filter .25s ease;
+    }
 }
 .movie-card-badge[data-style="1"]{background:linear-gradient(135deg,#ff5364 0%,#e50914 48%,#8b0010 100%)}
 .movie-card-badge[data-style="2"]{background:linear-gradient(135deg,#b76cff 0%,#7c3aed 48%,#3b0764 100%)}
@@ -2693,6 +2694,307 @@ body{
         padding-bottom:9px !important;
     }
 }
+
+/* =========================================================
+   BADGE — FINAL MOBILE COMPACT OVERRIDE
+   Keeps badge tiny + glued to poster top-left.
+========================================================= */
+@media (max-width:800px){
+    .movie-card .movie-card-badge{
+        top:0 !important;
+        left:0 !important;
+        right:auto !important;
+        bottom:auto !important;
+        z-index:20 !important;
+        max-width:calc(100% - 4px) !important;
+        padding:2px 4px !important;
+        min-height:0 !important;
+        height:auto !important;
+        border-radius:0 7px 7px 0 !important;
+        gap:1px !important;
+        font-size:5px !important;
+        line-height:1 !important;
+        letter-spacing:.12px !important;
+        font-weight:900 !important;
+        box-shadow:0 2px 6px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.22) !important;
+        transform:none !important;
+        backdrop-filter:blur(5px);
+        -webkit-backdrop-filter:blur(5px);
+    }
+
+    .movie-card .movie-card-badge::before{
+        font-size:4.8px !important;
+        margin:0 !important;
+    }
+}
+
+
+/* =========================================================
+   BADGE — MOBILE FINAL SIZE + FIXED POSITION
+========================================================= */
+@media (max-width:800px){
+    .movie-card .movie-card-badge{
+        top:0 !important;
+        left:0 !important;
+        right:auto !important;
+        bottom:auto !important;
+        z-index:50 !important;
+        transform:none !important;
+        animation:none !important;
+        padding:3px 5px !important;
+        font-size:6.2px !important;
+        line-height:1 !important;
+        letter-spacing:.22px !important;
+        gap:2px !important;
+        border-radius:0 7px 7px 0 !important;
+        max-width:calc(100% - 4px) !important;
+        min-height:0 !important;
+        height:auto !important;
+        box-shadow:0 3px 8px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.25) !important;
+        pointer-events:none !important;
+    }
+
+    .movie-card .movie-card-badge::before{
+        font-size:5.8px !important;
+        margin:0 !important;
+    }
+
+    .movie-card:hover .movie-card-badge,
+    .movie-card:active .movie-card-badge,
+    .movie-card:focus .movie-card-badge{
+        top:0 !important;
+        left:0 !important;
+        transform:none !important;
+        animation:none !important;
+    }
+}
+
+
+/* =========================================================
+   MOBILE — EXACT 3 GRID + FULL META + FIXED BADGE
+   Final override; existing features remain untouched.
+========================================================= */
+@media (max-width:800px){
+    .movie-row{
+        display:flex !important;
+        flex-wrap:nowrap !important;
+        overflow-x:hidden !important;
+        gap:6px !important;
+        padding-left:0 !important;
+        padding-right:0 !important;
+        scroll-snap-type:none !important;
+    }
+
+    .movie-row .movie-card-wrap{
+        flex:0 0 calc((100% - 12px) / 3) !important;
+        width:calc((100% - 12px) / 3) !important;
+        min-width:0 !important;
+        max-width:calc((100% - 12px) / 3) !important;
+    }
+
+    .movie-row .movie-card{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:100% !important;
+        overflow:hidden !important;
+    }
+
+    .movie-row .movie-card-title{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:100% !important;
+        overflow:hidden !important;
+        white-space:nowrap !important;
+        text-overflow:ellipsis !important;
+    }
+
+    .movie-row .movie-info{
+        z-index:10 !important;
+    }
+
+    /* Keep year / category / rating visible and fixed on hover. */
+    .movie-row .movie-card:hover .movie-info,
+    .movie-row .movie-card:active .movie-info,
+    .movie-row .movie-card:focus .movie-info{
+        opacity:1 !important;
+        visibility:visible !important;
+        transform:none !important;
+        bottom:0 !important;
+    }
+
+    .movie-row .movie-card:hover .movie-meta,
+    .movie-row .movie-card:active .movie-meta,
+    .movie-row .movie-card:focus .movie-meta{
+        opacity:1 !important;
+        visibility:visible !important;
+    }
+
+    .movie-row .movie-card .movie-meta{
+        display:flex !important;
+        align-items:center !important;
+        width:100% !important;
+        min-width:0 !important;
+        white-space:nowrap !important;
+        overflow:hidden !important;
+        font-size:7px !important;
+        line-height:1.15 !important;
+    }
+
+    .movie-row .movie-card .movie-meta > span{
+        flex:0 0 auto !important;
+    }
+
+    .movie-row .movie-card .movie-meta .movie-rating{
+        margin-left:auto !important;
+        flex:0 0 auto !important;
+        white-space:nowrap !important;
+    }
+
+    /* Hover must not move the badge. */
+    .movie-row .movie-card:hover .movie-card-badge,
+    .movie-row .movie-card:active .movie-card-badge,
+    .movie-row .movie-card:focus .movie-card-badge{
+        top:0 !important;
+        left:0 !important;
+        right:auto !important;
+        bottom:auto !important;
+        transform:none !important;
+        animation:none !important;
+    }
+}
+
+
+/* =========================================================
+   MOBILE FINAL — TRUE 3-CARD WIDTH + EQUAL SIDE SPACING
+   + FULL META + NO META/BADGE HOVER MOVEMENT
+========================================================= */
+@media (max-width:800px){
+    .movie-row{
+        box-sizing:border-box !important;
+        width:100% !important;
+        gap:6px !important;
+        padding-left:0 !important;
+        padding-right:15px !important;
+        overflow-x:hidden !important;
+        overflow-y:hidden !important;
+        flex-wrap:nowrap !important;
+    }
+
+    .movie-row .movie-card-wrap{
+        box-sizing:border-box !important;
+        flex:0 0 calc((100% - 12px) / 3) !important;
+        width:calc((100% - 12px) / 3) !important;
+        min-width:0 !important;
+        max-width:calc((100% - 12px) / 3) !important;
+    }
+
+    .movie-row .movie-card{
+        box-sizing:border-box !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        transform:none !important;
+        overflow:hidden !important;
+    }
+
+    /* Hover play/blur can still work, but the card itself and metadata
+       never move/scale on mobile. */
+    .movie-row .movie-card:hover{
+        transform:none !important;
+    }
+
+    .movie-row .movie-card:hover .movie-card-badge,
+    .movie-row .movie-card:active .movie-card-badge,
+    .movie-row .movie-card:focus .movie-card-badge{
+        top:0 !important;
+        left:0 !important;
+        right:auto !important;
+        bottom:auto !important;
+        transform:none !important;
+        filter:none !important;
+        animation:none !important;
+    }
+
+    .movie-row .movie-card .movie-info{
+        left:6px !important;
+        right:6px !important;
+        bottom:5px !important;
+        width:auto !important;
+        opacity:1 !important;
+        visibility:visible !important;
+        transform:none !important;
+        z-index:20 !important;
+        pointer-events:none !important;
+    }
+
+    .movie-row .movie-card:hover .movie-info,
+    .movie-row .movie-card:active .movie-info,
+    .movie-row .movie-card:focus .movie-info{
+        left:6px !important;
+        right:6px !important;
+        bottom:5px !important;
+        opacity:1 !important;
+        visibility:visible !important;
+        transform:none !important;
+    }
+
+    .movie-row .movie-card .movie-meta{
+        display:flex !important;
+        align-items:center !important;
+        gap:3px !important;
+        width:100% !important;
+        min-width:0 !important;
+        margin-top:2px !important;
+        font-size:6.5px !important;
+        line-height:1.15 !important;
+        white-space:nowrap !important;
+        overflow:visible !important;
+    }
+
+    .movie-row .movie-card .movie-meta > span{
+        flex:0 0 auto !important;
+        min-width:0 !important;
+    }
+
+    /* Category gets only the space it needs; if long, it truncates
+       instead of pushing the rating outside the card. */
+    .movie-row .movie-card .movie-meta > span:nth-child(3){
+        flex:1 1 auto !important;
+        min-width:0 !important;
+        max-width:42% !important;
+        overflow:hidden !important;
+        text-overflow:ellipsis !important;
+        white-space:nowrap !important;
+    }
+
+    .movie-row .movie-card .movie-meta .movie-rating{
+        flex:0 0 auto !important;
+        margin-left:auto !important;
+        white-space:nowrap !important;
+        overflow:visible !important;
+        min-width:max-content !important;
+    }
+
+    .movie-row .movie-card .movie-name{
+        max-width:100% !important;
+        overflow:hidden !important;
+        text-overflow:ellipsis !important;
+        white-space:nowrap !important;
+    }
+
+    .movie-row .movie-card .movie-card-badge{
+        top:0 !important;
+        left:0 !important;
+        max-width:calc(100% - 3px) !important;
+        padding:3px 5px !important;
+        font-size:6.2px !important;
+        line-height:1 !important;
+        letter-spacing:.22px !important;
+        gap:2px !important;
+        transform:none !important;
+    }
+}
+
 </style>
 </head>
 
