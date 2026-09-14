@@ -435,7 +435,7 @@ body{
 }
 
 /* =========================================================
-   REAL BANNER SKELETON — SAME STRUCTURE AS FINAL BANNER
+   OTT PREMIUM RESPONSIVE BANNER SKELETON
 ========================================================= */
 .banner-skeleton-card{
     position:relative;
@@ -445,54 +445,132 @@ body{
     max-height:340px;
     overflow:hidden;
     border-radius:15px;
-    background:#151518;
-    border:1px solid rgba(255,255,255,.055);
+    background:#111215;
+    border:1px solid rgba(255,255,255,.065);
+    box-shadow:0 12px 35px rgba(0,0,0,.24);
+    isolation:isolate;
 }
+
+/* Base artwork placeholder */
 .banner-skeleton-card::before{
     content:"";
     position:absolute;
     inset:0;
+    z-index:0;
     background:
-        linear-gradient(180deg,
-            rgba(255,255,255,.045) 0 45%,
-            rgba(255,255,255,.025) 45% 100%
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,.055) 0%,
+            rgba(255,255,255,.025) 46%,
+            rgba(8,8,10,.18) 62%,
+            rgba(8,8,10,.92) 100%
         );
 }
+
+/* Real OTT-like content placeholders */
 .banner-skeleton-card::after{
     content:"";
     position:absolute;
+    z-index:2;
     left:16px;
     right:16px;
     bottom:15px;
-    height:58px;
-    border-radius:5px;
+    width:calc(100% - 32px);
+    height:72px;
+    border-radius:6px;
     background:
         linear-gradient(
             to bottom,
-            rgba(255,255,255,.12) 0 9px,
-            transparent 9px 16px,
-            rgba(255,255,255,.085) 16px 27px,
-            transparent 27px 35px,
-            rgba(255,255,255,.07) 35px 41px,
-            transparent 41px
+            rgba(255,255,255,.13) 0 9px,
+            transparent 9px 17px,
+            rgba(255,255,255,.10) 17px 36px,
+            transparent 36px 45px,
+            rgba(255,255,255,.075) 45px 51px,
+            transparent 51px
         );
 }
-.banner-skeleton-card{
-    background-image:linear-gradient(
-        110deg,
-        rgba(255,255,255,0) 25%,
-        rgba(255,255,255,.075) 45%,
-        rgba(255,255,255,0) 65%
-    );
-    background-size:250% 100%;
-    animation:bannerSkeletonShimmer 1.45s ease-in-out infinite;
-}
-.banner-skeleton-card:nth-child(2){animation-delay:.16s}
-.banner-skeleton-card:nth-child(3){animation-delay:.32s}
 
-@keyframes bannerSkeletonShimmer{
-    0%{background-position:200% 0}
-    100%{background-position:-50% 0}
+/* Moving light sweep over the whole poster */
+.banner-skeleton-card{
+    background-image:
+        linear-gradient(
+            112deg,
+            rgba(255,255,255,0) 20%,
+            rgba(255,255,255,.085) 43%,
+            rgba(255,255,255,0) 66%
+        ),
+        linear-gradient(180deg,#17181b,#111215);
+    background-size:240% 100%,100% 100%;
+    background-position:200% 0,0 0;
+    animation:ottBannerShimmer 1.55s cubic-bezier(.4,0,.2,1) infinite;
+}
+
+.banner-skeleton-card:nth-child(2){
+    animation-delay:.18s;
+}
+.banner-skeleton-card:nth-child(3){
+    animation-delay:.36s;
+}
+
+@keyframes ottBannerShimmer{
+    0%{
+        background-position:200% 0,0 0;
+    }
+    100%{
+        background-position:-45% 0,0 0;
+    }
+}
+
+/* Small featured badge placeholder */
+.banner-skeleton-card .skeleton-badge{
+    position:absolute;
+    z-index:3;
+    left:16px;
+    bottom:91px;
+    width:58px;
+    height:14px;
+    border-radius:20px;
+    background:rgba(255,255,255,.075);
+}
+
+/* Tablet: give the banner a slightly more premium compact height. */
+@media(min-width:801px) and (max-width:1200px){
+    .banner-skeleton-card{
+        height:300px;
+        min-height:0;
+        max-height:none;
+        border-radius:14px;
+    }
+}
+
+/* Mobile: one complete OTT hero skeleton, never cramped. */
+@media(max-width:700px){
+    .banner-skeleton-card{
+        flex:0 0 100%;
+        width:100%;
+        height:auto;
+        min-height:0;
+        max-height:none;
+        aspect-ratio:1.88/1;
+        border-radius:13px;
+    }
+
+    .banner-skeleton-card:nth-child(n+2){
+        display:none;
+    }
+
+    .banner-skeleton-card::after{
+        left:13px;
+        right:13px;
+        bottom:13px;
+        width:calc(100% - 26px);
+        height:62px;
+    }
+
+    .banner-skeleton-card .skeleton-badge{
+        left:13px;
+        bottom:79px;
+    }
 }
 
 /* =========================================================
@@ -511,15 +589,15 @@ body{
 
     .mobile-section-nav.is-loading a::before{
         content:"";
-        width:16px;
-        height:16px;
-        flex:0 0 16px;
-        border-radius:50%;
+        width:17px;
+        height:17px;
+        flex:0 0 17px;
+        border-radius:5px;
         background:#202024;
         background-image:linear-gradient(
             110deg,
             rgba(255,255,255,0) 25%,
-            rgba(255,255,255,.11) 45%,
+            rgba(255,255,255,.13) 45%,
             rgba(255,255,255,0) 65%
         );
         background-size:250% 100%;
@@ -661,22 +739,90 @@ body{
 
 .banner-title{
     color:#fff;
-    font-size:clamp(15px,1.45vw,23px);
-    line-height:1.08;
+    font-size:clamp(17px,1.55vw,25px);
+    line-height:1.05;
     font-weight:900;
-    text-shadow:0 2px 12px rgba(0,0,0,.7);
+    text-shadow:0 2px 14px rgba(0,0,0,.55);
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
 }
 
+/* Different stylish OTT-style display font for each slide. */
+.banner-font-0 .banner-title{
+    font-family:"Trebuchet MS",Arial,sans-serif;
+    font-weight:900;
+    letter-spacing:-.8px;
+}
+.banner-font-1 .banner-title{
+    font-family:Georgia,"Times New Roman",serif;
+    font-weight:800;
+    font-style:italic;
+    letter-spacing:-.55px;
+}
+.banner-font-2 .banner-title{
+    font-family:"Arial Black",Impact,sans-serif;
+    font-weight:900;
+    letter-spacing:-1px;
+    text-transform:uppercase;
+}
+.banner-font-3 .banner-title{
+    font-family:"Palatino Linotype",Palatino,Georgia,serif;
+    font-weight:700;
+    letter-spacing:.05px;
+}
+.banner-font-4 .banner-title{
+    font-family:"Segoe UI",Arial,sans-serif;
+    font-weight:900;
+    letter-spacing:.25px;
+}
+.banner-font-5 .banner-title{
+    font-family:Impact,"Arial Narrow",sans-serif;
+    font-weight:900;
+    letter-spacing:.15px;
+}
+
 .banner-meta{
-    margin-top:5px;
-    color:#d7d7da;
+    margin-top:6px;
+    color:#fff;
     font-size:10px;
-    font-weight:600;
+    font-weight:800;
     display:flex;
-    gap:8px;
+    gap:9px;
+    flex-wrap:wrap;
+}
+
+.banner-meta span{
+    display:inline-flex;
+    align-items:center;
+    white-space:nowrap;
+}
+
+.banner-meta .meta-year{
+    background:linear-gradient(135deg,#46f58a 0%,#16c96b 50%,#9affbd 100%);
+    background-clip:text;
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.banner-meta .meta-type{
+    background:linear-gradient(135deg,#ff5a5a 0%,#e50914 50%,#ff9696 100%);
+    background-clip:text;
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.banner-meta .meta-rating{
+    background:linear-gradient(135deg,#fff36b 0%,#ffd21c 50%,#fff8a8 100%);
+    background-clip:text;
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.banner-meta .meta-divider{
+    color:rgba(255,255,255,.58);
+    -webkit-text-fill-color:rgba(255,255,255,.58);
+    font-weight:500;
 }
 
 .banner-controls{
@@ -2588,9 +2734,9 @@ body{
 <section class="banner-slider" id="bannerSlider" aria-label="Featured movies">
     <div class="banner-viewport">
         <div class="banner-track" id="bannerTrack">
-            <div class="banner-skeleton-card" aria-hidden="true"></div>
-            <div class="banner-skeleton-card" aria-hidden="true"></div>
-            <div class="banner-skeleton-card" aria-hidden="true"></div>
+            <div class="banner-skeleton-card" aria-hidden="true"><span class="skeleton-badge"></span></div>
+            <div class="banner-skeleton-card" aria-hidden="true"><span class="skeleton-badge"></span></div>
+            <div class="banner-skeleton-card" aria-hidden="true"><span class="skeleton-badge"></span></div>
         </div>
     </div>
 
@@ -3483,15 +3629,18 @@ function renderBanners(items){
         const card = document.createElement("article");
         card.className = "banner-card";
         card.dataset.id = movie.id;
+        card.classList.add(`banner-font-${index % 6}`);
         card.innerHTML = `
             <img src="${escapeBannerText(movie.backdrop || movie.image)}" alt="${escapeBannerText(movie.title)}" loading="eager" decoding="async">
             <div class="banner-info">
                 <span class="banner-label">Featured</span>
                 <div class="banner-title">${escapeBannerText(movie.title)}</div>
                 <div class="banner-meta">
-                    <span>${escapeBannerText(movie.year || "")}</span>
-                    <span>${escapeBannerText(movie.category || "Movie")}</span>
-                    ${movie.rating ? `<span>★ ${escapeBannerText(movie.rating)}</span>` : ""}
+                    <span class="meta-year">${escapeBannerText(movie.year || "")}</span>
+                    <span class="meta-divider">|</span>
+                    <span class="meta-type">${escapeBannerText(movie.category || "Movie")}</span>
+                    <span class="meta-divider">|</span>
+                    <span class="meta-rating">${movie.rating ? `★ ${escapeBannerText(movie.rating)}` : "★ —"}</span>
                 </div>
             </div>
         `;
