@@ -434,6 +434,167 @@ body{
     border-radius:16px;
 }
 
+/* =========================================================
+   REAL BANNER SKELETON — SAME STRUCTURE AS FINAL BANNER
+========================================================= */
+.banner-skeleton-card{
+    position:relative;
+    flex:0 0 calc((100% - 28px)/3);
+    height:32vh;
+    min-height:220px;
+    max-height:340px;
+    overflow:hidden;
+    border-radius:15px;
+    background:#151518;
+    border:1px solid rgba(255,255,255,.055);
+}
+.banner-skeleton-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+        linear-gradient(180deg,
+            rgba(255,255,255,.045) 0 45%,
+            rgba(255,255,255,.025) 45% 100%
+        );
+}
+.banner-skeleton-card::after{
+    content:"";
+    position:absolute;
+    left:16px;
+    right:16px;
+    bottom:15px;
+    height:58px;
+    border-radius:5px;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255,255,255,.12) 0 9px,
+            transparent 9px 16px,
+            rgba(255,255,255,.085) 16px 27px,
+            transparent 27px 35px,
+            rgba(255,255,255,.07) 35px 41px,
+            transparent 41px
+        );
+}
+.banner-skeleton-card{
+    background-image:linear-gradient(
+        110deg,
+        rgba(255,255,255,0) 25%,
+        rgba(255,255,255,.075) 45%,
+        rgba(255,255,255,0) 65%
+    );
+    background-size:250% 100%;
+    animation:bannerSkeletonShimmer 1.45s ease-in-out infinite;
+}
+.banner-skeleton-card:nth-child(2){animation-delay:.16s}
+.banner-skeleton-card:nth-child(3){animation-delay:.32s}
+
+@keyframes bannerSkeletonShimmer{
+    0%{background-position:200% 0}
+    100%{background-position:-50% 0}
+}
+
+/* =========================================================
+   MOBILE QUICK NAV — EXACT ICON + TEXT SKELETON
+========================================================= */
+@media(max-width:800px){
+    .mobile-section-nav.is-loading a{
+        pointer-events:none;
+        color:transparent!important;
+        position:relative;
+    }
+
+    .mobile-section-nav.is-loading a.active::after{
+        display:none;
+    }
+
+    .mobile-section-nav.is-loading a::before{
+        content:"";
+        width:16px;
+        height:16px;
+        flex:0 0 16px;
+        border-radius:50%;
+        background:#202024;
+        background-image:linear-gradient(
+            110deg,
+            rgba(255,255,255,0) 25%,
+            rgba(255,255,255,.11) 45%,
+            rgba(255,255,255,0) 65%
+        );
+        background-size:250% 100%;
+        animation:navSkeletonShimmer 1.35s ease-in-out infinite;
+    }
+
+    .mobile-section-nav.is-loading a::after{
+        content:"";
+        width:47px;
+        height:9px;
+        flex:0 0 47px;
+        border-radius:5px;
+        background:#202024;
+        background-image:linear-gradient(
+            110deg,
+            rgba(255,255,255,0) 25%,
+            rgba(255,255,255,.11) 45%,
+            rgba(255,255,255,0) 65%
+        );
+        background-size:250% 100%;
+        animation:navSkeletonShimmer 1.35s ease-in-out infinite;
+    }
+
+    .mobile-section-nav.is-loading a:nth-child(2)::before,
+    .mobile-section-nav.is-loading a:nth-child(2)::after{
+        animation-delay:.12s;
+    }
+
+    .mobile-section-nav.is-loading a:nth-child(3)::before,
+    .mobile-section-nav.is-loading a:nth-child(3)::after{
+        animation-delay:.24s;
+    }
+
+    .mobile-section-nav.is-loading svg{
+        display:none;
+    }
+
+    .mobile-section-nav.is-loading{
+        gap:0;
+    }
+
+    @keyframes navSkeletonShimmer{
+        0%{background-position:200% 0}
+        100%{background-position:-50% 0}
+    }
+
+    .banner-skeleton-card{
+        flex:0 0 100%;
+        height:32vh;
+        min-height:0;
+        max-height:none;
+        aspect-ratio:1.88/1;
+        border-radius:13px;
+    }
+
+    .banner-skeleton-card:nth-child(n+2){
+        display:none;
+    }
+}
+
+@media(max-width:700px){
+    .banner-viewport{
+        touch-action:pan-y;
+        cursor:grab;
+    }
+
+    .banner-viewport.banner-dragging{
+        cursor:grabbing;
+    }
+
+    .banner-viewport.banner-dragging .banner-track{
+        transition:none!important;
+    }
+}
+
 .banner-track{
     display:flex;
     gap:14px;
@@ -1798,10 +1959,9 @@ body{
         inset:0 15px 2px;
     }
 
+    /* Mobile: clean banner — no previous/next arrows. */
     .banner-arrow{
-        width:32px;
-        height:32px;
-        opacity:1;
+        display:none;
     }
 
     .banner-prev{left:7px}
@@ -1937,12 +2097,12 @@ body{
 
     .movie-card,
     .loading-card{
-        flex-basis:125px;
+        flex-basis:calc((100% - 18px)/3);
         border-radius:6px;
     }
 
     .movie-card-wrap{
-        flex-basis:125px;
+        flex-basis:calc((100% - 18px)/3);
     }
 
     .movie-card-title{
@@ -2062,7 +2222,6 @@ body{
     .movie-row{
         gap:10px;
         padding-right:15px;
-        scroll-snap-type:x proximity;
         -webkit-overflow-scrolling:touch;
     }
 
@@ -2071,8 +2230,6 @@ body{
         /* Exactly 3 complete cards in the visible row. */
         flex:0 0 calc((100% - 20px)/3);
         min-width:0;
-        scroll-snap-align:start;
-        scroll-snap-stop:normal;
     }
 
     .loading-card{
@@ -2089,14 +2246,12 @@ body{
     .movie-row{
         gap:9px;
         padding-right:15px;
-        scroll-snap-type:x mandatory;
     }
 
     .movie-card,
     .loading-card{
         /* 3 cards + 2 gaps, all fully visible without clipping. */
         flex:0 0 calc((100% - 18px)/3);
-        scroll-snap-align:start;
     }
 
     .loading-card{
@@ -2380,7 +2535,7 @@ body{
 
 </header>
 
-<nav class="mobile-section-nav" aria-label="Quick navigation">
+<nav class="mobile-section-nav is-loading" aria-label="Quick navigation">
     <a class="active" href="#" aria-label="Home">
         <svg viewBox="-1.5 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M0 28.8496C0 30.5896 1.41049 32 3.15041 32H25.2032C26.9432 32 28.3537 30.5896 28.3537 28.8496V13.0282C28.3537 12.1326 27.9725 11.2793 27.3054 10.6817L16.2789 0.803877C15.0825 -0.267959 13.2712 -0.267959 12.0747 0.803877L1.0483 10.6817C0.381205 11.2793 0 12.1326 0 13.0282V28.8496Z" fill="url(#paint0_linear_103_1796)"></path> <path d="M9.45122 32H18.9024V20.9736C18.9024 20.1036 18.1972 19.3984 17.3272 19.3984H11.0264C10.1565 19.3984 9.45122 20.1036 9.45122 20.9736V32Z" fill="white" fill-opacity="0.48"></path> <defs> <linearGradient id="paint0_linear_103_1796" x1="14.1768" y1="32" x2="14.1768" y2="0" gradientUnits="userSpaceOnUse"> <stop stop-color="#E84909"></stop> <stop offset="1" stop-color="#FF6200"></stop> </linearGradient> </defs> </g></svg>
         <span>Home</span>
@@ -2432,7 +2587,11 @@ body{
 ======================================================= -->
 <section class="banner-slider" id="bannerSlider" aria-label="Featured movies">
     <div class="banner-viewport">
-        <div class="banner-track" id="bannerTrack"></div>
+        <div class="banner-track" id="bannerTrack">
+            <div class="banner-skeleton-card" aria-hidden="true"></div>
+            <div class="banner-skeleton-card" aria-hidden="true"></div>
+            <div class="banner-skeleton-card" aria-hidden="true"></div>
+        </div>
     </div>
 
     <div class="banner-controls">
@@ -3356,7 +3515,36 @@ function renderBanners(items){
     startBannerTimer();
 }
 
-function showBanner(index){
+function getBannerGap(){
+    return window.innerWidth <= 700 ? 10 : 14;
+}
+
+function getBannerStep(){
+    const track=document.getElementById("bannerTrack");
+    const card=track?.querySelector(".banner-card");
+    if(!card) return 0;
+    return card.getBoundingClientRect().width + getBannerGap();
+}
+
+function setBannerTransform(px, animate=true){
+    const track=document.getElementById("bannerTrack");
+    if(!track) return;
+    track.style.transition = animate
+        ? "transform .65s cubic-bezier(.22,.61,.36,1)"
+        : "none";
+    track.style.transform=`translate3d(${px}px,0,0)`;
+}
+
+function updateBannerDotsFromPosition(px){
+    const step=getBannerStep();
+    if(!step) return;
+    const current=Math.max(0,Math.round(Math.abs(px)/step));
+    document.querySelectorAll(".banner-dot").forEach((dot,i)=>
+        dot.classList.toggle("active",i===current)
+    );
+}
+
+function showBanner(index, animate=true){
     const track=document.getElementById("bannerTrack");
     const slider=document.getElementById("bannerSlider");
     if(!track || !slider || !bannerItems.length) return;
@@ -3367,40 +3555,227 @@ function showBanner(index){
     const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
     bannerIndex=Math.max(0,Math.min(index,maxIndex));
 
-    const gap=14;
-    const cardWidth=cards[0].getBoundingClientRect().width;
-    track.style.transform=`translateX(-${bannerIndex*(cardWidth+gap)}px)`;
+    const step=cards[0].getBoundingClientRect().width + getBannerGap();
+    setBannerTransform(-(bannerIndex*step),animate);
 
     document.querySelectorAll(".banner-dot").forEach((dot,i)=>
         dot.classList.toggle("active",i===bannerIndex)
     );
 }
 
-function startBannerTimer(){
-    clearInterval(bannerTimer);
+function startBannerTimer(delay=4500){
+    clearTimeout(bannerTimer);
     if(bannerItems.length <= bannerVisibleCount()) return;
-    bannerTimer=setInterval(()=>{
+
+    bannerTimer=setTimeout(()=>{
         const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
-        showBanner(bannerIndex>=maxIndex ? 0 : bannerIndex+1);
-    },4500);
+
+        if(window.innerWidth <= 700){
+            /*
+             * Mobile swipe can stop at any position.
+             * After the pause, continue from that exact position
+             * and smoothly move toward the next banner.
+             */
+            const track=document.getElementById("bannerTrack");
+            const card=track?.querySelector(".banner-card");
+            if(!track || !card) return;
+
+            const matrix=new DOMMatrixReadOnly(getComputedStyle(track).transform);
+            const currentX=matrix.m41 || 0;
+            const step=card.getBoundingClientRect().width + getBannerGap();
+
+            let nextX=currentX-step;
+
+            /* When the end is reached, smoothly return to the first banner. */
+            if(nextX < -(maxIndex*step)-2){
+                nextX=0;
+                bannerIndex=0;
+            }else{
+                bannerIndex=Math.min(maxIndex,Math.max(0,Math.round(Math.abs(nextX)/step)));
+            }
+
+            setBannerTransform(nextX,true);
+            updateBannerDotsFromPosition(nextX);
+
+            clearTimeout(bannerTimer);
+            bannerTimer=setTimeout(()=>{
+                startBannerTimer(3000);
+            },4500);
+            return;
+        }
+
+        showBanner(bannerIndex>=maxIndex ? 0 : bannerIndex+1,true);
+        startBannerTimer(4500);
+    },delay);
 }
 
 function setupBannerControls(){
     document.getElementById("bannerPrev")?.addEventListener("click",()=>{
         const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
-        showBanner(bannerIndex<=0 ? maxIndex : bannerIndex-1);
+        showBanner(bannerIndex<=0 ? maxIndex : bannerIndex-1,true);
         startBannerTimer();
     });
 
     document.getElementById("bannerNext")?.addEventListener("click",()=>{
         const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
-        showBanner(bannerIndex>=maxIndex ? 0 : bannerIndex+1);
+        showBanner(bannerIndex>=maxIndex ? 0 : bannerIndex+1,true);
         startBannerTimer();
     });
 
     const slider=document.getElementById("bannerSlider");
-    slider?.addEventListener("mouseenter",()=>clearInterval(bannerTimer));
-    slider?.addEventListener("mouseleave",startBannerTimer);
+
+    slider?.addEventListener("mouseenter",()=>{
+        if(window.innerWidth > 700) clearTimeout(bannerTimer);
+    });
+
+    slider?.addEventListener("mouseleave",()=>{
+        if(window.innerWidth > 700) startBannerTimer();
+    });
+
+    /* =========================================================
+       MOBILE BANNER — FREE LEFT/RIGHT SWIPE
+       Stops exactly where the finger is released.
+       Auto-slider resumes 3 seconds after release.
+    ========================================================= */
+    const viewport=document.querySelector("#bannerSlider .banner-viewport");
+
+    if(viewport){
+        let dragging=false;
+        let pointerId=null;
+        let startX=0;
+        let startTranslate=0;
+        let moved=false;
+
+        const currentTranslate=()=>{
+            const track=document.getElementById("bannerTrack");
+            if(!track) return 0;
+            const matrix=new DOMMatrixReadOnly(getComputedStyle(track).transform);
+            return matrix.m41 || 0;
+        };
+
+        viewport.addEventListener("pointerdown",(e)=>{
+            if(window.innerWidth > 700) return;
+            if(e.pointerType==="mouse" && e.button!==0) return;
+
+            clearTimeout(bannerTimer);
+
+            dragging=true;
+            pointerId=e.pointerId;
+            startX=e.clientX;
+            startTranslate=currentTranslate();
+            moved=false;
+
+            viewport.classList.add("banner-dragging");
+            viewport.setPointerCapture?.(e.pointerId);
+        });
+
+        viewport.addEventListener("pointermove",(e)=>{
+            if(!dragging || e.pointerId!==pointerId) return;
+
+            const delta=e.clientX-startX;
+
+            if(Math.abs(delta)>4) moved=true;
+
+            const step=getBannerStep();
+            const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
+            const minX=-(maxIndex*step);
+
+            /*
+             * Free movement: follow the finger exactly.
+             * A small resistance is used only at the two ends.
+             */
+            let nextX=startTranslate+delta;
+
+            if(nextX>0){
+                nextX=nextX*0.28;
+            }else if(nextX<minX){
+                nextX=minX+(nextX-minX)*0.28;
+            }
+
+            setBannerTransform(nextX,false);
+            updateBannerDotsFromPosition(nextX);
+        });
+
+        const finishBannerSwipe=(e)=>{
+            if(!dragging || (pointerId!==null && e.pointerId!==pointerId)) return;
+
+            dragging=false;
+            viewport.classList.remove("banner-dragging");
+
+            try{
+                if(viewport.hasPointerCapture?.(e.pointerId)){
+                    viewport.releasePointerCapture(e.pointerId);
+                }
+            }catch(err){}
+
+            pointerId=null;
+
+            if(!moved){
+                startBannerTimer(4500);
+                return;
+            }
+
+            /*
+             * Keep the exact free-swipe position for 3 seconds.
+             * Then smoothly complete the partially visible banner
+             * to the nearest full slide and resume normal auto-slide.
+             */
+            clearTimeout(bannerTimer);
+            bannerTimer=setTimeout(()=>{
+                const track=document.getElementById("bannerTrack");
+                const card=track?.querySelector(".banner-card");
+                if(!track || !card) return;
+
+                const currentX=currentTranslate();
+                const step=card.getBoundingClientRect().width + getBannerGap();
+                const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
+
+                let targetIndex=Math.round(Math.abs(currentX)/step);
+                targetIndex=Math.max(0,Math.min(targetIndex,maxIndex));
+
+                bannerIndex=targetIndex;
+                setBannerTransform(-(targetIndex*step),true);
+
+                document.querySelectorAll(".banner-dot").forEach((dot,i)=>
+                    dot.classList.toggle("active",i===targetIndex)
+                );
+
+                /* Continue the normal auto-slider after the banner is full. */
+                startBannerTimer(4500);
+            },3000);
+        };
+
+        viewport.addEventListener("pointerup",finishBannerSwipe);
+        viewport.addEventListener("pointercancel",(e)=>{
+            if(!dragging) return;
+            dragging=false;
+            viewport.classList.remove("banner-dragging");
+            pointerId=null;
+
+            clearTimeout(bannerTimer);
+            bannerTimer=setTimeout(()=>{
+                const track=document.getElementById("bannerTrack");
+                const card=track?.querySelector(".banner-card");
+                if(!track || !card) return;
+
+                const currentX=currentTranslate();
+                const step=card.getBoundingClientRect().width + getBannerGap();
+                const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
+
+                let targetIndex=Math.round(Math.abs(currentX)/step);
+                targetIndex=Math.max(0,Math.min(targetIndex,maxIndex));
+
+                bannerIndex=targetIndex;
+                setBannerTransform(-(targetIndex*step),true);
+
+                document.querySelectorAll(".banner-dot").forEach((dot,i)=>
+                    dot.classList.toggle("active",i===targetIndex)
+                );
+
+                startBannerTimer(4500);
+            },3000);
+        });
+    }
 
     let resizeTimer;
     window.addEventListener("resize",()=>{
@@ -3573,6 +3948,9 @@ async function loadDatabaseMovies(){
 
         runUrlSearch();
 
+        /* Real data is ready — reveal the actual Home / Telegram / Genres nav. */
+        document.querySelector(".mobile-section-nav")?.classList.remove("is-loading");
+
     }catch(error){
         console.error("CINEFLIX database load failed:",error);
 
@@ -3580,6 +3958,9 @@ async function loadDatabaseMovies(){
         trendingRow.innerHTML="";
         newRow.innerHTML="";
         seriesRow.innerHTML="";
+
+        /* Stop the nav shimmer even if the request fails. */
+        document.querySelector(".mobile-section-nav")?.classList.remove("is-loading");
     }
 }
 
