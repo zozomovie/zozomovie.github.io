@@ -1953,6 +1953,37 @@ body{
 }
 
 /* =========================================================
+   OTT CATEGORY NAV + MOBILE MENU
+========================================================= */
+.menu-toggle{display:none;}
+.desktop-category-nav{position:relative;z-index:900;margin-top:64px;height:48px;display:flex;align-items:center;justify-content:center;gap:28px;padding:0 4%;background:#080809;border-bottom:1px solid rgba(255,255,255,.055);box-shadow:0 7px 22px rgba(0,0,0,.22);}
+.desktop-category-nav a{color:#bfc0c5;text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap;transition:.22s ease;}
+.desktop-category-nav a:hover,.desktop-category-nav a.active{color:#fff;}
+.desktop-category-nav a.active::after{content:"";display:block;width:18px;height:2px;margin:6px auto 0;border-radius:9px;background:var(--red);}
+.mobile-menu-backdrop,.mobile-menu{display:none;}
+@media(max-width:800px){
+ .desktop-category-nav{display:none;}
+ .header .logo{margin-left:48px;}
+ .menu-toggle{display:grid;place-items:center;width:38px;height:38px;margin:0;position:absolute;left:10px;top:50%;transform:translateY(-50%);border:0;border-radius:10px;background:rgba(255,255,255,.035);color:#e8e8ea;cursor:pointer;flex:0 0 auto;z-index:2;}
+ .menu-toggle svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+ .mobile-menu-backdrop{position:fixed;inset:0;z-index:1100;display:block;background:rgba(0,0,0,.52);backdrop-filter:blur(3px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility .25s ease;}
+ .mobile-menu-backdrop.open{opacity:1;visibility:visible;pointer-events:auto;}
+ .mobile-menu{display:flex;position:fixed;top:0;left:0;bottom:0;width:min(76vw,330px);z-index:1101;flex-direction:column;padding:18px 14px 22px;background:linear-gradient(180deg,#101013 0%,#09090b 100%);border-right:1px solid rgba(255,255,255,.08);box-shadow:20px 0 50px rgba(0,0,0,.45);transform:translateX(-102%);transition:transform .3s cubic-bezier(.22,.61,.36,1);}
+ .mobile-menu.open{transform:translateX(0);}
+ .mobile-menu-top{display:flex;align-items:center;justify-content:space-between;padding:3px 3px 17px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.07);}
+ .mobile-menu-brand{display:flex;align-items:center;gap:9px;font-weight:900;font-size:18px;letter-spacing:-.5px;}
+ .mobile-menu-brand .logo-mark{width:29px;height:29px;}
+ .mobile-menu-close{width:34px;height:34px;border:0;border-radius:9px;background:rgba(255,255,255,.06);color:#fff;display:grid;place-items:center;cursor:pointer;}
+ .mobile-menu-close svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;}
+ .mobile-menu-links{display:flex;flex-direction:column;gap:4px;overflow:auto;padding-top:8px;}
+ .mobile-menu-links a{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 11px;border-radius:11px;color:#d9d9dd;text-decoration:none;font-size:13px;font-weight:700;transition:.2s ease;}
+ .mobile-menu-links a:hover,.mobile-menu-links a:active{background:rgba(229,9,20,.11);color:#fff;}
+ .mobile-menu-links svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;flex:0 0 auto;}
+ .mobile-menu-section{margin:13px 11px 5px;color:#777;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+}
+@media(min-width:801px){.banner-slider{margin-top:0;}}
+
+/* =========================================================
    FINAL OTT POLISH — SPACING + CLEANER HOME
 ========================================================= */
 .header{
@@ -2019,6 +2050,97 @@ body{
     }
 }
 
+
+/* Compact mobile navigation directly under the header */
+.mobile-section-nav{display:none;}
+@media(max-width:800px){
+    .mobile-section-nav{
+        display:flex;
+        position:relative;
+        z-index:900;
+        margin-top:58px;
+        height:38px;
+        align-items:center;
+        gap:24px;
+        padding:0 16px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        white-space:nowrap;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+        background:#09090b;
+        border-bottom:1px solid rgba(255,255,255,.055);
+    }
+    .mobile-section-nav::-webkit-scrollbar{display:none;}
+    .mobile-section-nav a{
+        position:relative;
+        flex:0 0 auto;
+        color:#aeb0b5;
+        text-decoration:none;
+        font-size:11px;
+        font-weight:750;
+        line-height:38px;
+        transition:color .2s ease;
+    }
+    .mobile-section-nav a.active,.mobile-section-nav a:active{color:#fff;}
+    .mobile-section-nav a.active::after{
+        content:"";
+        position:absolute;
+        left:50%;
+        bottom:0;
+        width:18px;
+        height:2px;
+        border-radius:8px;
+        transform:translateX(-50%);
+        background:var(--red);
+    }
+    /* Keep the banner immediately below this compact bar. */
+    .banner-slider{margin-top:0!important;padding-top:9px;padding-bottom:11px;}
+}
+
+
+/* FINAL HEADER SPACING POLISH */
+@media (max-width:800px){
+    /* Compact, clean mobile header: no dead black space below it. */
+    .header{
+        height:56px;
+        min-height:56px;
+        padding:0 9px;
+    }
+    .menu-toggle{
+        left:7px;
+        width:36px;
+        height:36px;
+    }
+    .header .logo{
+        margin-left:43px;
+        font-size:20px;
+        gap:7px;
+    }
+    .header .logo-mark{
+        width:29px;
+        height:29px;
+    }
+    .header-right{
+        gap:8px;
+    }
+    .mobile-section-nav{
+        margin-top:56px !important;
+        height:36px !important;
+        min-height:36px !important;
+        padding:0 14px !important;
+        gap:22px !important;
+    }
+    .mobile-section-nav a{
+        font-size:11px !important;
+        line-height:36px !important;
+    }
+    .banner-slider{
+        margin-top:0 !important;
+        padding-top:5px !important;
+        padding-bottom:9px !important;
+    }
+}
 </style>
 </head>
 
@@ -2038,6 +2160,10 @@ body{
         </span>
         CINEFLIX
     </a>
+
+    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
 
     <nav class="nav">
         <a href="#" class="active">Home</a>
@@ -2075,6 +2201,45 @@ body{
 
 </header>
 
+<nav class="mobile-section-nav" aria-label="Main navigation">
+    <a class="active" href="#">Home</a>
+    <a href="#movies">Movies</a>
+    <a href="#series">Series</a>
+    <a href="#trending">Trending</a>
+    <a href="#genres">Genres</a>
+</nav>
+
+<nav class="desktop-category-nav" aria-label="Movie categories">
+    <a class="active" href="#">Home</a>
+    <a href="search/?query=Bollywood">Bollywood</a>
+    <a href="search/?query=Hollywood">Hollywood</a>
+    <a href="search/?query=Hindi%20Dubbed">Hindi Dubbed</a>
+    <a href="search/?query=South%20Hindi">South Hindi</a>
+    <a href="search/?query=Web%20Series">Web Series</a>
+    <a href="search/?query=18%2B">18+</a>
+    <a href="#genres">Genres</a>
+    <a href="#more">More</a>
+</nav>
+
+<div class="mobile-menu-backdrop" id="mobileMenuBackdrop"></div>
+<aside class="mobile-menu" id="mobileMenu" aria-hidden="true">
+    <div class="mobile-menu-top">
+        <div class="mobile-menu-brand"><span class="logo-mark"><svg viewBox="0 0 24 24"><path d="M7 3v18l14-9L7 3z"/></svg></span>CINEFLIX</div>
+        <button class="mobile-menu-close" id="mobileMenuClose" type="button" aria-label="Close menu"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="mobile-menu-links">
+        <a href="#"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+        <a href="search/?query=Bollywood"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/></svg>Bollywood</a>
+        <a href="search/?query=Hollywood"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/></svg>Hollywood</a>
+        <a href="search/?query=Hindi%20Dubbed"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 21h8M12 16v5"/></svg>Hindi Dubbed</a>
+        <a href="search/?query=South%20Hindi"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg>South Hindi</a>
+        <a href="search/?query=Web%20Series"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9l8 3-8 3z"/></svg>Web Series</a>
+        <a href="search/?query=18%2B"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9v6M8 9h2M14 10.5A2 2 0 1 1 16 14M16 14a2 2 0 1 1-2-3.5"/></svg>18+</a>
+        <div class="mobile-menu-section">Explore</div>
+        <a href="#genres"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h16"/></svg>Genres <span style="margin-left:auto">⌄</span></a>
+        <a href="#more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More <span style="margin-left:auto">⌄</span></a>
+    </div>
+</aside>
 
 <!-- =======================================================
      COMPACT AUTO BANNER
@@ -2173,8 +2338,8 @@ body{
 
         <div class="section-header">
             <h2 class="section-title">
-                Binge-Worthy Series
-                <span>Popular series</span>
+                Web Series
+                <span>Popular web series</span>
             </h2>
             <a href="#" class="see-all">See all</a>
         </div>
@@ -3115,6 +3280,29 @@ function showGenreResults(genre){
 }
 
 /* =========================================================
+   MOBILE MENU
+========================================================= */
+(function initMobileMenu(){
+    const toggle=document.getElementById("menuToggle");
+    const menu=document.getElementById("mobileMenu");
+    const close=document.getElementById("mobileMenuClose");
+    const backdrop=document.getElementById("mobileMenuBackdrop");
+    if(!toggle||!menu||!close||!backdrop) return;
+    const setOpen=(open)=>{
+        menu.classList.toggle("open",open);
+        backdrop.classList.toggle("open",open);
+        toggle.setAttribute("aria-expanded",String(open));
+        menu.setAttribute("aria-hidden",String(!open));
+        document.body.style.overflow=open?"hidden":"";
+    };
+    toggle.addEventListener("click",()=>setOpen(true));
+    close.addEventListener("click",()=>setOpen(false));
+    backdrop.addEventListener("click",()=>setOpen(false));
+    menu.querySelectorAll("a").forEach(a=>a.addEventListener("click",()=>setOpen(false)));
+    document.addEventListener("keydown",e=>{if(e.key==="Escape") setOpen(false);});
+})();
+
+/* =========================================================
    LOAD DATABASE MOVIES
 ========================================================= */
 async function loadDatabaseMovies(){
@@ -3160,7 +3348,10 @@ async function loadDatabaseMovies(){
         })).filter(m=>m.id && m.image);
 
         movies=mapped;
-        series=mapped.filter(m=>String(m.category).toLowerCase()==="series");
+        series=mapped.filter(m=>{
+            const c=String(m.category||"").trim().toLowerCase();
+            return c==="web series" || c.includes("web series");
+        });
 
         const movieOnly=mapped.filter(m=>String(m.category).toLowerCase()!=="series");
         const trending=mapped.filter(m=>m.isTrending);
