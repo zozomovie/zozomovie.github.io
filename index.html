@@ -1134,8 +1134,6 @@ body{
     .see-all{padding:5px 8px;font-size:10px;}
     .movie-row{gap:9px;padding-right:15px;}
     .movie-card{flex-basis:calc((100% - 18px)/3);border-radius:7px;}
-    .movie-card-badge{top:5px;left:5px;max-width:calc(100% - 10px);padding:5px 7px;font-size:6.5px;letter-spacing:.35px;gap:3px}
-    .movie-card-badge::before{font-size:7px}
     .genre-browse{margin:0 15px 22px;padding:14px;border-radius:13px;}
     .genre-browse-title{font-size:14px;}
     .genre-browse-sub{font-size:9px;}
@@ -1264,47 +1262,6 @@ body{
     transform:scale(1.045) translateY(-4px);
     box-shadow:0 15px 35px rgba(0,0,0,.55);
     z-index:4;
-}
-
-.movie-card-badge{
-    position:absolute;
-    top:8px;
-    left:8px;
-    z-index:5;
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    max-width:calc(100% - 16px);
-    padding:6px 9px;
-    border-radius:999px;
-    overflow:hidden;
-    white-space:nowrap;
-    text-overflow:ellipsis;
-    color:#fff;
-    font-size:8px;
-    line-height:1;
-    font-weight:900;
-    letter-spacing:.55px;
-    text-transform:uppercase;
-    background:linear-gradient(135deg,#ff3d4f 0%,#e50914 45%,#9b0010 100%);
-    border:1px solid rgba(255,255,255,.22);
-    box-shadow:0 7px 18px rgba(0,0,0,.42),0 0 18px rgba(229,9,20,.18),inset 0 1px 0 rgba(255,255,255,.25);
-    backdrop-filter:blur(7px);
-    -webkit-backdrop-filter:blur(7px);
-    pointer-events:none;
-    transform:translateZ(0);
-    transition:transform .3s ease,filter .3s ease;
-}
-.movie-card-badge::before{
-    content:"✦";
-    flex:0 0 auto;
-    color:#fff1a8;
-    font-size:9px;
-    text-shadow:0 0 8px rgba(255,241,168,.45);
-}
-.movie-card:hover .movie-card-badge{
-    transform:translateY(-1px) scale(1.02);
-    filter:brightness(1.08);
 }
 
 .movie-card img{
@@ -3085,8 +3042,6 @@ function createMovieCard(movie){
             loading="lazy"
         >
 
-        ${movie.badge ? `<span class="movie-card-badge" title="${escapeBannerText(movie.badge)}">${escapeBannerText(movie.badge)}</span>` : ""}
-
         <div class="movie-gradient"></div>
 
         <div class="movie-hover-overlay" aria-hidden="true">
@@ -3506,7 +3461,7 @@ async function loadSearchSuggestions(query){
     try{
         const {data,error}=await supabaseClient
             .from("movies")
-            .select("id,title,year,rating,poster_url,genres,category,badge")
+            .select("id,title,year,rating,poster_url,genres,category")
             .ilike("title",`%${query}%`)
             .order("title",{ascending:true})
             .limit(8);
@@ -4077,7 +4032,7 @@ async function loadDatabaseMovies(){
     try{
         const {data,error}=await supabaseClient
             .from("movies")
-            .select("id,title,year,rating,poster_url,backdrop_url,genres,category,badge,is_trending,is_new_release,sort_order,created_at")
+            .select("id,title,year,rating,poster_url,backdrop_url,genres,category,is_trending,is_new_release,sort_order,created_at")
             .order("sort_order",{ascending:true})
             .order("created_at",{ascending:false});
 
