@@ -3017,6 +3017,83 @@ body{
     }
 }
 
+
+/* =========================================================
+   MOVIE CARD HOVER — BADGE + META STAY FIXED
+   Keep the existing image/like hover effects, but don't move
+   the card container itself on hover.
+========================================================= */
+.movie-row .movie-card:hover{
+    transform:none !important;
+}
+
+.movie-row .movie-card:hover .movie-card-badge,
+.movie-row .movie-card:active .movie-card-badge,
+.movie-row .movie-card:focus .movie-card-badge{
+    top:0 !important;
+    left:0 !important;
+    right:auto !important;
+    bottom:auto !important;
+    transform:none !important;
+    animation:none !important;
+}
+
+.movie-row .movie-card:hover .movie-info,
+.movie-row .movie-card:active .movie-info,
+.movie-row .movie-card:focus .movie-info{
+    opacity:1 !important;
+    visibility:visible !important;
+    transform:none !important;
+}
+
+
+/* =========================================================
+   MOBILE FINAL — EXACTLY 3 CARDS / EQUAL LEFT-RIGHT SPACE
+========================================================= */
+@media (max-width:800px){
+    .movie-row-wrapper{
+        width:100% !important;
+        max-width:100% !important;
+        overflow:hidden !important;
+        box-sizing:border-box !important;
+    }
+
+    .movie-row{
+        box-sizing:border-box !important;
+        width:calc(100% - 15px) !important;
+        max-width:calc(100% - 15px) !important;
+        margin:0 15px 0 0 !important;
+        padding-left:0 !important;
+        padding-right:0 !important;
+        gap:6px !important;
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+        flex-wrap:nowrap !important;
+        -webkit-overflow-scrolling:touch !important;
+        touch-action:pan-x pan-y !important;
+    }
+
+    .movie-row .movie-card-wrap{
+        box-sizing:border-box !important;
+        flex:0 0 calc((100% - 12px) / 3) !important;
+        width:calc((100% - 12px) / 3) !important;
+        min-width:calc((100% - 12px) / 3) !important;
+        max-width:calc((100% - 12px) / 3) !important;
+    }
+
+    .movie-row .movie-card{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:100% !important;
+    }
+
+    /* Never expose a 4th-card sliver at the right edge. */
+    .movie-row::after{
+        content:none !important;
+        display:none !important;
+    }
+}
+
 </style>
 </head>
 
@@ -4493,8 +4570,13 @@ async function loadDatabaseMovies(){
         newRow.innerHTML="";
         seriesRow.innerHTML="";
 
-        if(trendingItems.length) loadRow("trendingRow",trendingItems);
-        else trendingRow.innerHTML="";
+        if(trendingItems.length) {
+            loadRow("trendingRow",trendingItems);
+            startTrendingAutoSlide();
+        } else {
+            trendingRow.innerHTML="";
+            stopTrendingAutoSlide();
+        }
 
         if(freshItems.length) loadRow("newRow",freshItems);
         else newRow.innerHTML="";
@@ -4518,6 +4600,109 @@ async function loadDatabaseMovies(){
         /* Stop the nav shimmer even if the request fails. */
         document.querySelector(".mobile-section-nav")?.classList.remove("is-loading");
     }
+}
+
+
+
+/* =========================================================
+   TRENDING ONLY — AUTO SLIDE 3 CARDS
+   3 sec after page data is ready, then every 2.5 sec.
+========================================================= */
+let trendingAutoSlideTimer = null;
+let trendingAutoStartTimer = null;
+let trendingUserInteracting = false;
+
+function trendingAutoSlideOnce(){
+    const row=document.getElementById("trendingRow");
+    if(!row || trendingUserInteracting) return;
+
+    const cards=Array.from(row.querySelectorAll(".movie-card-wrap"));
+    if(cards.length<=3) return;
+
+    const gap=parseFloat(getComputedStyle(row).gap)||0;
+    const step=(cards[0]?.getBoundingClientRect().width||0)+gap;
+    const maxScroll=Math.max(0,row.scrollWidth-row.clientWidth);
+
+    if(row.scrollLeft >= maxScroll-2){
+        row.scrollTo({left:0,behavior:"smooth"});
+    }else{
+        row.scrollBy({left:step,behavior:"smooth"});
+    }
+}
+
+function scheduleTrendingAutoResume(){
+    clearTimeout(trendingAutoStartTimer);
+    clearInterval(trendingAutoSlideTimer);
+
+    if(trendingUserInteracting) return;
+
+    trendingAutoStartTimer=setTimeout(()=>{
+        if(trendingUserInteracting) return;
+        trendingAutoSlideOnce();
+        trendingAutoSlideTimer=setInterval(()=>{
+            if(!trendingUserInteracting) trendingAutoSlideOnce();
+        },2500);
+    },2500);
+}
+
+function startTrendingAutoSlide(){
+    const row=document.getElementById("trendingRow");
+    if(!row) return;
+
+    clearTimeout(trendingAutoStartTimer);
+    clearInterval(trendingAutoSlideTimer);
+
+    trendingUserInteracting=false;
+
+    /* First auto movement happens 3 seconds after Trending is ready. */
+    trendingAutoStartTimer=setTimeout(()=>{
+        if(trendingUserInteracting) return;
+
+        trendingAutoSlideOnce();
+
+        trendingAutoSlideTimer=setInterval(()=>{
+            if(!trendingUserInteracting) trendingAutoSlideOnce();
+        },2500);
+    },3000);
+
+    /* Pause while the user is touching/dragging the Trending row. */
+    if(!row.dataset.autoPauseBound){
+        row.dataset.autoPauseBound="true";
+
+        const pause=()=>{
+            trendingUserInteracting=true;
+            clearTimeout(trendingAutoStartTimer);
+            clearInterval(trendingAutoSlideTimer);
+            trendingAutoStartTimer=null;
+            trendingAutoSlideTimer=null;
+        };
+
+        const resume=()=>{
+            if(!trendingUserInteracting) return;
+            trendingUserInteracting=false;
+            scheduleTrendingAutoResume();
+        };
+
+        row.addEventListener("pointerdown",pause,{passive:true});
+        row.addEventListener("pointerup",resume,{passive:true});
+        row.addEventListener("pointercancel",resume,{passive:true});
+        row.addEventListener("pointerleave",()=>{
+            /* Mouse hover should also pause auto-slide while over the row. */
+            if(!trendingUserInteracting) return;
+        },{passive:true});
+
+        /* Desktop: hovering any Trending card pauses the timer. */
+        row.addEventListener("mouseenter",pause,{passive:true});
+        row.addEventListener("mouseleave",resume,{passive:true});
+    }
+}
+
+function stopTrendingAutoSlide(){
+    clearTimeout(trendingAutoStartTimer);
+    clearInterval(trendingAutoSlideTimer);
+    trendingAutoStartTimer=null;
+    trendingAutoSlideTimer=null;
+    trendingUserInteracting=false;
 }
 
 
