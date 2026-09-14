@@ -412,6 +412,15 @@ body{
 /* =========================================================
    COMPACT CINEMATIC BANNER SLIDER
 ========================================================= */
+/* Keep the fixed header completely separate from the banner. */
+.header{
+    background:#070708;
+}
+
+.banner-slider{
+    margin-top:58px;
+}
+
 
 .banner-slider{
     position:relative;
@@ -1265,7 +1274,12 @@ body{
 
 @media(max-width:800px){
 
+    .header{
+        background:#070708;
+    }
+
     .banner-slider{
+        margin-top:62px;
         padding:10px 15px 2px;
     }
 
