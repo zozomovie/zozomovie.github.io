@@ -2995,6 +2995,28 @@ body{
     }
 }
 
+
+/* =========================================================
+   MOBILE SWIPE — NATIVE SMOOTH / MOMENTUM SCROLL
+   Prevents pointermove JS from fighting the browser's touch scrolling.
+========================================================= */
+@media (max-width:800px){
+    .movie-row{
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+        -webkit-overflow-scrolling:touch !important;
+        overscroll-behavior-x:contain !important;
+        touch-action:pan-x pan-y !important;
+        scroll-behavior:auto !important;
+        scroll-snap-type:none !important;
+        will-change:scroll-position;
+    }
+
+    .movie-row.dragging{
+        scroll-behavior:auto !important;
+    }
+}
+
 </style>
 </head>
 
@@ -3608,6 +3630,10 @@ function setupDrag(row){
 
     row.addEventListener("pointerdown",(e)=>{
 
+        /* On touch devices, use native browser scrolling/momentum.
+           JS drag is kept for mouse/trackpad so desktop behavior remains. */
+        if(e.pointerType==="touch") return;
+
         isDown = true;
         moved = false;
 
@@ -3622,7 +3648,7 @@ function setupDrag(row){
 
     row.addEventListener("pointermove",(e)=>{
 
-        if(!isDown) return;
+        if(e.pointerType==="touch" || !isDown) return;
 
         const walk = (e.clientX-startX)*1.25;
 
