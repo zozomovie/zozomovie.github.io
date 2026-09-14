@@ -968,6 +968,131 @@ body{
 
 .movie-card:hover img{
     transform:scale(1.05);
+    filter:blur(2.6px);
+}
+
+/* =========================================================
+   MOVIE CARD — SCREENSHOT-STYLE HOVER
+   ========================================================= */
+.movie-card img{
+    transition:transform .35s ease, filter .28s ease;
+}
+
+.movie-card:hover img{
+    transform:scale(1.045);
+    filter:blur(2.2px) brightness(.62) saturate(.88);
+}
+
+.movie-hover-overlay{
+    position:absolute;
+    inset:0;
+    z-index:3;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:
+        radial-gradient(circle at center, rgba(0,0,0,.08) 0 18%, rgba(0,0,0,.28) 48%, rgba(0,0,0,.38) 100%);
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .22s ease,visibility .22s ease;
+}
+
+.movie-card:hover .movie-hover-overlay{
+    opacity:1;
+    visibility:visible;
+}
+
+.movie-hover-play{
+    width:58px;
+    height:58px;
+    display:grid;
+    place-items:center;
+    background:transparent;
+    border:0;
+    box-shadow:none;
+    transform:scale(.94);
+    transition:transform .22s ease;
+}
+
+.movie-card:hover .movie-hover-play{
+    transform:scale(1);
+}
+
+.movie-hover-play svg{
+    width:52px;
+    height:52px;
+    display:block;
+    fill:none;
+    stroke:#fff;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    margin:0;
+    filter:none;
+}
+
+.movie-hover-brand{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+    font-family:Impact,"Arial Black",Arial,sans-serif;
+    font-size:16px;
+    line-height:1;
+    font-weight:900;
+    font-style:italic;
+    letter-spacing:-.35px;
+    padding:5px 9px;
+    border-radius:5px;
+    background:rgba(0,0,0,.46);
+    box-shadow:0 3px 12px rgba(0,0,0,.42);
+    text-transform:uppercase;
+    text-shadow:0 2px 7px rgba(0,0,0,.9);
+}
+
+.movie-hover-brand .zozo{
+    color:#ff2438;
+    -webkit-text-fill-color:#ff2438;
+}
+
+.movie-hover-brand .movies{
+    color:#fff;
+    -webkit-text-fill-color:#fff;
+    margin-left:4px;
+}
+
+@media(max-width:800px){
+    .movie-card:hover img{
+        filter:blur(2.5px) brightness(.7);
+    }
+
+    .movie-hover-overlay{
+        gap:6px;
+        background:
+            radial-gradient(circle at center, rgba(0,0,0,.08) 0 20%, rgba(0,0,0,.25) 52%, rgba(0,0,0,.34) 100%);
+    }
+
+    .movie-hover-play{
+        width:43px;
+        height:43px;
+    }
+
+    .movie-hover-play svg{
+        width:39px;
+        height:39px;
+        margin:0;
+        stroke-width:1.8;
+    }
+
+    .movie-hover-brand{
+        font-size:9px;
+        letter-spacing:-.1px;
+        padding:0;
+        background:transparent;
+    }
 }
 
 .movie-gradient{
@@ -2612,6 +2737,18 @@ function createMovieCard(movie){
         >
 
         <div class="movie-gradient"></div>
+
+        <div class="movie-hover-overlay" aria-hidden="true">
+            <span class="movie-hover-play">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M20.4086 9.35258C22.5305 10.5065 22.5305 13.4935 20.4086 14.6474L7.59662 21.6145C5.53435 22.736 3 21.2763 3 18.9671L3 5.0329C3 2.72368 5.53435 1.26402 7.59661 2.38548L20.4086 9.35258Z"
+                          stroke="currentColor" stroke-width="1.7"></path>
+                </svg>
+            </span>
+            <span class="movie-hover-brand">
+                <span class="zozo">ZOZO</span><span class="movies">MOVIES</span>
+            </span>
+        </div>
 
         <div class="movie-info">
 
