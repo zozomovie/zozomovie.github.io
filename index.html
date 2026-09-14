@@ -1951,6 +1951,74 @@ body{
         animation:none!important;
     }
 }
+
+/* =========================================================
+   FINAL OTT POLISH — SPACING + CLEANER HOME
+========================================================= */
+.header{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:1000;
+}
+.banner-slider{
+    padding-top:18px;
+    padding-bottom:14px;
+}
+.banner-viewport{
+    box-shadow:0 18px 45px rgba(0,0,0,.30);
+    border:1px solid rgba(255,255,255,.045);
+}
+.banner-card{
+    background:#101012;
+    box-shadow:0 12px 32px rgba(0,0,0,.25);
+}
+.banner-dots{
+    margin-top:12px;
+}
+.content{
+    margin-top:0;
+}
+.section{
+    margin-bottom:16px;
+}
+.section:first-child{
+    margin-top:5px;
+}
+.section-header{
+    margin-bottom:11px;
+}
+.movie-row{
+    padding-top:2px;
+    padding-bottom:8px;
+}
+.genre-browse{
+    margin-top:2px;
+}
+
+@media(max-width:800px){
+    .banner-slider{
+        padding-top:10px;
+        padding-bottom:13px;
+    }
+    .section:first-child{
+        margin-top:3px;
+    }
+    .section{
+        margin-bottom:14px;
+    }
+    .section-header{
+        margin-bottom:9px;
+    }
+    .movie-row{
+        padding-bottom:5px;
+    }
+    .genre-browse{
+        margin-top:1px;
+    }
+}
+
 </style>
 </head>
 
@@ -3012,7 +3080,7 @@ function renderGenreChips(rows){
     wrap.innerHTML=final.map(name=>`<button type="button" class="genre-chip" data-genre="${escapeBannerText(name)}">${escapeBannerText(name)}</button>`).join("");
     wrap.querySelectorAll(".genre-chip").forEach(chip=>chip.addEventListener("click",()=>{
         const q=chip.dataset.genre||"";
-        if(q) showGenreResults(q);
+        if(q) window.location.assign("search/?query=" + encodeURIComponent(q));
     }));
 }
 
@@ -3021,6 +3089,7 @@ function renderGenreChips(rows){
 ========================================================= */
 function showGenreResults(genre){
     const q=String(genre||"").trim();
+    if(q){ window.location.assign("search/?query=" + encodeURIComponent(q)); return; }
     if(!q || !genreResults || !genreResultsGrid) return;
 
     const matches=movies.filter(movie=>{
