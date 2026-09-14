@@ -4622,12 +4622,34 @@ function trendingAutoSlideOnce(){
     const gap=parseFloat(getComputedStyle(row).gap)||0;
     const step=(cards[0]?.getBoundingClientRect().width||0)+gap;
     const maxScroll=Math.max(0,row.scrollWidth-row.clientWidth);
+    const target=(row.scrollLeft >= maxScroll-2) ? 0 : Math.min(row.scrollLeft+step,maxScroll);
 
-    if(row.scrollLeft >= maxScroll-2){
-        row.scrollTo({left:0,behavior:"smooth"});
-    }else{
-        row.scrollBy({left:step,behavior:"smooth"});
-    }
+    /* Slow, buttery-smooth movement instead of the browser's quick
+       native smooth-scroll animation. */
+    const start=row.scrollLeft;
+    const distance=target-start;
+    const duration=1000;
+    const started=performance.now();
+
+    if(Math.abs(distance)<1) return;
+
+    cancelAnimationFrame(row._trendingSmoothFrame);
+
+    const easeInOut=t=>{
+        return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+    };
+
+    const animate=now=>{
+        if(trendingUserInteracting) return;
+        const progress=Math.min((now-started)/duration,1);
+        row.scrollLeft=start + distance*easeInOut(progress);
+
+        if(progress<1){
+            row._trendingSmoothFrame=requestAnimationFrame(animate);
+        }
+    };
+
+    row._trendingSmoothFrame=requestAnimationFrame(animate);
 }
 
 function scheduleTrendingAutoResume(){
@@ -4673,6 +4695,10 @@ function startTrendingAutoSlide(){
             trendingUserInteracting=true;
             clearTimeout(trendingAutoStartTimer);
             clearInterval(trendingAutoSlideTimer);
+            if(row._trendingSmoothFrame){
+                cancelAnimationFrame(row._trendingSmoothFrame);
+                row._trendingSmoothFrame=null;
+            }
             trendingAutoStartTimer=null;
             trendingAutoSlideTimer=null;
         };
@@ -4700,6 +4726,11 @@ function startTrendingAutoSlide(){
 function stopTrendingAutoSlide(){
     clearTimeout(trendingAutoStartTimer);
     clearInterval(trendingAutoSlideTimer);
+    const row=document.getElementById("trendingRow");
+    if(row && row._trendingSmoothFrame){
+        cancelAnimationFrame(row._trendingSmoothFrame);
+        row._trendingSmoothFrame=null;
+    }
     trendingAutoStartTimer=null;
     trendingAutoSlideTimer=null;
     trendingUserInteracting=false;
