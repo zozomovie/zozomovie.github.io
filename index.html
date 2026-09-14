@@ -2650,7 +2650,7 @@ async function loadDatabaseMovies(){
     try{
         const {data,error}=await supabaseClient
             .from("movies")
-            .select("id,title,year,rating,poster_url,backdrop_url,backdrop_image,hero_image,backdrop,genres,category,is_trending,is_new_release,sort_order,created_at")
+            .select("id,title,year,rating,poster_url,backdrop_url,genres,category,is_trending,is_new_release,sort_order,created_at")
             .order("sort_order",{ascending:true})
             .order("created_at",{ascending:false});
 
