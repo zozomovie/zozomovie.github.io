@@ -682,11 +682,12 @@ body{
 .banner-title{font-size:clamp(16px,1.55vw,24px);}
 
 .banner-dots{margin-top:9px;}
+.banner-slider{padding-bottom:17px;}
 
-.content{padding-top:2px;}
+.content{padding-top:0;}
 
 .section{
-    margin-bottom:34px;
+    margin-bottom:22px;
     padding-left:4%;
 }
 
@@ -758,7 +759,7 @@ body{
 
 /* Compact genre strip, similar to modern OTT browse pages. */
 .genre-browse{
-    margin:4px 4% 38px;
+    margin:4px 4% 24px;
     padding:18px 20px;
     border:1px solid rgba(255,255,255,.065);
     border-radius:16px;
@@ -818,7 +819,7 @@ body{
     .banner-card{height:25vh;min-height:160px;max-height:225px;border-radius:14px;}
     .banner-info{left:13px;right:13px;bottom:12px;}
     .banner-title{font-size:17px;}
-    .section{padding-left:15px;margin-bottom:28px;}
+    .section{padding-left:15px;margin-bottom:20px;}
     .section-header{padding-right:15px;margin-bottom:10px;}
     .section-title{font-size:17px;gap:7px;}
     .section-title::before{height:15px;width:3px;}
@@ -826,7 +827,7 @@ body{
     .see-all{padding:5px 8px;font-size:10px;}
     .movie-row{gap:9px;padding-right:15px;}
     .movie-card{flex-basis:calc((100% - 18px)/3);border-radius:7px;}
-    .genre-browse{margin:0 15px 30px;padding:14px;border-radius:13px;}
+    .genre-browse{margin:0 15px 22px;padding:14px;border-radius:13px;}
     .genre-browse-title{font-size:14px;}
     .genre-browse-sub{font-size:9px;}
     .genre-chip{padding:7px 11px;font-size:10px;}
@@ -843,7 +844,7 @@ body{
 }
 
 .section{
-    margin-bottom:36px;
+    margin-bottom:24px;
     padding-left:4%;
 }
 
@@ -1251,6 +1252,78 @@ body{
 @keyframes cardShimmer{
     0%{background-position:200% 0}
     100%{background-position:-50% 0}
+}
+
+/* =========================================================
+   GENRE RESULTS
+========================================================= */
+.genre-results{
+    display:none;
+    margin:0 4% 30px;
+    padding:18px 0 4px;
+    scroll-margin-top:82px;
+}
+
+.genre-results.show{display:block;}
+
+.genre-results-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+    margin-bottom:14px;
+}
+
+.genre-results-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0;
+    color:#fff;
+    font-size:20px;
+    font-weight:850;
+    letter-spacing:-.45px;
+}
+
+.genre-results-title::before{
+    content:"";
+    width:3px;
+    height:18px;
+    border-radius:4px;
+    background:var(--red);
+    box-shadow:0 0 12px rgba(229,9,20,.45);
+}
+
+.genre-results-count{
+    color:#737379;
+    font-size:11px;
+    font-weight:600;
+    white-space:nowrap;
+}
+
+.genre-results-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:16px;
+}
+
+.genre-empty{
+    padding:34px 15px;
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;
+    background:rgba(255,255,255,.018);
+    text-align:center;
+    color:#85858b;
+    font-size:12px;
+}
+
+@media(max-width:700px){
+    .banner-slider{padding-bottom:14px;}
+    .genre-results{margin:0 15px 24px;padding-top:8px;}
+    .genre-results-head{margin-bottom:11px;}
+    .genre-results-title{font-size:17px;}
+    .genre-results-count{font-size:9px;}
+    .genre-results-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
 }
 
 /* =========================================================
@@ -2070,6 +2143,14 @@ body{
         <div class="genre-chips" id="genreChips"></div>
     </section>
 
+    <section class="genre-results" id="genreResults" aria-live="polite">
+        <div class="genre-results-head">
+            <h2 class="genre-results-title" id="genreResultsTitle">Action</h2>
+            <span class="genre-results-count" id="genreResultsCount"></span>
+        </div>
+        <div class="genre-results-grid" id="genreResultsGrid"></div>
+    </section>
+
 </main>
 
 
@@ -2549,6 +2630,10 @@ const mainContent = document.getElementById("mainContent");
 const searchGrid = document.getElementById("searchGrid");
 const noResults = document.getElementById("noResults");
 const requestMovieBtn = document.getElementById("requestMovieBtn");
+const genreResults = document.getElementById("genreResults");
+const genreResultsGrid = document.getElementById("genreResultsGrid");
+const genreResultsTitle = document.getElementById("genreResultsTitle");
+const genreResultsCount = document.getElementById("genreResultsCount");
 
 let searchTimer = null;
 let lastSearchQuery = "";
@@ -2927,8 +3012,37 @@ function renderGenreChips(rows){
     wrap.innerHTML=final.map(name=>`<button type="button" class="genre-chip" data-genre="${escapeBannerText(name)}">${escapeBannerText(name)}</button>`).join("");
     wrap.querySelectorAll(".genre-chip").forEach(chip=>chip.addEventListener("click",()=>{
         const q=chip.dataset.genre||"";
-        if(q) window.location.href="search/?query="+encodeURIComponent(q);
+        if(q) showGenreResults(q);
     }));
+}
+
+/* =========================================================
+   REAL GENRE FILTER — SAME HOME PAGE
+========================================================= */
+function showGenreResults(genre){
+    const q=String(genre||"").trim();
+    if(!q || !genreResults || !genreResultsGrid) return;
+
+    const matches=movies.filter(movie=>{
+        const values=Array.isArray(movie.genres)
+            ? movie.genres.map(x=>typeof x==="string" ? x : x?.name).filter(Boolean)
+            : [];
+        return values.some(value=>String(value).trim().toLowerCase()===q.toLowerCase());
+    });
+
+    genreResultsTitle.textContent=q + " Movies & Series";
+    genreResultsCount.textContent=`${matches.length} ${matches.length===1?"title":"titles"}`;
+    genreResultsGrid.innerHTML="";
+
+    if(matches.length){
+        matches.forEach(movie=>genreResultsGrid.appendChild(createMovieCard(movie)));
+        attachMovieCardNavigation(genreResultsGrid);
+    }else{
+        genreResultsGrid.innerHTML=`<div class="genre-empty" style="grid-column:1/-1">No ${escapeBannerText(q)} movies or series found.</div>`;
+    }
+
+    genreResults.classList.add("show");
+    requestAnimationFrame(()=>genreResults.scrollIntoView({behavior:"smooth",block:"start"}));
 }
 
 /* =========================================================
@@ -2970,6 +3084,7 @@ async function loadDatabaseMovies(){
             image:m.poster_url || "",
             backdrop:m.backdrop_url || m.backdrop_image || m.hero_image || m.backdrop || m.poster_url || "",
             category:m.category || "Movies",
+            genres:Array.isArray(m.genres) ? m.genres : [],
             isTrending:Boolean(m.is_trending),
             isNewRelease:Boolean(m.is_new_release),
             createdAt:m.created_at || ""
