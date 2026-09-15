@@ -2459,7 +2459,7 @@ body{
 
     .movie-card,
     .loading-card{
-        /* Exactly 3 complete cards in the visible row. */
+        /* 3 complete cards remain visible; each swipe advances 6 cards. */
         flex:0 0 calc((100% - 20px)/3);
         min-width:0;
     }
@@ -2482,7 +2482,7 @@ body{
 
     .movie-card,
     .loading-card{
-        /* 3 cards + 2 gaps, all fully visible without clipping. */
+        /* 3 cards + 2 gaps remain fully visible; swipe advances 6 cards. */
         flex:0 0 calc((100% - 18px)/3);
     }
 
@@ -3107,6 +3107,36 @@ body{
     }
 }
 
+
+/* =========================================================
+   DESKTOP / LAPTOP — BADGE ABSOLUTELY FIXED ON HOVER
+   Do not move, scale, brighten, or animate the badge.
+   Keep the rest of the card hover effects untouched.
+========================================================= */
+@media (min-width:801px){
+    .movie-row .movie-card:hover{
+        transform:none !important;
+    }
+
+    .movie-row .movie-card:hover .movie-card-badge,
+    .movie-row .movie-card:active .movie-card-badge,
+    .movie-row .movie-card:focus .movie-card-badge{
+        top:8px !important;
+        left:8px !important;
+        right:auto !important;
+        bottom:auto !important;
+        transform:none !important;
+        filter:none !important;
+        animation:none !important;
+        transition:none !important;
+    }
+
+    .movie-row .movie-card-badge{
+        transform:none !important;
+        filter:none !important;
+    }
+}
+
 </style>
 </head>
 
@@ -3309,14 +3339,13 @@ body{
 
     </section>
 
-
     <!-- ALL MOVIES -->
     <section class="section" id="allMovies">
 
         <div class="section-header">
             <h2 class="section-title">
                 Movies
-                <span>All Latest movies</span>
+                <span>All movies</span>
             </h2>
             <a href="#" class="see-all">See all</a>
         </div>
@@ -3743,6 +3772,50 @@ function loadTop10(){
    HORIZONTAL ROW DRAG / SWIPE
 ========================================================= */
 
+function getRowPageWidth(row, count=1){
+    if(!row) return 0;
+
+    const card=row.querySelector(".movie-card-wrap");
+    if(!card) return 0;
+
+    const gap=parseFloat(getComputedStyle(row).gap)||0;
+    const width=card.getBoundingClientRect().width||0;
+
+    return (width+gap)*Math.max(1,count);
+}
+
+/* Movies + Web Series move a full 6-card page at a time.
+   Other existing sections keep their normal 1-card movement. */
+function getRowSwipeCount(row){
+    if(!row) return 1;
+
+    if(row.id === "moviesRow" || row.id === "seriesRow"){
+        return window.innerWidth <= 800 ? 6 : 10;
+    }
+
+    return 1;
+}
+
+function snapRow(row,direction){
+    if(!row) return;
+
+    const pageWidth=getRowPageWidth(row,getRowSwipeCount(row));
+    if(pageWidth<=0) return;
+
+    const maxScroll=Math.max(0,row.scrollWidth-row.clientWidth);
+    if(maxScroll<=1) return;
+
+    const current=row.scrollLeft;
+    const target=direction>0
+        ? Math.min(current+pageWidth,maxScroll)
+        : Math.max(current-pageWidth,0);
+
+    row.scrollTo({
+        left:target,
+        behavior:"smooth"
+    });
+}
+
 function setupDrag(row){
 
     let isDown = false;
@@ -3750,10 +3823,57 @@ function setupDrag(row){
     let scrollLeft = 0;
     let moved = false;
 
+    /* Mobile touch swipe:
+       one horizontal swipe advances exactly one 6-card page. */
+    let touchStartX=0;
+    let touchStartY=0;
+    let touchStartScroll=0;
+
+    row.addEventListener("touchstart",(e)=>{
+        const t=e.touches[0];
+        if(!t) return;
+
+        touchStartX=t.clientX;
+        touchStartY=t.clientY;
+        touchStartScroll=row.scrollLeft;
+    },{passive:true});
+
+    row.addEventListener("touchend",(e)=>{
+        const t=e.changedTouches[0];
+        if(!t) return;
+
+        const dx=t.clientX-touchStartX;
+        const dy=t.clientY-touchStartY;
+
+        if(Math.abs(dx)<35 || Math.abs(dx)<=Math.abs(dy)) return;
+
+        const pageWidth=getRowPageWidth(row,getRowSwipeCount(row));
+        if(pageWidth<=0) return;
+
+        const maxScroll=Math.max(0,row.scrollWidth-row.clientWidth);
+        if(maxScroll<=1) return;
+
+        const direction=dx<0 ? 1 : -1;
+        const target=Math.max(
+            0,
+            Math.min(
+                maxScroll,
+                touchStartScroll + direction*pageWidth
+            )
+        );
+
+        requestAnimationFrame(()=>{
+            row.scrollTo({
+                left:target,
+                behavior:"smooth"
+            });
+        });
+    },{passive:true});
+
     row.addEventListener("pointerdown",(e)=>{
 
-        /* On touch devices, use native browser scrolling/momentum.
-           JS drag is kept for mouse/trackpad so desktop behavior remains. */
+        /* On touch devices, native touch handling above is used.
+           JS mouse drag remains available for desktop. */
         if(e.pointerType==="touch") return;
 
         isDown = true;
@@ -3784,9 +3904,6 @@ function setupDrag(row){
 
     row.addEventListener("pointerup",(e)=>{
 
-        /* The row uses pointer capture for swipe/drag. Because of that,
-           the browser may report the row as the click target instead of
-           the movie card. Resolve the card from the actual screen point. */
         const wasClick = !moved;
 
         isDown = false;
@@ -3798,7 +3915,16 @@ function setupDrag(row){
             }
         }catch(err){}
 
-        if(!wasClick) return;
+        if(!wasClick){
+
+            const dx=e.clientX-startX;
+
+            if(Math.abs(dx)>35){
+                snapRow(row,dx<0 ? 1 : -1);
+            }
+
+            return;
+        }
 
         const underPointer = document.elementFromPoint(e.clientX,e.clientY);
         const card = underPointer ? underPointer.closest(".movie-card") : null;
@@ -3825,7 +3951,6 @@ function setupDrag(row){
 
 }
 
-
 /* =========================================================
    ROW ARROWS
 ========================================================= */
@@ -3844,19 +3969,13 @@ function setupRowArrows(){
 
         prev.addEventListener("click",()=>{
 
-            row.scrollBy({
-                left:-window.innerWidth*.65,
-                behavior:"smooth"
-            });
+            snapRow(row,-1);
 
         });
 
         next.addEventListener("click",()=>{
 
-            row.scrollBy({
-                left:window.innerWidth*.65,
-                behavior:"smooth"
-            });
+            snapRow(row,1);
 
         });
 
@@ -4620,8 +4739,9 @@ async function loadDatabaseMovies(){
     try{
         const {data,error}=await supabaseClient
             .from("movies")
-            .select("id,title,year,rating,poster_url,backdrop_url,genres,category,badge,badge_style,is_trending,is_new_release,sort_order,created_at")
+            .select("id,title,year,rating,poster_url,backdrop_url,genres,category,badge,badge_style,is_trending,is_new_release,is_featured,sort_order,created_at,updated_at")
             .order("sort_order",{ascending:true})
+            .order("updated_at",{ascending:false})
             .order("created_at",{ascending:false});
 
         if(error) throw error;
@@ -4650,7 +4770,9 @@ async function loadDatabaseMovies(){
             genres:Array.isArray(m.genres) ? m.genres : [],
             isTrending:Boolean(m.is_trending),
             isNewRelease:Boolean(m.is_new_release),
-            createdAt:m.created_at || ""
+            isFeatured:Boolean(m.is_featured),
+            createdAt:m.created_at || "",
+            updatedAt:m.updated_at || m.created_at || ""
         })).filter(m=>m.id && m.image);
 
         movies=mapped;
@@ -4671,15 +4793,108 @@ async function loadDatabaseMovies(){
         const trending=mapped.filter(m=>m.isTrending);
         const fresh=mapped.filter(m=>m.isNewRelease);
 
+        // Section priority:
+        // Any checkbox selected in Admin makes that item appear first
+        // inside its applicable section, without removing it from the
+        // normal Movies / Series section.
+        const newestFirst=(a,b)=>{
+            const at=new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+            const bt=new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
+            return bt-at;
+        };
+
         // Show EVERY matching item added from Admin.
         // Nothing is artificially limited to one card anymore.
-        const trendingItems=trending.length ? trending : movieOnly;
-        const freshItems=fresh.length ? fresh : movieOnly;
-        // MOVIES SECTION: always show every Movie selected from Admin.
-        // Trending / New Release / Featured checkboxes never remove a movie
-        // from this section. Series are kept out completely.
-        const movieItems=movieOnly;
-        const seriesItems=series;
+        // Each checkbox controls membership of its own section.
+        // Within every section, the newest added/edited item is always #1.
+        const trendingItems=trending.slice().sort(newestFirst);
+        const freshItems=fresh.slice().sort(newestFirst);
+
+        // Movie / Series normal sections:
+        // Shuffle the card positions on every refresh.
+        // Trending / New Release stay in their existing order.
+        // Avoid putting the same movie/series at the same position on the
+        // first visible/page positions when there are enough different items.
+        // Keep the newest added/edited item at #6 on mobile and #10 on
+        // laptop/desktop, as requested earlier.
+        const shuffleArray=(items)=>{
+            const arr=items.slice();
+            for(let i=arr.length-1;i>0;i--){
+                const j=Math.floor(Math.random()*(i+1));
+                [arr[i],arr[j]]=[arr[j],arr[i]];
+            }
+            return arr;
+        };
+
+        const getRefreshShuffleCount=()=>{
+            return window.innerWidth <= 800 ? 6 : 10;
+        };
+
+        const shuffleMovieSeriesForRefresh=(items)=>{
+            if(items.length <= 1) return items.slice();
+
+            const newest=items.slice().sort(newestFirst)[0];
+            const newestId=String(newest?.id ?? "");
+
+            // Shuffle all other cards on every refresh.
+            let shuffled=shuffleArray(items.filter(item =>
+                String(item?.id ?? "") !== newestId
+            ));
+
+            const targetPosition=getRefreshShuffleCount();
+
+            // Preserve the earlier #6 mobile / #10 laptop-desktop rule
+            // whenever the section has enough titles.
+            if(items.length >= targetPosition){
+                shuffled.splice(targetPosition - 1,0,newest);
+            }else{
+                shuffled.unshift(newest);
+            }
+
+            // Same-position avoidance against Trending + New Release.
+            // We only rearrange the Movie/Series section; those two sections
+            // remain completely untouched.
+            const blockedRows=[trendingItems,freshItems];
+            const checkCount=Math.min(targetPosition,shuffled.length);
+
+            for(let i=0;i<checkCount;i++){
+                const currentId=String(shuffled[i]?.id ?? "");
+
+                const conflict=blockedRows.some(row =>
+                    String(row[i]?.id ?? "") === currentId
+                );
+
+                if(!conflict) continue;
+
+                let swapIndex=-1;
+
+                // Find a position whose item is not already occupying this
+                // same position in Trending or New Release.
+                for(let j=0;j<shuffled.length;j++){
+                    if(j===i) continue;
+
+                    const candidateId=String(shuffled[j]?.id ?? "");
+                    const candidateConflict=blockedRows.some(row =>
+                        String(row[i]?.id ?? "") === candidateId
+                    );
+
+                    if(!candidateConflict){
+                        swapIndex=j;
+                        break;
+                    }
+                }
+
+                if(swapIndex>=0){
+                    [shuffled[i],shuffled[swapIndex]]=
+                    [shuffled[swapIndex],shuffled[i]];
+                }
+            }
+
+            return shuffled;
+        };
+
+        const movieItems=shuffleMovieSeriesForRefresh(movieOnly);
+        const seriesItems=shuffleMovieSeriesForRefresh(series);
 
         trendingRow.innerHTML="";
         newRow.innerHTML="";
