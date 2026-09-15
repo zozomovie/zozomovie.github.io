@@ -818,6 +818,13 @@ body{
     -webkit-background-clip:text;
     -webkit-text-fill-color:transparent;
 }
+.banner-meta .meta-release-date{
+    background:linear-gradient(135deg,#7ddcff 0%,#2196f3 50%,#c8f1ff 100%);
+    background-clip:text;
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    font-weight:900;
+}
 
 .banner-meta .meta-divider{
     color:rgba(255,255,255,.58);
@@ -1123,7 +1130,13 @@ body{
     .logo{font-size:20px;}
     .nav{display:none;}
     .banner-slider{margin-top:62px;padding:10px 15px 4px;}
-    .banner-card{height:25vh;min-height:160px;max-height:225px;border-radius:14px;}
+   
+/* Admin-managed hero badge gradients */
+.banner-label[data-style="1"]{background:linear-gradient(135deg,#ff5364,#e50914 50%,#8b0010)!important}
+.banner-label[data-style="2"]{background:linear-gradient(135deg,#b76cff,#7c3aed 50%,#3b0764)!important}
+.banner-label[data-style="3"]{background:linear-gradient(135deg,#ffe58a,#f59e0b 50%,#9a4d00)!important}
+.banner-label[data-style="4"]{background:linear-gradient(135deg,#67e8f9,#0891b2 50%,#164e63)!important}
+ .banner-card{height:25vh;min-height:160px;max-height:225px;border-radius:14px;}
     .banner-info{left:13px;right:13px;bottom:12px;}
     .banner-title{font-size:17px;}
     .section{padding-left:15px;margin-bottom:20px;}
@@ -4112,19 +4125,27 @@ function renderBanners(items){
         card.innerHTML = `
             <img src="${escapeBannerText(movie.backdrop || movie.image)}" alt="${escapeBannerText(movie.title)}" loading="eager" decoding="async">
             <div class="banner-info">
-                <span class="banner-label">Featured</span>
+                ${movie.badge ? `<span class="banner-label" data-style="${escapeBannerText(movie.badgeType==="upcoming" ? "4" : (movie.badgeStyle || "1"))}">✦ ${escapeBannerText(movie.badgeType==="upcoming" ? "Upcoming" : movie.badge)}</span>` : ""}
                 <div class="banner-title">${escapeBannerText(movie.title)}</div>
                 <div class="banner-meta">
-                    <span class="meta-year">${escapeBannerText(movie.year || "")}</span>
-                    <span class="meta-divider">|</span>
-                    <span class="meta-type">${escapeBannerText(movie.category || "Movie")}</span>
-                    <span class="meta-divider">|</span>
-                    <span class="meta-rating">${movie.rating ? `★ ${escapeBannerText(movie.rating)}` : "★ —"}</span>
+                    ${movie.badgeType === "upcoming" ? `
+                        <span class="meta-release-date">${escapeBannerText(movie.releaseDate || "Coming Soon")}</span>
+                        <span class="meta-divider">|</span>
+                        <span class="meta-type">${escapeBannerText(movie.category || "Movies")}</span>
+                    ` : `
+                        <span class="meta-year">${escapeBannerText(movie.year || "")}</span>
+                        <span class="meta-divider">|</span>
+                        <span class="meta-type">${escapeBannerText(movie.category || "Movie")}</span>
+                        <span class="meta-divider">|</span>
+                        <span class="meta-rating">${movie.rating ? `★ ${escapeBannerText(movie.rating)}` : "★ —"}</span>
+                    `}
                 </div>
             </div>
         `;
         card.addEventListener("click",()=>{
-            window.location.href = `movie.html?id=${encodeURIComponent(movie.id)}`;
+            if(movie.movieId){
+                window.location.href = `movie.html?id=${encodeURIComponent(movie.movieId)}`;
+            }
         });
         track.appendChild(card);
     });
@@ -4261,9 +4282,9 @@ function setupBannerControls(){
     });
 
     /* =========================================================
-       MOBILE BANNER — FREE LEFT/RIGHT SWIPE
-       Stops exactly where the finger is released.
-       Auto-slider resumes 3 seconds after release.
+       MOBILE BANNER — FULL-SLIDE SMOOTH SWIPE
+       Every left/right swipe completes to one full banner.
+       It never leaves the slider stopped between two banners.
     ========================================================= */
     const viewport=document.querySelector("#bannerSlider .banner-viewport");
 
@@ -4301,28 +4322,61 @@ function setupBannerControls(){
             if(!dragging || e.pointerId!==pointerId) return;
 
             const delta=e.clientX-startX;
-
             if(Math.abs(delta)>4) moved=true;
 
             const step=getBannerStep();
             const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
             const minX=-(maxIndex*step);
 
-            /*
-             * Free movement: follow the finger exactly.
-             * A small resistance is used only at the two ends.
-             */
+            /* Follow the finger while dragging, with only a tiny edge resistance. */
             let nextX=startTranslate+delta;
 
             if(nextX>0){
-                nextX=nextX*0.28;
+                nextX=nextX*0.18;
             }else if(nextX<minX){
-                nextX=minX+(nextX-minX)*0.28;
+                nextX=minX+(nextX-minX)*0.18;
             }
 
             setBannerTransform(nextX,false);
-            updateBannerDotsFromPosition(nextX);
         });
+
+        const completeBannerSwipe=()=>{
+            const track=document.getElementById("bannerTrack");
+            const card=track?.querySelector(".banner-card");
+            if(!track || !card || !bannerItems.length) return;
+
+            const step=card.getBoundingClientRect().width + getBannerGap();
+            const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
+
+            /*
+             * Always finish at a complete slide.
+             * Swipe left  = next banner.
+             * Swipe right = previous banner.
+             */
+            const swipeDistance=currentTranslate()-startTranslate;
+            const direction=swipeDistance<0 ? 1 : -1;
+
+            let baseIndex=Math.round(Math.abs(startTranslate)/step);
+
+            /* If the finger movement is very small, use the nearest full slide. */
+            if(Math.abs(swipeDistance)<18){
+                baseIndex=Math.round(Math.abs(currentTranslate())/step);
+            }
+
+            let targetIndex=baseIndex + (Math.abs(swipeDistance)>=18 ? direction : 0);
+            targetIndex=Math.max(0,Math.min(targetIndex,maxIndex));
+
+            bannerIndex=targetIndex;
+            setBannerTransform(-(targetIndex*step),true);
+
+            document.querySelectorAll(".banner-dot").forEach((dot,i)=>
+                dot.classList.toggle("active",i===targetIndex)
+            );
+
+            /* Give the completed slide time to settle, then resume auto-slide. */
+            clearTimeout(bannerTimer);
+            bannerTimer=setTimeout(()=>startBannerTimer(4500),650);
+        };
 
         const finishBannerSwipe=(e)=>{
             if(!dragging || (pointerId!==null && e.pointerId!==pointerId)) return;
@@ -4339,69 +4393,26 @@ function setupBannerControls(){
             pointerId=null;
 
             if(!moved){
+                /* Normal tap — do not move the banner. */
+                setBannerTransform(startTranslate,false);
                 startBannerTimer(4500);
                 return;
             }
 
-            /*
-             * Keep the exact free-swipe position for 3 seconds.
-             * Then smoothly complete the partially visible banner
-             * to the nearest full slide and resume normal auto-slide.
-             */
-            clearTimeout(bannerTimer);
-            bannerTimer=setTimeout(()=>{
-                const track=document.getElementById("bannerTrack");
-                const card=track?.querySelector(".banner-card");
-                if(!track || !card) return;
-
-                const currentX=currentTranslate();
-                const step=card.getBoundingClientRect().width + getBannerGap();
-                const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
-
-                let targetIndex=Math.round(Math.abs(currentX)/step);
-                targetIndex=Math.max(0,Math.min(targetIndex,maxIndex));
-
-                bannerIndex=targetIndex;
-                setBannerTransform(-(targetIndex*step),true);
-
-                document.querySelectorAll(".banner-dot").forEach((dot,i)=>
-                    dot.classList.toggle("active",i===targetIndex)
-                );
-
-                /* Continue the normal auto-slider after the banner is full. */
-                startBannerTimer(4500);
-            },3000);
+            completeBannerSwipe();
         };
 
         viewport.addEventListener("pointerup",finishBannerSwipe);
+
         viewport.addEventListener("pointercancel",(e)=>{
             if(!dragging) return;
+
             dragging=false;
             viewport.classList.remove("banner-dragging");
             pointerId=null;
 
-            clearTimeout(bannerTimer);
-            bannerTimer=setTimeout(()=>{
-                const track=document.getElementById("bannerTrack");
-                const card=track?.querySelector(".banner-card");
-                if(!track || !card) return;
-
-                const currentX=currentTranslate();
-                const step=card.getBoundingClientRect().width + getBannerGap();
-                const maxIndex=Math.max(0,bannerItems.length-bannerVisibleCount());
-
-                let targetIndex=Math.round(Math.abs(currentX)/step);
-                targetIndex=Math.max(0,Math.min(targetIndex,maxIndex));
-
-                bannerIndex=targetIndex;
-                setBannerTransform(-(targetIndex*step),true);
-
-                document.querySelectorAll(".banner-dot").forEach((dot,i)=>
-                    dot.classList.toggle("active",i===targetIndex)
-                );
-
-                startBannerTimer(4500);
-            },3000);
+            /* Even on pointer-cancel, never leave the slider half-way. */
+            completeBannerSwipe();
         });
     }
 
@@ -4495,6 +4506,70 @@ function showGenreResults(genre){
 })();
 
 /* =========================================================
+   ADMIN-MANAGED HERO BANNERS
+   Exact count = exact active rows in public.hero_sliders.
+========================================================= */
+async function loadHeroSliders(){
+    const track=document.getElementById("bannerTrack");
+    const slider=document.getElementById("bannerSlider");
+    if(!track||!slider)return;
+    try{
+        const {data,error}=await supabaseClient
+            .from("hero_sliders")
+            .select("id,movie_id,tmdb_id,media_type,tmdb_url,title,poster_url,backdrop_url,year,rating,category,badge,badge_type,release_date,badge_style,sort_order,created_at")
+            .eq("is_active",true)
+            .order("sort_order",{ascending:true})
+            .order("created_at",{ascending:true});
+        if(error)throw error;
+        const items=(Array.isArray(data)?data:[]).map(row=>({
+            id:row.id,
+            movieId:row.movie_id||null,
+            tmdbId:row.tmdb_id,
+            mediaType:row.media_type||"movie",
+            title:row.title||"Untitled",
+            year:String(row.year||""),
+            rating:Number(row.rating||0).toFixed(1),
+            category:row.category||(row.media_type==="tv"?"Series":"Movies"),
+            image:row.poster_url||row.backdrop_url||"",
+            backdrop:row.backdrop_url||row.poster_url||"",
+            badge:String(row.badge||"").trim(),
+            badgeType:String(row.badge_type||"normal").toLowerCase()==="upcoming"?"upcoming":"normal",
+            releaseDate:String(row.release_date||"").trim(),
+            badgeStyle:(()=>{const v=String(row.badge_style??"1").toLowerCase();return ({red:"1",purple:"2",gold:"3",blue:"4","1":"1","2":"2","3":"3","4":"4"})[v]||"1";})()
+        })).filter(x=>x.id&&x.image);
+        renderBanners(items);
+    }catch(error){
+        console.error("CINEFLIX hero sliders load failed:",error);
+        bannerItems=[];
+        stopBannerTimer();
+        track.innerHTML="";
+        slider.classList.add("hidden");
+    }
+}
+
+/* =========================================================
+   REALTIME HERO SLIDER SYNC
+   Admin changes appear on Home as soon as Supabase Realtime
+   delivers the INSERT/UPDATE/DELETE event.
+========================================================= */
+let heroSliderRealtimeChannel=null;
+let heroSliderRealtimeTimer=null;
+function startHeroSliderRealtime(){
+    if(heroSliderRealtimeChannel){
+        try{supabaseClient.removeChannel(heroSliderRealtimeChannel)}catch{}
+    }
+    heroSliderRealtimeChannel=supabaseClient
+        .channel("cineflix-hero-sliders-live")
+        .on("postgres_changes",{event:"*",schema:"public",table:"hero_sliders"},()=>{
+            clearTimeout(heroSliderRealtimeTimer);
+            heroSliderRealtimeTimer=setTimeout(()=>loadHeroSliders(),40);
+        })
+        .subscribe((status)=>{
+            if(status==="SUBSCRIBED") console.log("Hero slider realtime connected ✓");
+        });
+}
+
+/* =========================================================
    LOAD DATABASE MOVIES
 ========================================================= */
 async function loadDatabaseMovies(){
@@ -4559,12 +4634,6 @@ async function loadDatabaseMovies(){
         const trendingItems=trending.length ? trending : movieOnly;
         const freshItems=fresh.length ? fresh : movieOnly;
         const seriesItems=series;
-
-        // Use real database artwork for the compact banner.
-        const bannerSource=[...trending,...fresh,...movieOnly,...series]
-            .filter((item,index,self)=>item && self.findIndex(x=>String(x.id)===String(item.id))===index)
-            .slice(0,10);
-        renderBanners(bannerSource);
 
         trendingRow.innerHTML="";
         newRow.innerHTML="";
@@ -4746,6 +4815,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     // No demo cards are rendered on startup.
     // Real cards appear only after Supabase responds.
     loadDatabaseMovies();
+    loadHeroSliders();
+    startHeroSliderRealtime();
 
     setupRowArrows();
     setupBannerControls();
