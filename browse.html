@@ -253,7 +253,18 @@ body{
         width:315px;
         opacity:1;
     }
-    #searchBtn{
+    #searchBtn.search-open svg path{
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    fill:none;
+}
+
+#searchBtn.search-open{
+    color:#fff;
+}
+
+#searchBtn{
         display:none;
     }
 }
@@ -3151,7 +3162,6 @@ body{
 
 html,body{min-height:100%}
 body.browse-page{
-    padding-bottom:78px;
     background:
       radial-gradient(circle at 85% 0%,rgba(229,9,20,.055),transparent 28%),
       linear-gradient(180deg,#070708 0%,#09090b 48%,#070708 100%);
@@ -3183,50 +3193,59 @@ body.browse-page{
 }
 .browse-head{
     display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
     gap:20px;
     margin-bottom:22px;
 }
-.browse-title-wrap{min-width:0}
-.browse-kicker{
-    color:#77777e;
-    font-size:10px;
-    font-weight:800;
-    letter-spacing:1.4px;
-    text-transform:uppercase;
-    margin-bottom:7px;
+.browse-title-wrap{
+    min-width:0;
+    width:max-content;
+    max-width:100%;
+    text-align:center;
+    position:relative;
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
 }
+.browse-kicker{display:none}
 .browse-title{
     position:relative;
-    display:flex;
+    display:inline-flex;
     align-items:center;
+    justify-content:center;
     gap:10px;
     color:#fff;
-    font-size:28px;
+    font-size:30px;
     line-height:1.05;
     font-weight:900;
     letter-spacing:-.8px;
+    text-align:center;
+    padding-bottom:7px;
+    border-bottom:2px solid rgba(229,9,20,.55);
+    box-shadow:0 2px 7px rgba(229,9,20,.10);
 }
-.browse-title::before{
-    content:"";
-    width:4px;
-    height:27px;
-    flex:0 0 4px;
-    border-radius:5px;
-    background:var(--red);
-    box-shadow:0 0 16px rgba(229,9,20,.45);
+.browse-title::before,
+.browse-title::after{
+    color:rgba(255,255,255,.38);
+    font-size:.72em;
+    font-weight:700;
 }
+.browse-title::before{content:"—"}
+.browse-title::after{content:"—"}
 .browse-count{
     color:#77777e;
     font-size:11px;
     font-weight:650;
     margin-top:8px;
-    margin-left:14px;
+    margin-left:0;
+    text-align:center;
+    text-transform:none;
 }
 .browse-grid{
     display:grid;
-    grid-template-columns:repeat(5,minmax(0,1fr));
+    grid-template-columns:repeat(7,minmax(0,1fr));
     gap:22px 14px;
 }
 .browse-card-wrap{min-width:0;position:relative}
@@ -3318,75 +3337,31 @@ body.browse-page{
     color:#e3e3e7;
 }
 
-/* Browse footer is fixed to the bottom as requested. */
-.browse-page .footer{
-    position:fixed!important;
-    left:0!important;
-    right:0!important;
-    bottom:0!important;
-    z-index:950!important;
-    margin:0!important;
-    height:64px!important;
-    padding:7px 4% 6px!important;
-    overflow:hidden;
-    backdrop-filter:blur(18px);
-    background:rgba(8,8,9,.96)!important;
-    border-top:1px solid rgba(255,255,255,.09);
-}
-.browse-page .footer-top{
-    width:min(1180px,100%);
-    height:35px;
-    margin:0 auto;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-.browse-page .footer-brand{display:none}
-.browse-page .footer-links{
-    width:100%;
-    display:grid;
-    grid-template-columns:repeat(6,minmax(0,1fr));
-    gap:6px;
-}
-.browse-page .footer-links a{
-    min-height:35px;
-    height:35px;
-    padding:5px 6px;
-    border-radius:8px;
-    font-size:9px;
-}
-.browse-page .footer-bottom{
-    margin:3px 0 0;
-    padding:0;
-    border:0;
-    font-size:7px;
-    line-height:1;
-}
 @media(max-width:800px){
-    body.browse-page{padding-bottom:68px}
     .browse-main{
         width:calc(100% - 30px);
         padding-top:79px;
     }
     .browse-head{
         margin-bottom:15px;
-        align-items:flex-end;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
     }
-    .browse-kicker{font-size:8px;margin-bottom:5px}
+    .browse-kicker{display:none}
     .browse-title{
         font-size:20px;
         letter-spacing:-.45px;
         gap:7px;
-    }
-    .browse-title::before{
-        width:3px;
-        height:19px;
-        flex-basis:3px;
+        padding-bottom:5px;
+        border-bottom-width:1.5px;
+        box-shadow:0 1px 5px rgba(229,9,20,.08);
     }
     .browse-count{
         font-size:9px;
         margin-top:6px;
-        margin-left:10px;
+        margin-left:0;
+        text-align:center;
     }
     .browse-grid{
         grid-template-columns:repeat(3,minmax(0,1fr));
@@ -3422,29 +3397,6 @@ body.browse-page{
     .page-current{
         min-width:55px;
         font-size:8px;
-    }
-    .browse-page .footer{
-        height:57px!important;
-        padding:5px 9px 3px!important;
-    }
-    .browse-page .footer-links{
-        gap:4px;
-        grid-template-columns:repeat(6,minmax(0,1fr));
-    }
-    .browse-page .footer-links a{
-        min-height:30px;
-        height:30px;
-        padding:4px 2px;
-        gap:3px;
-        border-radius:7px;
-        font-size:6.5px;
-    }
-    .browse-page .footer-links a svg{
-        width:11px;height:11px;flex-basis:11px;
-    }
-    .browse-page .footer-bottom{
-        margin-top:3px;
-        font-size:6px;
     }
 }
 </style>
@@ -3561,8 +3513,8 @@ body.browse-page{
     <div class="browse-head">
         <div class="browse-title-wrap">
             <div class="browse-kicker">ZOZO MOVIES • EXPLORE</div>
-            <h1 class="browse-title" id="browseTitle">Movies</h1>
-            <div class="browse-count" id="browseCount">Loading titles…</div>
+            <h1 class="browse-title" id="browseTitle"></h1>
+            <div class="browse-count" id="browseCount"></div>
         </div>
     </div>
 
@@ -3713,9 +3665,9 @@ function parseBrowseRoute(){
 }
 
 function browseLabel(){
-    if(browseType === "series") return "Web Series";
-    if(browseType === "new") return "New Releases";
-    return "Movies";
+    if(browseType === "series") return "All Webseries";
+    if(browseType === "new") return "All New Releases";
+    return "All Movies";
 }
 
 function isSeries(movie){
@@ -3826,7 +3778,16 @@ function renderBrowse(){
     const start=(browsePage-1)*browsePageSize;
     const pageItems=browseMovies.slice(start,start+browsePageSize);
 
-    count.textContent=`${browseMovies.length} ${browseMovies.length===1?"title":"titles"}`;
+    if(browsePage===1){
+      const countLabel = browseType === "series" ? "Webseries"
+        : browseType === "new" ? "New Releases"
+        : "Movies";
+      count.textContent=`Total ${browseMovies.length} ${countLabel}`;
+      count.style.display="block";
+    }else{
+      count.textContent="";
+      count.style.display="none";
+    }
 
     grid.innerHTML="";
     if(!pageItems.length){
@@ -3913,8 +3874,13 @@ async function loadBrowseData(){
     }
 }
 
+/* Resolve the URL before the first database request so the correct title
+   is shown immediately — never flash "Movies" while Series/New Releases loads. */
+parseBrowseRoute();
+const initialBrowseTitle=document.getElementById("browseTitle");
+if(initialBrowseTitle) initialBrowseTitle.textContent=browseLabel();
+
 document.addEventListener("DOMContentLoaded",()=>{
-    parseBrowseRoute();
     browsePageSize=window.innerWidth<=800?15:25;
 
     document.getElementById("prevPage").addEventListener("click",()=>{
@@ -3950,7 +3916,18 @@ document.addEventListener("DOMContentLoaded",()=>{
     const searchInput=document.getElementById("searchInput");
     const searchSubmit=document.getElementById("searchSubmit");
     if(searchBtn&&searchBox){
-      searchBtn.addEventListener("click",()=>searchBox.classList.toggle("open"));
+      const setSearchOpen=(open)=>{
+        searchBox.classList.toggle("open",open);
+        searchBtn.classList.toggle("search-open",open);
+        searchBtn.setAttribute("aria-label",open?"Close search":"Open search");
+        searchBtn.innerHTML=open
+          ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`
+          : `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`;
+        if(open){
+          setTimeout(()=>searchInput?.focus(),50);
+        }
+      };
+      searchBtn.addEventListener("click",()=>setSearchOpen(!searchBox.classList.contains("open")));
     }
     const doSearch=()=>{
       const q=String(searchInput?.value||"").trim();
