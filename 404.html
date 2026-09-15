@@ -3955,7 +3955,26 @@ document.addEventListener("DOMContentLoaded",()=>{
     const searchInput=document.getElementById("searchInput");
     const searchSubmit=document.getElementById("searchSubmit");
     if(searchBtn&&searchBox){
-      searchBtn.addEventListener("click",()=>searchBox.classList.toggle("open"));
+      const searchIconSVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>`;
+      const closeIconSVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>`;
+
+      const setSearchOpen = (open) => {
+        searchBox.classList.toggle("open", open);
+        searchBtn.classList.toggle("search-open", open);
+        searchBtn.innerHTML = open ? closeIconSVG : searchIconSVG;
+        searchBtn.setAttribute("aria-label", open ? "Close search" : "Open search");
+        searchBtn.setAttribute("aria-expanded", String(open));
+        if(open){
+          requestAnimationFrame(()=>searchInput?.focus());
+        }else{
+          searchInput?.blur();
+          document.getElementById("searchSuggestions")?.classList.remove("show");
+        }
+      };
+
+      searchBtn.innerHTML = searchIconSVG;
+      searchBtn.setAttribute("aria-expanded", "false");
+      searchBtn.addEventListener("click",()=>setSearchOpen(!searchBox.classList.contains("open")));
     }
     const doSearch=()=>{
       const q=String(searchInput?.value||"").trim();
