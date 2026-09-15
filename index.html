@@ -3310,6 +3310,38 @@ body{
     </section>
 
 
+    <!-- ALL MOVIES -->
+    <section class="section" id="allMovies">
+
+        <div class="section-header">
+            <h2 class="section-title">
+                Movies
+                <span>All movies</span>
+            </h2>
+            <a href="#" class="see-all">See all</a>
+        </div>
+
+        <div class="movie-row-wrapper">
+
+            <button class="row-arrow row-prev">
+                <svg viewBox="0 0 24 24">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+            </button>
+
+            <div class="movie-row" id="moviesRow"></div>
+
+            <button class="row-arrow row-next">
+                <svg viewBox="0 0 24 24">
+                    <path d="m9 18 6-6-6 6"/>
+                </svg>
+            </button>
+
+        </div>
+
+    </section>
+
+
     <!-- SERIES -->
     <section class="section" id="series">
 
@@ -4575,12 +4607,14 @@ function startHeroSliderRealtime(){
 async function loadDatabaseMovies(){
     const trendingRow=document.getElementById("trendingRow");
     const newRow=document.getElementById("newRow");
+    const moviesRow=document.getElementById("moviesRow");
     const seriesRow=document.getElementById("seriesRow");
 
     // Never render the old demo movies. Show only the normal loading state
     // until the real Supabase data is available.
     showSkeleton(trendingRow);
     showSkeleton(newRow);
+    showSkeleton(moviesRow);
     showSkeleton(seriesRow);
 
     try{
@@ -4620,12 +4654,20 @@ async function loadDatabaseMovies(){
         })).filter(m=>m.id && m.image);
 
         movies=mapped;
+
+        // SERIES SECTION: show ONLY items published as Series from Admin.
+        // Also accept the older "Web Series" category for backward compatibility.
+        // Movies, Bollywood, Hollywood, etc. must never enter this section.
         series=mapped.filter(m=>{
             const c=String(m.category||"").trim().toLowerCase();
-            return c==="web series" || c.includes("web series");
+            return c==="series" || c==="web series" || c.includes("web series");
         });
 
-        const movieOnly=mapped.filter(m=>String(m.category).toLowerCase()!=="series");
+        // Keep Series completely out of movie-only sections.
+        const movieOnly=mapped.filter(m=>{
+            const c=String(m.category||"").trim().toLowerCase();
+            return c!=="series" && c!=="web series" && !c.includes("web series");
+        });
         const trending=mapped.filter(m=>m.isTrending);
         const fresh=mapped.filter(m=>m.isNewRelease);
 
@@ -4633,10 +4675,15 @@ async function loadDatabaseMovies(){
         // Nothing is artificially limited to one card anymore.
         const trendingItems=trending.length ? trending : movieOnly;
         const freshItems=fresh.length ? fresh : movieOnly;
+        // MOVIES SECTION: always show every Movie selected from Admin.
+        // Trending / New Release / Featured checkboxes never remove a movie
+        // from this section. Series are kept out completely.
+        const movieItems=movieOnly;
         const seriesItems=series;
 
         trendingRow.innerHTML="";
         newRow.innerHTML="";
+        moviesRow.innerHTML="";
         seriesRow.innerHTML="";
 
         if(trendingItems.length) {
@@ -4649,6 +4696,9 @@ async function loadDatabaseMovies(){
 
         if(freshItems.length) loadRow("newRow",freshItems);
         else newRow.innerHTML="";
+
+        if(movieItems.length) loadRow("moviesRow",movieItems);
+        else moviesRow.innerHTML="";
 
         if(seriesItems.length) loadRow("seriesRow",seriesItems);
         else seriesRow.innerHTML="";
@@ -4664,6 +4714,7 @@ async function loadDatabaseMovies(){
         // Do not show demo movies on failure.
         trendingRow.innerHTML="";
         newRow.innerHTML="";
+        moviesRow.innerHTML="";
         seriesRow.innerHTML="";
 
         /* Stop the nav shimmer even if the request fails. */
