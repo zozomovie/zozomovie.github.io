@@ -2641,12 +2641,8 @@ body{
     .mobile-section-nav a svg{
         width:16px;
         height:16px;
-        fill:none;
-        stroke:currentColor;
-        stroke-width:1.9;
-        stroke-linecap:round;
-        stroke-linejoin:round;
         flex:0 0 auto;
+        display:block;
     }
     .mobile-section-nav a.active,.mobile-section-nav a:active{color:#fff;}
     .mobile-section-nav a.active::after{
@@ -3787,12 +3783,11 @@ function getRowPageWidth(row, count=1){
 /* Movies + Web Series move a full 6-card page at a time.
    Other existing sections keep their normal 1-card movement. */
 function getRowSwipeCount(row){
-    if(!row) return 1;
-
-    if(row.id === "moviesRow" || row.id === "seriesRow"){
-        return window.innerWidth <= 800 ? 6 : 10;
-    }
-
+    /*
+     * Every horizontal movie section now behaves like Trending Now.
+     * The row follows the exact amount of finger/mouse movement instead
+     * of jumping 3/6/10 cards at once.
+     */
     return 1;
 }
 
@@ -3823,11 +3818,12 @@ function setupDrag(row){
     let scrollLeft = 0;
     let moved = false;
 
-    /* Mobile touch swipe:
-       one horizontal swipe advances exactly one 6-card page. */
+    /* Mobile touch swipe — follow the finger naturally, then settle
+       exactly where the user released. No 3/6-card page jumping. */
     let touchStartX=0;
     let touchStartY=0;
     let touchStartScroll=0;
+    let touchDragging=false;
 
     row.addEventListener("touchstart",(e)=>{
         const t=e.touches[0];
@@ -3836,30 +3832,37 @@ function setupDrag(row){
         touchStartX=t.clientX;
         touchStartY=t.clientY;
         touchStartScroll=row.scrollLeft;
+        touchDragging=false;
     },{passive:true});
 
-    row.addEventListener("touchend",(e)=>{
-        const t=e.changedTouches[0];
+    row.addEventListener("touchmove",(e)=>{
+        const t=e.touches[0];
         if(!t) return;
 
         const dx=t.clientX-touchStartX;
         const dy=t.clientY-touchStartY;
 
-        if(Math.abs(dx)<35 || Math.abs(dx)<=Math.abs(dy)) return;
+        if(Math.abs(dx)>6 && Math.abs(dx)>Math.abs(dy)){
+            touchDragging=true;
+        }
+    },{passive:true});
 
-        const pageWidth=getRowPageWidth(row,getRowSwipeCount(row));
-        if(pageWidth<=0) return;
+    row.addEventListener("touchend",(e)=>{
+        const t=e.changedTouches[0];
+        if(!t || !touchDragging) return;
+
+        const dx=t.clientX-touchStartX;
+        const dy=t.clientY-touchStartY;
+
+        if(Math.abs(dx)<10 || Math.abs(dx)<=Math.abs(dy)) return;
 
         const maxScroll=Math.max(0,row.scrollWidth-row.clientWidth);
         if(maxScroll<=1) return;
 
-        const direction=dx<0 ? 1 : -1;
+        /* Stop exactly at the distance covered by the finger. */
         const target=Math.max(
             0,
-            Math.min(
-                maxScroll,
-                touchStartScroll + direction*pageWidth
-            )
+            Math.min(maxScroll,touchStartScroll-dx)
         );
 
         requestAnimationFrame(()=>{
@@ -3919,8 +3922,13 @@ function setupDrag(row){
 
             const dx=e.clientX-startX;
 
-            if(Math.abs(dx)>35){
-                snapRow(row,dx<0 ? 1 : -1);
+            if(Math.abs(dx)>5){
+                /* The pointer drag already moved scrollLeft with the cursor.
+                   Keep the exact release position instead of snapping a page. */
+                row.scrollTo({
+                    left:Math.max(0,Math.min(row.scrollLeft,row.scrollWidth-row.clientWidth)),
+                    behavior:"smooth"
+                });
             }
 
             return;
