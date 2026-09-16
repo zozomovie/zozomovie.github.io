@@ -175,7 +175,7 @@ body{
 <body>
 
 <nav class="navbar">
-    <a href="/zozomovie.github.io" class="logo">CINE<span>FLIX</span></a>
+    <a href="/index.html" class="logo">CINE<span>FLIX</span></a>
 </nav>
 
 <main class="page">
@@ -200,191 +200,80 @@ body{
 
 <script>
 const params = new URLSearchParams(window.location.search);
-
-let movieId =
-    params.get("id") ||
-    sessionStorage.getItem("active_movie_id");
-
-let qIndex =
-    parseInt(
-        params.get("q_index") ||
-        sessionStorage.getItem("active_q_index") ||
-        "0",
-        10
-    );
-
-let movieTitle =
-    params.get("title") ||
-    sessionStorage.getItem("active_movie_title") ||
-    "Movie Download";
-
-let qualityName =
-    params.get("quality") ||
-    sessionStorage.getItem("active_quality_name") ||
-    "HD Quality";
-
-let randomRef =
-    params.get("ref") ||
-    sessionStorage.getItem("active_server_ref") ||
-    "v8x9a2k1m4z0p";
+let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
+let qIndex = parseInt(params.get("q_index") || sessionStorage.getItem("active_q_index") || "0", 10);
+let movieTitle = params.get("title") || sessionStorage.getItem("active_movie_title") || "Movie Download";
+let qualityName = params.get("quality") || sessionStorage.getItem("active_quality_name") || "HD Quality";
+let randomRef = params.get("ref") || sessionStorage.getItem("active_server_ref") || "v8x9a2k1m4z0p";
 
 if (movieId) {
     sessionStorage.setItem("active_movie_id", movieId);
     sessionStorage.setItem("last_active_page", "server");
 }
 
-
-/* Direct URL access enabled.
-   No sessionStorage authorization check here. */
-
-(function protectAndMaskServerPage() {
-
-    if (!movieId) {
-        return;
-    }
-
+// Single-click Back Navigation Fix: replaceState
+(function maskServerPage() {
     if (window.history.replaceState && randomRef) {
-
-        const customServerUrl =
-            window.location.protocol +
-            "//" +
-            window.location.host +
-            '/server.html/' +
-            randomRef +
-            '_h';
-
-        window.history.replaceState(
-            { path: customServerUrl },
-            '',
-            customServerUrl
-        );
+        const customServerUrl = window.location.protocol + "//" + window.location.host + '/server.html/' + randomRef + '_h';
+        window.history.replaceState({ path: customServerUrl }, '', customServerUrl);
     }
-
 })();
-
 
 document.getElementById("movieTitle").textContent = movieTitle;
 document.getElementById("qualityText").textContent = qualityName;
 
-function esc(s){
-    return String(s||"").replace(
-        /[&<>"']/g,
-        c => ({
-            '&':'&amp;',
-            '<':'&lt;',
-            '>':'&gt;',
-            '"':'&quot;',
-            "'":'&#039;'
-        }[c])
-    );
-}
+function esc(s){ return String(s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 
-const SUPABASE_URL =
-    "https://bbqaagbypawcpszjwzii.supabase.co";
-
-const SUPABASE_KEY =
-    "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
-
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    );
+const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function loadServersFromSupabase() {
-
-    const container =
-        document.getElementById("serverContainer");
+    const container = document.getElementById("serverContainer");
 
     if (!movieId) {
-
-        container.innerHTML =
-            `<div class="loading-msg">
-                Movie ID missing.
-            </div>`;
-
+        container.innerHTML = `<div class="loading-msg">Movie ID missing.</div>`;
         return;
     }
 
     try {
+        const { data, error } = await supabaseClient
+            .from("movies")
+            .select("qualities_data")
+            .eq("id", movieId)
+            .single();
 
-        const { data, error } =
-            await supabaseClient
-                .from("movies")
-                .select("qualities_data")
-                .eq("id", movieId)
-                .single();
-
-        if (
-            error ||
-            !data ||
-            !data.qualities_data
-        ) {
-            throw new Error(
-                "Servers data not found."
-            );
+        if (error || !data || !data.qualities_data) {
+            throw new Error("Servers data not found.");
         }
 
-        const selectedQualityObj =
-            data.qualities_data[qIndex];
-
-        const servers =
-            selectedQualityObj?.servers || [];
+        const selectedQualityObj = data.qualities_data[qIndex];
+        const servers = selectedQualityObj?.servers || [];
 
         if (servers.length === 0) {
-
-            container.innerHTML =
-                `<div class="loading-msg">
-                    No servers available.
-                </div>`;
-
+            container.innerHTML = `<div class="loading-msg">No servers available.</div>`;
             return;
         }
 
-        container.innerHTML =
-            servers.map((srv, idx) => {
-
-                const num =
-                    (idx + 1)
-                    .toString()
-                    .padStart(2, '0');
-
-                return `
-                    <a
-                        href="${esc(srv.url)}"
-                        target="_blank"
-                        class="server-card"
-                    >
-                        <div class="server-number">
-                            ${num}
-                        </div>
-
-                        <div class="server-content">
-                            <div class="server-name">
-                                ${esc(srv.server_name)}
-                            </div>
-
-                            <div class="server-desc">
-                                High speed connection
-                            </div>
-                        </div>
-                    </a>
-                `;
-
-            }).join("");
+        container.innerHTML = servers.map((srv, idx) => {
+            const num = (idx + 1).toString().padStart(2, '0');
+            return `
+                <a href="${esc(srv.url)}" target="_blank" class="server-card">
+                    <div class="server-number">${num}</div>
+                    <div class="server-content">
+                        <div class="server-name">${esc(srv.server_name)}</div>
+                        <div class="server-desc">High speed connection</div>
+                    </div>
+                </a>
+            `;
+        }).join("");
 
     } catch (err) {
-
-        container.innerHTML =
-            `<div class="loading-msg">
-                Error loading servers:
-                ${esc(err.message)}
-            </div>`;
+        container.innerHTML = `<div class="loading-msg">Error loading servers: ${esc(err.message)}</div>`;
     }
 }
 
 loadServersFromSupabase();
-
 </script>
 
 </body>
