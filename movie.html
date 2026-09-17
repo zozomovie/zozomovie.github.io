@@ -1754,6 +1754,133 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     }
 }
 </style>
+
+<style id="episode-meta-on-thumb-title-below-final">
+/* FINAL EPISODE CARD LAYOUT
+   Date + duration are always on the thumbnail bottom.
+   Episode title stays below the thumbnail on every screen size. */
+.tv-episode-card{
+    position:relative !important;
+    overflow:hidden !important;
+}
+.tv-episode-body{
+    position:relative !important;
+    display:block !important;
+    padding:7px 10px 7px !important;
+    min-height:0 !important;
+    height:auto !important;
+    color:#fff !important;
+    overflow:visible !important;
+}
+.tv-episode-name{
+    display:block !important;
+    width:100% !important;
+    color:#fff !important;
+    font-size:11px !important;
+    line-height:1.25 !important;
+    font-weight:900 !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    overflow-wrap:normal !important;
+    word-break:normal !important;
+}
+.tv-episode-meta{
+    position:absolute !important;
+    left:7px !important;
+    right:7px !important;
+    bottom:7px !important;
+    z-index:6 !important;
+    width:auto !important;
+    max-width:calc(100% - 14px) !important;
+    margin:0 !important;
+    padding:3px 7px !important;
+    gap:5px !important;
+    border:1px solid rgba(255,255,255,.22) !important;
+    border-radius:999px !important;
+    background:rgba(5,9,14,.82) !important;
+    backdrop-filter:blur(5px) !important;
+    -webkit-backdrop-filter:blur(5px) !important;
+    color:#fff !important;
+    font-size:8.5px !important;
+    line-height:1.15 !important;
+    font-weight:800 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+}
+.tv-episode-date,
+.tv-episode-duration{
+    white-space:nowrap !important;
+    flex:0 0 auto !important;
+}
+.tv-episode-duration{
+    display:inline-flex !important;
+    align-items:center !important;
+    gap:3px !important;
+}
+.tv-duration-icon,
+.tv-duration-icon svg{
+    width:9px !important;
+    height:9px !important;
+    flex:0 0 9px !important;
+}
+
+@media (max-width:600px){
+    /* Exactly two compact cards on mobile */
+    .tv-episodes-row{
+        gap:8px !important;
+        padding:3px 7px 5px 0 !important;
+    }
+    .tv-episode-card{
+        flex:0 0 calc((100% - 8px) / 2) !important;
+        width:calc((100% - 8px) / 2) !important;
+        min-width:calc((100% - 8px) / 2) !important;
+        max-width:calc((100% - 8px) / 2) !important;
+    }
+    .tv-episode-thumb{
+        width:100% !important;
+        height:auto !important;
+        aspect-ratio:16/9 !important;
+        object-fit:cover !important;
+        object-position:center !important;
+        display:block !important;
+    }
+    /* Full episode title BELOW thumbnail */
+    .tv-episode-body{
+        padding:5px 6px 6px !important;
+    }
+    .tv-episode-name{
+        font-size:9.5px !important;
+        line-height:1.18 !important;
+        white-space:normal !important;
+        overflow:visible !important;
+        text-overflow:clip !important;
+        overflow-wrap:normal !important;
+        word-break:normal !important;
+    }
+    /* Date + duration ON thumbnail bottom */
+    .tv-episode-meta{
+        left:5px !important;
+        right:5px !important;
+        bottom:5px !important;
+        max-width:calc(100% - 10px) !important;
+        padding:3px 5px !important;
+        gap:4px !important;
+        font-size:7.5px !important;
+    }
+    .tv-episode-duration{gap:2px !important}
+    .tv-duration-icon,
+    .tv-duration-icon svg{
+        width:8px !important;
+        height:8px !important;
+        flex:0 0 8px !important;
+    }
+}
+</style>
+
 </head>
 
 <body>
