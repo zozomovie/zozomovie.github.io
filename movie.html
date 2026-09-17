@@ -2717,14 +2717,9 @@ function normalizeClips(movie,tmdb){
         }));
     }
 
-    /* Final fallback: use the same backdrop resolver as the main hero.
-       This keeps Movie Clips visible when the Admin Movie Clip URL is
-       empty and the TMDB gallery response is unavailable. It will use
-       the saved TMDB backdrop_path/backdrop data first. */
-    const fallbackBackdrop = getBackdrop(movie,tmdb);
-    if(fallbackBackdrop){
+    if(tmdb?.backdrop_path){
         return [{
-            image:fallbackBackdrop,
+            image:tmdbImage(tmdb.backdrop_path,"original"),
             quote:""
         }];
     }
