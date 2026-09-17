@@ -180,7 +180,7 @@ body{
 
 <main class="page">
     <div class="movie-header">
-        <h1 class="movie-title" id="movieTitle">Loading Movie...</h1>
+        <h1 class="movie-title" id="movieTitle">Loading...</h1>
         <div class="file-info">
             <span class="file-quality" id="qualityText">Selected Quality</span>
             <span class="separator">•</span>
@@ -211,7 +211,6 @@ if (movieId) {
     sessionStorage.setItem("last_active_page", "server");
 }
 
-// Single-click Back Navigation Fix: replaceState
 (function maskServerPage() {
     if (window.history.replaceState && randomRef) {
         const customServerUrl = window.location.protocol + "//" + window.location.host + '/server.html/' + randomRef + '_h';
@@ -247,11 +246,25 @@ async function loadServersFromSupabase() {
             throw new Error("Servers data not found.");
         }
 
-        const selectedQualityObj = data.qualities_data[qIndex];
-        const servers = selectedQualityObj?.servers || [];
+        const qData = data.qualities_data;
+        let servers = [];
+
+        // 1. CHECK IF TV SHOW STRUCTURE
+        if (qData && typeof qData === "object" && !Array.isArray(qData) && qData.__type === "tv_show_v1") {
+            const scrapedQualities = qData.scraped_qualities || [];
+            const selectedItem = scrapedQualities[qIndex];
+            if (selectedItem && Array.isArray(selectedItem.servers)) {
+                servers = selectedItem.servers;
+            }
+        } 
+        // 2. CHECK IF MOVIES / SERIES STRUCTURE
+        else if (Array.isArray(qData)) {
+            const selectedQualityObj = qData[qIndex];
+            servers = selectedQualityObj?.servers || [];
+        }
 
         if (servers.length === 0) {
-            container.innerHTML = `<div class="loading-msg">No servers available.</div>`;
+            container.innerHTML = `<div class="loading-msg">No servers available for this option.</div>`;
             return;
         }
 
