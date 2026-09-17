@@ -192,7 +192,7 @@ if (urlEp) {
 
 let selectedEpisodeParam = urlEp || sessionStorage.getItem(`active_tv_episode_${movieId}`);
 
-// Dynamic URL Masking with Episode Number
+// Dynamic Masking function with Episode Slug (/Episode01)
 function updateMaskedUrl(epNum = null) {
     const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
     const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
@@ -200,7 +200,8 @@ function updateMaskedUrl(epNum = null) {
     if (window.history.replaceState && movieSlug) {
         let epSlug = "";
         if (epNum !== null && epNum !== undefined && epNum !== "") {
-            const formattedEp = String(epNum).padStart(2, '0');
+            const numVal = parseInt(epNum, 10);
+            const formattedEp = isNaN(numVal) ? epNum : String(numVal).padStart(2, '0');
             epSlug = `/Episode${formattedEp}`;
         }
         
@@ -268,7 +269,7 @@ async function loadContent() {
                 document.getElementById("episodesWrapper").style.display = "none"; 
                 document.getElementById("episodesWrapper").innerHTML = "";
 
-                // Mask URL as /download/show-slug/Episode01
+                // Explicitly update URL to /download/show-name/Episode01
                 updateMaskedUrl(epNum);
 
                 renderSingleEpisodeQualities(epNum);
@@ -309,7 +310,7 @@ async function loadContent() {
     }
 }
 
-// RENDER QUALITIES FOR SINGLE SELECTED EPISODE ONLY
+// RENDER QUALITIES FOR SINGLE SELECTED EPISODE
 function renderSingleEpisodeQualities(epNo) {
     const container = document.getElementById("qualityContainer");
     const seasons = globalTvData?.seasons || [];
@@ -317,6 +318,7 @@ function renderSingleEpisodeQualities(epNo) {
     const episode = season?.episodes?.find(e => Number(e.episode_number) === Number(epNo));
     const scrapedQualities = globalTvData?.scraped_qualities || [];
 
+    // Exact Title Format: Show Title + (EPISODE 1 - Name)
     const epTitleText = episode?.name ? ` - ${episode.name}` : "";
     document.getElementById("movieTitle").innerHTML = `${globalMovieTitle} <span class="ep-subtitle-title">(EPISODE ${epNo}${epTitleText})</span>`;
     document.getElementById("subTitle").textContent = `Choose your preferred download quality for Episode ${epNo}`;
