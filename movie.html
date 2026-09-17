@@ -2366,13 +2366,21 @@ async function fetchTMDB(movie){
 
     const explicitId = first(
         movie.tmdb_id, movie.tmdbId,
-        movie.tmdb_movie_id, movie.tmdb_movieid
+        movie.tmdb_movie_id, movie.tmdb_movieid,
+        movie.tmdb_tv_id, movie.tmdb_tvid, movie.tmdb_series_id
     );
 
-    try{
-        let movieIdToFetch = explicitId;
+    /* TV Show / Series records must use TMDB's TV endpoints. */
+    const categoryText = String(first(
+        movie.category, movie.type, movie.media_type, movie.content_type, movie.contentType, ""
+    )).toLowerCase();
+    const isTV = /tv|series|show|web.?series/.test(categoryText) ||
+        !!movie.first_air_date || !!movie.tmdb_tv_id || !!movie.tmdb_tvid || !!movie.tmdb_series_id;
 
-        if(!movieIdToFetch){
+    try{
+        let mediaIdToFetch = explicitId;
+
+        if(!mediaIdToFetch){
             const title = first(movie.title,movie.name,movie.original_title,movie.original_name);
             if(!title) return null;
 
@@ -2382,12 +2390,16 @@ async function fetchTMDB(movie){
                 String(movie.release_date || movie.first_air_date || "").slice(0,4)
             );
 
-            const searchUrl = new URL("https://api.themoviedb.org/3/search/movie");
+            const searchUrl = new URL(
+                `https://api.themoviedb.org/3/search/${isTV ? "tv" : "movie"}`
+            );
             searchUrl.searchParams.set("query",String(title));
             searchUrl.searchParams.set("language","en-US");
             searchUrl.searchParams.set("page","1");
             searchUrl.searchParams.set("include_adult","false");
-            if(year) searchUrl.searchParams.set("year",String(year));
+            if(year){
+                searchUrl.searchParams.set(isTV ? "first_air_date_year" : "year",String(year));
+            }
 
             const searchResponse = await tmdbFetch(searchUrl.toString());
             if(!searchResponse.ok) return null;
@@ -2400,19 +2412,20 @@ async function fetchTMDB(movie){
             const exact = results.find(item =>
                 String(item?.title || item?.name || "").trim().toLowerCase() === wanted
             );
-            movieIdToFetch = (exact || results[0])?.id;
-            if(!movieIdToFetch) return null;
+            mediaIdToFetch = (exact || results[0])?.id;
+            if(!mediaIdToFetch) return null;
         }
 
+        const mediaTypePath = isTV ? "tv" : "movie";
         const detailUrl = new URL(
-            `https://api.themoviedb.org/3/movie/${encodeURIComponent(movieIdToFetch)}`
+            `https://api.themoviedb.org/3/${mediaTypePath}/${encodeURIComponent(mediaIdToFetch)}`
         );
         detailUrl.searchParams.set("language","en-US");
         detailUrl.searchParams.set("append_to_response","credits,images,videos");
         detailUrl.searchParams.set("include_image_language","en,null");
 
         const imageUrl = new URL(
-            `https://api.themoviedb.org/3/movie/${encodeURIComponent(movieIdToFetch)}/images`
+            `https://api.themoviedb.org/3/${mediaTypePath}/${encodeURIComponent(mediaIdToFetch)}/images`
         );
         /* Do NOT filter the gallery by language here. TMDB can otherwise
            return only a single matching backdrop on some mobile/browser
@@ -2701,6 +2714,38 @@ function normalizeClips(movie,tmdb){
        gallery, and finally the main backdrop.
     */
 
+    /* =========================================================
+       NO ADMIN CLIP URL → TMDB BACKDROP GALLERY
+       =========================================================
+       When Admin has not supplied a Movie Clip image URL, always
+       prefer TMDB's real backdrop gallery. Show up to 5 different
+       backdrops as separate Movie Clip slides.
+    */
+
+    const tmdbBackdrops = toImageList(
+        tmdb?.images?.backdrops || tmdb?.backdrops || []
+    )
+    .map(item => {
+        if(typeof item === "string") return tmdbImage(item,"original");
+        return first(
+            tmdbImage(item?.file_path,"original"),
+            imageFrom(item?.image),
+            imageFrom(item?.url),
+            imageFrom(item?.src),
+            ""
+        );
+    })
+    .filter(Boolean);
+
+    if(tmdbBackdrops.length){
+        return [...new Set(tmdbBackdrops)].slice(0,5).map(image => ({
+            image,
+            quote:""
+        }));
+    }
+
+    /* If TMDB has no gallery, use saved backdrop/gallery images as a
+       secondary fallback instead of leaving Movie Clips empty. */
     const savedBackdrops = [
         movie.backdrops,
         movie.backdrop_images,
@@ -2725,31 +2770,7 @@ function normalizeClips(movie,tmdb){
     .filter(Boolean);
 
     if(savedBackdrops.length){
-        return [...new Set(savedBackdrops)].slice(0,4).map(image => ({
-            image,
-            quote:""
-        }));
-    }
-
-    /* TMDB normally provides the full backdrop gallery because
-       fetchTMDB() requests credits, images and videos. */
-    const tmdbBackdrops = toImageList(
-        tmdb?.images?.backdrops || tmdb?.backdrops || []
-    )
-    .map(item => {
-        if(typeof item === "string") return tmdbImage(item,"original");
-        return first(
-            tmdbImage(item?.file_path,"original"),
-            imageFrom(item?.image),
-            imageFrom(item?.url),
-            imageFrom(item?.src),
-            ""
-        );
-    })
-    .filter(Boolean);
-
-    if(tmdbBackdrops.length){
-        return [...new Set(tmdbBackdrops)].slice(0,4).map(image => ({
+        return [...new Set(savedBackdrops)].slice(0,5).map(image => ({
             image,
             quote:""
         }));
