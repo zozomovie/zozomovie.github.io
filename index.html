@@ -1287,7 +1287,9 @@ body{
 }
 
 .movie-card-title{
-    display:block;
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
     margin-top:7px;
     color:#fff;
     font-size:13px;
@@ -5282,7 +5284,15 @@ window.addEventListener("DOMContentLoaded", () => {
    ========================================================= */
 
 /* Non-TV rows: keep the original vertical poster card shape. */
-.movie-row:not(.tv-show-row) .vertical-poster-card-wrap,
+.movie-row:not(.tv-show-row) .vertical-poster-card-wrap{
+    /* The wrapper must grow with the title below the poster.
+       Keeping aspect-ratio on the wrapper clips the external title
+       because .movie-row intentionally hides vertical overflow. */
+    aspect-ratio:auto !important;
+    height:auto !important;
+    overflow:visible !important;
+}
+
 .movie-row:not(.tv-show-row) .vertical-poster-card-wrap .movie-card{
     aspect-ratio:2/3 !important;
     height:auto !important;
