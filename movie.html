@@ -2715,7 +2715,7 @@ function normalizeClips(movie,tmdb){
     */
 
     /* =========================================================
-       NO ADMIN CLIP URL → TMDB BACKDROP GALLERY
+       NO ADMIN CLIP URL → TMDB BACKDROP GALLERY (4th to 8th)
        =========================================================
        When Admin has not supplied a Movie Clip image URL, always
        prefer TMDB's real backdrop gallery. Show up to 5 different
@@ -2738,7 +2738,7 @@ function normalizeClips(movie,tmdb){
     .filter(Boolean);
 
     if(tmdbBackdrops.length){
-        return [...new Set(tmdbBackdrops)].slice(0,5).map(image => ({
+        return [...new Set(tmdbBackdrops)].slice(3,8).map(image => ({
             image,
             quote:""
         }));
