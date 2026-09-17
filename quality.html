@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CINEFLIX — Select Quality / Episode</title>
+<title>CINEFLIX — Select Quality</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{
@@ -171,6 +171,7 @@ body{
 <script>
 const params = new URLSearchParams(window.location.search);
 let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
+let selectedEpisodeParam = params.get("episode") || params.get("ep") || sessionStorage.getItem(`active_tv_episode_${movieId}`);
 
 if (movieId) {
     sessionStorage.setItem("active_movie_id", movieId);
@@ -235,19 +236,30 @@ async function loadContent() {
         if (error || !data) throw new Error("Content not found.");
 
         globalMovieTitle = data.title || "Download Content";
-        document.getElementById("movieTitle").textContent = globalMovieTitle;
-
         const qData = data.qualities_data;
 
-        // CHECK IF TV SHOW (New Manager Structure)
+        // CHECK IF TV SHOW STRUCTURE
         if (qData && typeof qData === "object" && !Array.isArray(qData) && qData.__type === "tv_show_v1") {
             globalTvData = qData;
-            document.getElementById("subTitle").textContent = "Step 1: Select Episode → Step 2: Choose Quality";
-            renderTvEpisodes();
+            
+            // IF SPECIFIC EPISODE IS SELECTED FROM MOVIE.HTML / PREVIEW
+            if (selectedEpisodeParam) {
+                const epNum = parseInt(selectedEpisodeParam, 10);
+                document.getElementById("episodesWrapper").style.display = "none"; // Hide episode selector
+                document.getElementById("movieTitle").textContent = `${globalMovieTitle} - Episode ${epNum}`;
+                document.getElementById("subTitle").textContent = `Selected Episode: ${epNum} • Choose your preferred download quality`;
+                renderSingleEpisodeQualities(epNum);
+            } else {
+                // IF NO EPISODE PASSED, SHOW FULL EPISODE LIST
+                document.getElementById("movieTitle").textContent = globalMovieTitle;
+                document.getElementById("subTitle").textContent = "Step 1: Select Episode → Step 2: Choose Quality";
+                renderTvEpisodes();
+            }
             return;
         }
 
         // MOVIES / SERIES (Standard Qualities Array)
+        document.getElementById("movieTitle").textContent = globalMovieTitle;
         document.getElementById("episodesWrapper").style.display = "none";
         document.getElementById("subTitle").textContent = "Choose your preferred download quality";
 
@@ -274,43 +286,12 @@ async function loadContent() {
     }
 }
 
-// TV SHOW EPISODE GRID RENDERER
-function renderTvEpisodes() {
-    const wrapper = document.getElementById("episodesWrapper");
-    const container = document.getElementById("episodesContainer");
-    wrapper.style.display = "block";
-
-    const seasons = globalTvData?.seasons || [];
-    const season = seasons[0]; // Active season
-    const episodes = season?.episodes || [];
-
-    if (!episodes.length) {
-        document.getElementById("qualityContainer").innerHTML = `<div class="loader-box">No episodes found for this season.</div>`;
-        return;
-    }
-
-    container.innerHTML = episodes.map(ep => `
-        <div class="ep-card" id="ep_card_${ep.episode_number}" onclick="selectTvEpisode(${ep.episode_number})">
-            <div class="ep-no">Episode ${ep.episode_number}</div>
-            <div class="ep-name">${ep.name || `EP ${ep.episode_number}`}</div>
-        </div>
-    `).join("");
-
-    // Restore last selected episode or default to Episode 1
-    const savedEp = sessionStorage.getItem("active_ep_no");
-    const defaultEp = savedEp && episodes.some(e => e.episode_number == savedEp) ? parseInt(savedEp, 10) : episodes[0].episode_number;
-    selectTvEpisode(defaultEp);
-}
-
-function selectTvEpisode(epNo) {
-    document.querySelectorAll(".ep-card").forEach(c => c.classList.remove("active"));
-    const activeCard = document.getElementById(`ep_card_${epNo}`);
-    if (activeCard) activeCard.classList.add("active");
-
+// RENDER QUALITIES FOR SINGLE SELECTED EPISODE ONLY
+function renderSingleEpisodeQualities(epNo) {
     const container = document.getElementById("qualityContainer");
     const seasons = globalTvData?.seasons || [];
     const season = seasons[0];
-    const episode = season?.episodes?.find(e => e.episode_number === epNo);
+    const episode = season?.episodes?.find(e => Number(e.episode_number) === Number(epNo));
     const scrapedQualities = globalTvData?.scraped_qualities || [];
 
     const assignedIndexes = episode?.quality_indexes || [];
@@ -335,6 +316,39 @@ function selectTvEpisode(epNo) {
             </div>
         `;
     }).join("");
+}
+
+// TV SHOW ALL EPISODES GRID RENDERER (Fallback)
+function renderTvEpisodes() {
+    const wrapper = document.getElementById("episodesWrapper");
+    const container = document.getElementById("episodesContainer");
+    wrapper.style.display = "block";
+
+    const seasons = globalTvData?.seasons || [];
+    const season = seasons[0];
+    const episodes = season?.episodes || [];
+
+    if (!episodes.length) {
+        document.getElementById("qualityContainer").innerHTML = `<div class="loader-box">No episodes found.</div>`;
+        return;
+    }
+
+    container.innerHTML = episodes.map(ep => `
+        <div class="ep-card" id="ep_card_${ep.episode_number}" onclick="selectTvEpisode(${ep.episode_number})">
+            <div class="ep-no">Episode ${ep.episode_number}</div>
+            <div class="ep-name">${ep.name || `EP ${ep.episode_number}`}</div>
+        </div>
+    `).join("");
+
+    selectTvEpisode(episodes[0].episode_number);
+}
+
+function selectTvEpisode(epNo) {
+    document.querySelectorAll(".ep-card").forEach(c => c.classList.remove("active"));
+    const activeCard = document.getElementById(`ep_card_${epNo}`);
+    if (activeCard) activeCard.classList.add("active");
+
+    renderSingleEpisodeQualities(epNo);
 }
 
 loadContent();
