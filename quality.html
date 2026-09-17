@@ -56,7 +56,14 @@ body{
     color:#fff;
     font-size:clamp(20px,4.5vw,28px);
     font-weight:800;
-    line-height:1.2;
+    line-height:1.3;
+}
+.ep-subtitle-title{
+    display:block;
+    font-size:clamp(16px,3.8vw,22px);
+    color:#e50914;
+    font-weight:800;
+    margin-top:4px;
 }
 .subtitle{
     margin-bottom:25px;
@@ -171,11 +178,9 @@ body{
 <script>
 const params = new URLSearchParams(window.location.search);
 
-// 1. First fetch parameters from URL, fallback to SessionStorage
 let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
 let urlEp = params.get("episode") || params.get("ep");
 
-// Always save the latest ID and Episode in SessionStorage
 if (movieId) {
     sessionStorage.setItem("active_movie_id", movieId);
     sessionStorage.setItem("last_active_page", "quality");
@@ -185,18 +190,24 @@ if (urlEp) {
     sessionStorage.setItem(`active_tv_episode_${movieId}`, urlEp);
 }
 
-// Retrieve selected episode
 let selectedEpisodeParam = urlEp || sessionStorage.getItem(`active_tv_episode_${movieId}`);
 
-(function maskQualityPage() {
+// Dynamic URL Masking with Episode Number
+function updateMaskedUrl(epNum = null) {
     const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
     const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     
     if (window.history.replaceState && movieSlug) {
-        const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug;
+        let epSlug = "";
+        if (epNum !== null && epNum !== undefined && epNum !== "") {
+            const formattedEp = String(epNum).padStart(2, '0');
+            epSlug = `/Episode${formattedEp}`;
+        }
+        
+        const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug + epSlug;
         window.history.replaceState({ path: customUrl }, '', customUrl);
     }
-})();
+}
 
 function generateRandomString(length = 13) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -248,21 +259,21 @@ async function loadContent() {
         globalMovieTitle = data.title || "Download Content";
         const qData = data.qualities_data;
 
-        // CHECK IF TV SHOW STRUCTURE
         if (qData && typeof qData === "object" && !Array.isArray(qData) && qData.__type === "tv_show_v1") {
             globalTvData = qData;
             
-            // EPISODE IS SELECTED (From movie.html / preview)
             if (selectedEpisodeParam) {
                 const epNum = parseInt(selectedEpisodeParam, 10);
                 
-                // HIDE EPISODE SELECTION LIST COMPLETELY
                 document.getElementById("episodesWrapper").style.display = "none"; 
                 document.getElementById("episodesWrapper").innerHTML = "";
 
+                // Mask URL as /download/show-slug/Episode01
+                updateMaskedUrl(epNum);
+
                 renderSingleEpisodeQualities(epNum);
             } else {
-                // FALLBACK ONLY IF NO EPISODE IS PASSED AT ALL
+                updateMaskedUrl(null);
                 document.getElementById("movieTitle").textContent = globalMovieTitle;
                 document.getElementById("subTitle").textContent = "Step 1: Select Episode → Step 2: Choose Quality";
                 renderTvEpisodes();
@@ -270,7 +281,7 @@ async function loadContent() {
             return;
         }
 
-        // MOVIES / SERIES (Standard Qualities Array)
+        updateMaskedUrl(null);
         document.getElementById("movieTitle").textContent = globalMovieTitle;
         document.getElementById("episodesWrapper").style.display = "none";
         document.getElementById("subTitle").textContent = "Choose your preferred download quality";
@@ -306,9 +317,8 @@ function renderSingleEpisodeQualities(epNo) {
     const episode = season?.episodes?.find(e => Number(e.episode_number) === Number(epNo));
     const scrapedQualities = globalTvData?.scraped_qualities || [];
 
-    // Set Episode Name in Header
-    const epNameText = episode?.name ? ` (${episode.name})` : "";
-    document.getElementById("movieTitle").textContent = `${globalMovieTitle} - EP ${epNo}${epNameText}`;
+    const epTitleText = episode?.name ? ` - ${episode.name}` : "";
+    document.getElementById("movieTitle").innerHTML = `${globalMovieTitle} <span class="ep-subtitle-title">(EPISODE ${epNo}${epTitleText})</span>`;
     document.getElementById("subTitle").textContent = `Choose your preferred download quality for Episode ${epNo}`;
 
     const assignedIndexes = episode?.quality_indexes || [];
@@ -335,7 +345,6 @@ function renderSingleEpisodeQualities(epNo) {
     }).join("");
 }
 
-// TV SHOW ALL EPISODES GRID RENDERER (Fallback)
 function renderTvEpisodes() {
     const wrapper = document.getElementById("episodesWrapper");
     const container = document.getElementById("episodesContainer");
@@ -365,6 +374,7 @@ function selectTvEpisode(epNo) {
     const activeCard = document.getElementById(`ep_card_${epNo}`);
     if (activeCard) activeCard.classList.add("active");
 
+    updateMaskedUrl(epNo);
     renderSingleEpisodeQualities(epNo);
 }
 
