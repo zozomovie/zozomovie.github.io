@@ -1563,6 +1563,11 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     }
 }
 </style>
+<style id="cineflix-tv-episodes">
+/* TV SHOW EPISODES — scoped addition below Cast & Crew */
+.tv-episodes-wrap{margin-top:20px}.tv-episodes-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 10px 13px}.tv-episodes-title{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800}.tv-episodes-title::before{content:"";width:4px;height:22px;border-radius:4px;background:#e50914}.tv-episodes-side{color:#8d98a8;font-size:12px}.tv-episodes-row{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;padding:4px 4% 12px 0;scrollbar-width:none;scroll-behavior:smooth;touch-action:pan-x;cursor:grab}.tv-episodes-row::-webkit-scrollbar{display:none}.tv-episode-card{position:relative;flex:0 0 235px;min-width:235px;border:1px solid rgba(255,255,255,.10);border-radius:13px;overflow:hidden;background:#0a121b;color:#fff;text-align:left;cursor:pointer;box-shadow:0 9px 25px rgba(0,0,0,.25);transition:.2s}.tv-episode-card:hover{border-color:rgba(255,255,255,.22);transform:translateY(-1px)}.tv-episode-card.active{border-color:rgba(229,9,20,.85);box-shadow:0 0 0 1px rgba(229,9,20,.16),0 12px 30px rgba(0,0,0,.3)}.tv-episode-thumb{display:block;width:100%;aspect-ratio:16/8.8;object-fit:cover;background:#111a24}.tv-episode-gradient{position:absolute;left:0;right:0;top:0;height:62%;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent)}.tv-episode-number{position:absolute;left:8px;top:8px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.13);font-size:8px;font-weight:900}.tv-episode-active{position:absolute;right:8px;top:8px;padding:4px 7px;border-radius:999px;background:#e50914;color:#fff;font-size:7px;font-weight:900;display:none}.tv-episode-card.active .tv-episode-active{display:block}.tv-episode-body{padding:9px 10px 10px}.tv-episode-name{font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tv-episode-meta{margin-top:4px;color:#7f8b9b;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tv-episode-empty{padding:12px 0;color:#707b8b;font-size:11px;text-align:center}
+@media(max-width:600px){.tv-episodes-wrap{margin-top:17px}.tv-episodes-head{margin:0 7px 10px}.tv-episodes-title{font-size:17px}.tv-episodes-title::before{height:19px}.tv-episodes-side{font-size:10px}.tv-episodes-row{gap:10px;padding-right:7px}.tv-episode-card{flex:0 0 72%;min-width:72%;border-radius:11px}.tv-episode-body{padding:8px}.tv-episode-name{font-size:10px}.tv-episode-meta{font-size:7px}}
+</style>
 </head>
 
 <body>
@@ -2251,19 +2256,87 @@ function normalizeClips(movie,tmdb){
 /* =========================================================
    REDIRECT TO QUALITY PAGE WITH SESSION ACCESS (UPDATED)
 ========================================================= */
-function openQualityPage(mId, mTitle) {
+function openQualityPage(mId, mTitle, tvEpisode=null) {
     if (!mId) return;
 
     // Both Session Storage keys stored for compatibility
     sessionStorage.setItem(`access_quality_${mId}`, 'granted');
     sessionStorage.setItem(`auth_movie_${mId}`, 'granted');
+    if(tvEpisode!==null&&tvEpisode!==undefined) sessionStorage.setItem(`active_tv_episode_${mId}`,String(tvEpisode));
 
     const movieSlug = (mTitle || 'movie')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)+/g, '');
 
-    window.location.href = `${WATCH_PAGE}?id=${mId}&movie=${encodeURIComponent(movieSlug)}`;
+    const ep=(tvEpisode!==null&&tvEpisode!==undefined&&String(tvEpisode)!=="")?`&episode=${encodeURIComponent(tvEpisode)}`:"";
+    window.location.href = `${WATCH_PAGE}?id=${mId}&movie=${encodeURIComponent(movieSlug)}${ep}`;
+}
+
+
+/* =========================================================
+   TV SHOW EPISODES
+========================================================= */
+function getTvShowData(movie){
+    const raw=movie?.qualities_data;
+    if(!raw || Array.isArray(raw) || typeof raw!="object" || raw.__type!=="tv_show_v1") return null;
+    return raw;
+}
+
+function tmdbEpisodeImage(path){
+    return path ? `https://image.tmdb.org/t/p/w780${path}` : "";
+}
+
+function renderTvEpisodes(movie,tmdb){
+    const data=getTvShowData(movie);
+    const section=document.getElementById("tvEpisodesSection");
+    const row=document.getElementById("tvEpisodesRow");
+    const counter=document.getElementById("tvEpisodesCounter");
+    if(!section||!row)return;
+    if(!data){section.classList.add("hidden");return;}
+
+    const seasons=Array.isArray(data.seasons)?data.seasons:[];
+    const seasonNumber=Number(data.active_season||seasons[0]?.season_number||0);
+    const season=seasons.find(s=>Number(s.season_number)===seasonNumber)||seasons[0];
+    const episodes=Array.isArray(season?.episodes)?season.episodes:[];
+    if(!episodes.length){section.classList.add("hidden");return;}
+
+    section.classList.remove("hidden");
+    if(counter)counter.textContent=`${episodes.length} Episodes • Swipe`;
+    row.innerHTML=episodes.map((ep,i)=>{
+        const image=tmdbEpisodeImage(ep.still_path)||getBackdrop(movie,tmdb);
+        return `<button type="button" class="tv-episode-card ${i===0?"active":""}" data-episode="${Number(ep.episode_number)}" data-index="${i}" data-image="${esc(image)}">
+            <img class="tv-episode-thumb" src="${esc(image)}" alt="${esc(ep.name||`Episode ${ep.episode_number}`)}" loading="${i<2?"eager":"lazy"}" decoding="async">
+            <span class="tv-episode-gradient"></span>
+            <span class="tv-episode-number">EP ${Number(ep.episode_number)}</span>
+            <span class="tv-episode-active">PLAYING</span>
+            <span class="tv-episode-body"><span class="tv-episode-name">${esc(ep.name||`Episode ${ep.episode_number}`)}</span><span class="tv-episode-meta">${ep.air_date||""}${ep.runtime?` • ${ep.runtime} min`:""}</span></span>
+        </button>`;
+    }).join("");
+
+    const activate=(ep)=>{
+        const selected=episodes.find(x=>Number(x.episode_number)===Number(ep))||episodes[0];
+        row.querySelectorAll(".tv-episode-card").forEach(card=>card.classList.toggle("active",Number(card.dataset.episode)===Number(selected.episode_number)));
+        const image=tmdbEpisodeImage(selected.still_path)||getBackdrop(movie,tmdb);
+        const backdropImg=document.getElementById("backdropImg");
+        if(backdropImg&&image)backdropImg.src=image;
+        // Make the selected episode backdrop the first Movie Clip too.
+        const firstClip=document.querySelector("#clipTrack .clip-slide img");
+        if(firstClip&&image)firstClip.src=image;
+        try{sessionStorage.setItem(`cineflix_tv_episode_${movie.id}`,String(selected.episode_number));}catch{}
+    };
+
+    row.querySelectorAll(".tv-episode-card").forEach(card=>card.addEventListener("click",()=>{
+        activate(Number(card.dataset.episode));
+        // Keep Download Now tied to the selected episode.
+        const download=document.getElementById("downloadNowBtn");
+        if(download){download.dataset.tvEpisode=String(card.dataset.episode);}
+    }));
+
+    let savedEpisode=1;
+    try{savedEpisode=Number(sessionStorage.getItem(`cineflix_tv_episode_${movie.id}`)||1);}catch{}
+    if(!episodes.some(x=>Number(x.episode_number)===savedEpisode))savedEpisode=Number(episodes[0].episode_number);
+    activate(savedEpisode);
 }
 
 /* =========================================================
@@ -2433,6 +2506,14 @@ function render(movie,tmdb,similar){
                     </div>
                 </section>
 
+                <section class="section tv-episodes-wrap hidden" id="tvEpisodesSection">
+                    <div class="tv-episodes-head">
+                        <h2 class="tv-episodes-title">Episodes</h2>
+                        <div class="tv-episodes-side" id="tvEpisodesCounter">Swipe</div>
+                    </div>
+                    <div class="tv-episodes-row" id="tvEpisodesRow"></div>
+                </section>
+
                 <div class="download-now-wrap">
                     <button class="download-now-btn" id="downloadNowBtn">
                         ${icons.download}
@@ -2575,6 +2656,7 @@ function render(movie,tmdb,similar){
         </div>
     `;
 
+    renderTvEpisodes(movie,tmdb);
     initInteractions(movie,clips,similar,tmdb);
 
     const backdropImg = document.getElementById("backdropImg");
@@ -2597,7 +2679,13 @@ function initInteractions(movie,clips,similar,tmdb){
             e.preventDefault();
             const targetId = movieId || (movie && movie.id);
             const currentTitle = first(movie.title, movie.name, "Movie");
-            openQualityPage(targetId, currentTitle);
+            const tvData=getTvShowData(movie);
+            let tvEpisode=null;
+            if(tvData){
+                tvEpisode=downloadNowBtn.dataset.tvEpisode||null;
+                if(!tvEpisode){try{tvEpisode=sessionStorage.getItem(`cineflix_tv_episode_${movie.id}`)||"1";}catch{tvEpisode="1";}}
+            }
+            openQualityPage(targetId, currentTitle, tvEpisode);
         };
     }
 
