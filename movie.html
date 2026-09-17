@@ -2113,7 +2113,7 @@ function getTMDBToken(){
     }
 }
 
-const WATCH_PAGE = "https://mkvtechwlaa21.blogspot.com/p/quality.html";
+const WATCH_PAGE = "quality.html";
 
 const params = new URLSearchParams(location.search);
 const movieId = params.get("id");
@@ -2636,95 +2636,32 @@ function normalizeClips(movie,tmdb){
                     imageFrom(item?.file_path),
                     ""
                 ),
-                quote:first(item?.quote,item?.caption,item?.text,"")
+                quote:first(item?.quote,item?.caption,item?.text,""),
+                source_url:first(item?.source_url,item?.clip_source_url,item?.movie_clip_url,""),
+                crop:first(item?.crop,"")
             };
         })
         .filter(x=>x.image);
 
-    /* 1. SUPABASE-SAVED IMAGES — no TMDB token required */
-    const savedSources = [
-        movie.images,
-        movie.backdrop_images,
-        movie.tmdb_backdrops
-    ];
-
-    let saved = [];
-    for(const source of savedSources){
-        const list = normalizeList(source);
-        if(list.length) saved.push(...list);
+    /* Movie Clips are Admin-controlled only.
+   No TMDB backdrop is used here. One Admin URL is saved as four
+   crop views so the public Movie Clips slider always has 4 slides. */
+    const savedClipList = normalizeList(movie.clips);
+    if(savedClipList.length){
+        const source = savedClipList.find(x=>x.source_url)?.source_url || "";
+        if(source){
+            const crops = ["left","left-center","right-center","right"];
+            return crops.map((crop,i)=>({
+                image:source,
+                source_url:source,
+                crop,
+                quote:savedClipList[i]?.quote || ""
+            }));
+        }
+        return savedClipList.slice(0,4);
     }
 
-    const savedSeen = new Set();
-    const savedUnique = saved.filter(x=>{
-        if(!x.image || savedSeen.has(x.image)) return false;
-        savedSeen.add(x.image);
-        return true;
-    }).slice(0,5);
-
-    /* If all 5 were saved by Admin, use them directly.
-       If fewer are saved, keep collecting from TMDB instead of turning
-       the mobile carousel into a 1/1 carousel. */
-    if(savedUnique.length >= 5) return savedUnique;
-
-    /* 2. MOVIE-OWNED CLIPS / STILLS / GALLERY — also works without TMDB */
-    const ownSources = [
-        movie.clips,
-        movie.stills,
-        movie.screenshots,
-        movie.gallery
-    ];
-
-    let own = [];
-    for(const source of ownSources){
-        const list = normalizeList(source);
-        if(list.length) own.push(...list);
-    }
-
-    const ownSeen = new Set();
-    const ownUnique = own.filter(x=>{
-        if(!x.image || ownSeen.has(x.image)) return false;
-        ownSeen.add(x.image);
-        return true;
-    }).slice(0,5);
-
-    if(ownUnique.length >= 5) return ownUnique;
-
-    /* 3. TMDB BACKDROPS */
-    const allTmdbBackdrops = Array.isArray(tmdb?.images?.backdrops)
-        ? tmdb.images.backdrops.filter(x=>x && x.file_path)
-        : [];
-
-    /* Use the middle 5 backdrops (4th–8th). If TMDB has fewer than 8,
-       gracefully use the best available 5 instead of falling to 1/1. */
-    const selectedTmdbBackdrops = allTmdbBackdrops.length >= 8
-        ? allTmdbBackdrops.slice(3,8)
-        : allTmdbBackdrops.slice(0,5);
-
-    const tmdbBackdrops = selectedTmdbBackdrops.map(x=>({
-        image:tmdbImage(x.file_path,"original"),
-        quote:""
-    }));
-
-    const tmdbSeen = new Set();
-    const uniqueBackdrops = tmdbBackdrops.filter(x=>{
-        if(!x.image || tmdbSeen.has(x.image)) return false;
-        tmdbSeen.add(x.image);
-        return true;
-    }).slice(0,5);
-
-    if(uniqueBackdrops.length) return uniqueBackdrops;
-
-    /* 4. TMDB MAIN BACKDROP */
-    if(tmdb?.backdrop_path){
-        return [{
-            image:tmdbImage(tmdb.backdrop_path,"original"),
-            quote:""
-        }];
-    }
-
-    /* 5. FINAL POSTER FALLBACK */
-    const poster = getPoster(movie,tmdb);
-    return poster ? [{image:poster,quote:""}] : [];
+    return [];
 }
 /* =========================================================
    REDIRECT TO QUALITY PAGE WITH SESSION ACCESS (UPDATED)
@@ -3058,22 +2995,25 @@ function render(movie,tmdb,similar){
                     <div class="download-now-sub">Choose your preferred quality &amp; server</div>
                 </div>
 
+                ${clips.length ? `
                 <section class="section">
                     <div class="section-head">
                         <h2 class="section-title">${icons.clips} Movie Clips</h2>
                         <div class="section-side">
-                            <span id="clipCounter">${clips.length ? `1–2.5 / ${clips.length}` : ""}</span>
+                            <span id="clipCounter">1–2.5 / ${clips.length}</span>
                         </div>
                     </div>
 
                     <div class="clips-wrap" id="clipsWrap">
                         <div class="clip-track" id="clipTrack">
-                            ${clips.map((clip,i)=>`
+                            ${clips.map((clip,i)=>{
+                                const pos={left:"0% center","left-center":"33% center","right-center":"67% center",right:"100% center"}[clip.crop] || "50% center";
+                                return `
                                 <article class="clip-slide" data-index="${i}">
-                                    <img src="${esc(clip.image)}" alt="${esc(title)} backdrop ${i+1}" loading="${i<2?"eager":"lazy"}" decoding="async">
+                                    <img src="${esc(clip.image)}" alt="${esc(title)} movie clip ${i+1}" loading="${i<2?"eager":"lazy"}" decoding="async" style="object-position:${pos}">
                                     ${clip.quote ? `<div class="clip-quote">${esc(clip.quote)}</div>` : ""}
-                                </article>
-                            `).join("")}
+                                </article>`;
+                            }).join("")}
                         </div>
 
                         <button class="clip-arrow clip-prev" id="clipPrev" aria-label="Previous backdrop">
@@ -3085,9 +3025,10 @@ function render(movie,tmdb,similar){
                     </div>
 
                     <div class="clip-dots" id="clipDots">
-                        ${clips.map((_,i)=>`<button class="clip-dot ${i===0?"active":""}" data-index="${i}" aria-label="Backdrop ${i+1}"></button>`).join("")}
+                        ${clips.map((_,i)=>`<button class="clip-dot ${i===0?"active":""}" data-index="${i}" aria-label="Movie Clip ${i+1}"></button>`).join("")}
                     </div>
                 </section>
+                ` : ""}
 
                 ${similar.length ? `
                 <section class="section">
@@ -3498,7 +3439,7 @@ function initInteractions(movie,clips,similar,tmdb){
 
     track?.querySelectorAll("img").forEach(img=>{
         img.addEventListener("error",()=>{
-            if(img.src !== poster) img.src = poster;
+            img.style.opacity="0";
         },{once:true});
     });
 
