@@ -3146,6 +3146,28 @@ body{
     .tv-show-row .movie-card-wrap{flex:0 0 calc((100% - 39px)/4);}
 }
 </style>
+
+<style id="cineflix-scroll-flash-fix">
+/* Prevent the white viewport flash/bounce while vertically scrolling. */
+html{
+    background:#070708 !important;
+    overscroll-behavior-y:none !important;
+    background-color:#070708 !important;
+}
+
+body{
+    background-color:#070708 !important;
+    overscroll-behavior-y:none !important;
+    min-height:100vh;
+    -webkit-tap-highlight-color:transparent;
+}
+
+/* Keep the dark page background behind the full scrollable document. */
+html, body{
+    color-scheme:dark;
+}
+</style>
+
 </head>
 
 <body>
