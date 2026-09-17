@@ -1568,7 +1568,93 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 .tv-episodes-wrap{margin-top:20px}.tv-episodes-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 10px 13px}.tv-episodes-title{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800}.tv-episodes-title::before{content:"";width:4px;height:22px;border-radius:4px;background:#e50914}.tv-episodes-side{color:#8d98a8;font-size:12px}.tv-episodes-row{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;padding:4px 4% 12px 0;scrollbar-width:none;scroll-behavior:smooth;touch-action:pan-x;cursor:grab}.tv-episodes-row::-webkit-scrollbar{display:none}.tv-episode-card{position:relative;flex:0 0 235px;min-width:235px;border:1px solid rgba(255,255,255,.10);border-radius:13px;overflow:hidden;background:#0a121b;color:#fff;text-align:left;cursor:pointer;box-shadow:0 9px 25px rgba(0,0,0,.25);transition:.2s}.tv-episode-card:hover{border-color:rgba(255,255,255,.22);transform:translateY(-1px)}.tv-episode-card.active{border-color:rgba(229,9,20,.85);box-shadow:0 0 0 1px rgba(229,9,20,.16),0 12px 30px rgba(0,0,0,.3)}.tv-episode-thumb{display:block;width:100%;aspect-ratio:16/8.8;object-fit:cover;background:#111a24}.tv-episode-gradient{position:absolute;left:0;right:0;top:0;height:62%;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent)}.tv-episode-number{position:absolute;left:8px;top:8px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.13);font-size:8px;font-weight:900}.tv-episode-active{position:absolute;right:8px;top:8px;padding:4px 7px;border-radius:999px;background:#e50914;color:#fff;font-size:7px;font-weight:900;display:none}.tv-episode-card.active .tv-episode-active{display:block}.tv-episode-body{padding:9px 10px 10px}.tv-episode-name{font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tv-episode-meta{margin-top:4px;color:#7f8b9b;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tv-episode-empty{padding:12px 0;color:#707b8b;font-size:11px;text-align:center}
 .tv-episode-meta{display:flex;align-items:center;gap:8px;min-width:0}.tv-episode-date{white-space:nowrap}.tv-episode-duration{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}.tv-duration-icon{display:inline-flex;width:10px;height:10px;flex:0 0 10px}.tv-duration-icon svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2}
 .tv-episode-card.active .tv-episode-active{background:#fff;color:#0b1118}
-@media(max-width:600px){.tv-episodes-wrap{margin-top:17px}.tv-episodes-head{margin:0 7px 10px}.tv-episodes-title{font-size:17px}.tv-episodes-title::before{height:19px}.tv-episodes-side{font-size:10px}.tv-episodes-row{gap:10px;padding-right:7px}.tv-episode-card{flex:0 0 62%;min-width:62%;border-radius:11px}.tv-episode-body{padding:7px}.tv-episode-name{font-size:10px}.tv-episode-meta{font-size:7px;gap:5px}.tv-episode-number{left:6px;top:6px;padding:3px 6px;font-size:7px}.tv-episode-active{right:6px;top:6px;padding:3px 6px;font-size:6.5px}}
+@media(max-width:600px){
+.tv-episodes-wrap{margin-top:17px}
+.tv-episodes-head{margin:0 7px 10px}
+.tv-episodes-title{font-size:17px}
+.tv-episodes-title::before{height:19px}
+.tv-episodes-side{font-size:10px}
+
+.tv-episodes-row{
+    gap:8px;
+    padding:3px 7px 10px 0;
+    -webkit-overflow-scrolling:touch;
+}
+
+.tv-episode-card{
+    flex:0 0 calc((100% - 8px) / 2);
+    width:calc((100% - 8px) / 2);
+    min-width:calc((100% - 8px) / 2);
+    max-width:calc((100% - 8px) / 2);
+    border-radius:9px;
+}
+
+.tv-episode-thumb{
+    width:100%;
+    height:auto;
+    aspect-ratio:16/9;
+    object-fit:contain;
+    object-position:center center;
+    background:#05090e;
+}
+
+.tv-episode-body{
+    padding:7px 7px 8px;
+}
+
+.tv-episode-name{
+    font-size:10px;
+    line-height:1.25;
+}
+
+.tv-episode-meta{
+    margin-top:5px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    min-width:0;
+    color:#9aa7b7;
+    font-size:8px;
+    line-height:1.2;
+    white-space:nowrap;
+    overflow:visible;
+    text-overflow:clip;
+}
+
+.tv-episode-date{
+    flex:0 0 auto;
+    white-space:nowrap;
+}
+
+.tv-episode-duration{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+    white-space:nowrap;
+}
+
+.tv-duration-icon,
+.tv-duration-icon svg{
+    width:10px;
+    height:10px;
+    flex:0 0 10px;
+}
+
+.tv-episode-number{
+    left:6px;
+    top:6px;
+    padding:3px 5px;
+    font-size:6.5px;
+}
+
+.tv-episode-active{
+    right:6px;
+    top:6px;
+    padding:3px 5px;
+    font-size:6px;
+}
+}
 </style>
 </head>
 
