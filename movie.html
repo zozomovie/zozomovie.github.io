@@ -2113,7 +2113,7 @@ function getTMDBToken(){
     }
 }
 
-const WATCH_PAGE = "quality.html";
+const WATCH_PAGE = "https://mkvtechwlaa21.blogspot.com/p/quality.html";
 
 const params = new URLSearchParams(location.search);
 const movieId = params.get("id");
@@ -3743,3 +3743,28 @@ loadMovie();
 </script>
 </body>
 </html>
+<style id="episode-one-card-swipe-final">
+/* Episode row: every left/right swipe settles one card at a time. */
+.tv-episodes-row{
+    scroll-snap-type:x mandatory !important;
+    overscroll-behavior-x:contain !important;
+    -webkit-overflow-scrolling:touch !important;
+}
+.tv-episode-card{
+    scroll-snap-align:start !important;
+    scroll-snap-stop:always !important;
+}
+
+@media (max-width:600px){
+    .tv-episodes-row{
+        touch-action:pan-x pan-y !important;
+        scroll-snap-type:x mandatory !important;
+        scroll-padding-left:0 !important;
+        overscroll-behavior-x:contain !important;
+    }
+    .tv-episode-card{
+        scroll-snap-align:start !important;
+        scroll-snap-stop:always !important;
+    }
+}
+</style>
