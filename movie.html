@@ -1975,6 +1975,72 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
 }
 </style>
 
+
+<style id="episode-meta-simple-left-right-final">
+/* Date left + duration right on thumbnail. Plain text only — no pill, no background. */
+.tv-episode-meta{
+    position:absolute !important;
+    left:8px !important;
+    right:8px !important;
+    bottom:7px !important;
+    top:auto !important;
+    z-index:6 !important;
+    width:auto !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:8px !important;
+    box-sizing:border-box !important;
+    color:#fff !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:0 !important;
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+    font-size:9px !important;
+    line-height:1.15 !important;
+    font-weight:800 !important;
+    text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 5px rgba(0,0,0,.7) !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+}
+.tv-episode-date{
+    margin-right:auto !important;
+    text-align:left !important;
+}
+.tv-episode-duration{
+    margin-left:auto !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:3px !important;
+    text-align:right !important;
+}
+.tv-duration-icon,.tv-duration-icon svg{
+    width:9px !important;
+    height:9px !important;
+    flex:0 0 9px !important;
+}
+@media (max-width:600px){
+    .tv-episode-meta{
+        left:6px !important;
+        right:6px !important;
+        bottom:6px !important;
+        gap:6px !important;
+        font-size:8px !important;
+    }
+    .tv-episode-duration{gap:2px !important}
+    .tv-duration-icon,.tv-duration-icon svg{
+        width:8px !important;
+        height:8px !important;
+        flex-basis:8px !important;
+    }
+}
+</style>
+
 </head>
 
 <body>
@@ -2047,7 +2113,7 @@ function getTMDBToken(){
     }
 }
 
-const WATCH_PAGE = "https://mkvtechwlaa21.blogspot.com/p/quality.html";
+const WATCH_PAGE = "quality.html";
 
 const params = new URLSearchParams(location.search);
 const movieId = params.get("id");
