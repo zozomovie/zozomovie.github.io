@@ -54,14 +54,14 @@ body{
 .movie-title{
     margin:0 auto 7px;
     color:#fff;
-    font-size:clamp(22px,5vw,32px);
+    font-size:clamp(20px,4.5vw,28px);
     font-weight:800;
     line-height:1.2;
 }
 .subtitle{
     margin-bottom:25px;
-    color:#777;
-    font-size:12px;
+    color:#888;
+    font-size:13px;
 }
 .episodes-label{
     text-align:left;
@@ -170,13 +170,23 @@ body{
 
 <script>
 const params = new URLSearchParams(window.location.search);
-let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
-let selectedEpisodeParam = params.get("episode") || params.get("ep") || sessionStorage.getItem(`active_tv_episode_${movieId}`);
 
+// 1. First fetch parameters from URL, fallback to SessionStorage
+let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
+let urlEp = params.get("episode") || params.get("ep");
+
+// Always save the latest ID and Episode in SessionStorage
 if (movieId) {
     sessionStorage.setItem("active_movie_id", movieId);
     sessionStorage.setItem("last_active_page", "quality");
 }
+
+if (urlEp) {
+    sessionStorage.setItem(`active_tv_episode_${movieId}`, urlEp);
+}
+
+// Retrieve selected episode
+let selectedEpisodeParam = urlEp || sessionStorage.getItem(`active_tv_episode_${movieId}`);
 
 (function maskQualityPage() {
     const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
@@ -242,15 +252,17 @@ async function loadContent() {
         if (qData && typeof qData === "object" && !Array.isArray(qData) && qData.__type === "tv_show_v1") {
             globalTvData = qData;
             
-            // IF SPECIFIC EPISODE IS SELECTED FROM MOVIE.HTML / PREVIEW
+            // EPISODE IS SELECTED (From movie.html / preview)
             if (selectedEpisodeParam) {
                 const epNum = parseInt(selectedEpisodeParam, 10);
-                document.getElementById("episodesWrapper").style.display = "none"; // Hide episode selector
-                document.getElementById("movieTitle").textContent = `${globalMovieTitle} - Episode ${epNum}`;
-                document.getElementById("subTitle").textContent = `Selected Episode: ${epNum} • Choose your preferred download quality`;
+                
+                // HIDE EPISODE SELECTION LIST COMPLETELY
+                document.getElementById("episodesWrapper").style.display = "none"; 
+                document.getElementById("episodesWrapper").innerHTML = "";
+
                 renderSingleEpisodeQualities(epNum);
             } else {
-                // IF NO EPISODE PASSED, SHOW FULL EPISODE LIST
+                // FALLBACK ONLY IF NO EPISODE IS PASSED AT ALL
                 document.getElementById("movieTitle").textContent = globalMovieTitle;
                 document.getElementById("subTitle").textContent = "Step 1: Select Episode → Step 2: Choose Quality";
                 renderTvEpisodes();
@@ -293,6 +305,11 @@ function renderSingleEpisodeQualities(epNo) {
     const season = seasons[0];
     const episode = season?.episodes?.find(e => Number(e.episode_number) === Number(epNo));
     const scrapedQualities = globalTvData?.scraped_qualities || [];
+
+    // Set Episode Name in Header
+    const epNameText = episode?.name ? ` (${episode.name})` : "";
+    document.getElementById("movieTitle").textContent = `${globalMovieTitle} - EP ${epNo}${epNameText}`;
+    document.getElementById("subTitle").textContent = `Choose your preferred download quality for Episode ${epNo}`;
 
     const assignedIndexes = episode?.quality_indexes || [];
 
