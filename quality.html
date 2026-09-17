@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CINEFLIX — Select Quality</title>
+<title>CINEFLIX — Select Quality / Episode</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{
@@ -63,6 +63,41 @@ body{
     color:#777;
     font-size:12px;
 }
+.episodes-label{
+    text-align:left;
+    font-size:12px;
+    color:#aaa;
+    margin-bottom:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+}
+.episodes-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));
+    gap:10px;
+    margin-bottom:25px;
+    max-height:280px;
+    overflow-y:auto;
+    padding-right:4px;
+}
+.ep-card{
+    background:#111116;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:12px;
+    padding:10px;
+    cursor:pointer;
+    transition:.18s ease;
+    text-align:center;
+}
+.ep-card:hover, .ep-card.active{
+    background:rgba(229,9,20,.18);
+    border-color:#e50914;
+    box-shadow:0 4px 15px rgba(229,9,20,.2);
+}
+.ep-no{font-size:12px;font-weight:900;color:#fff}
+.ep-name{font-size:9px;color:#888;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 .quality-list{
     display:flex;
     flex-direction:column;
@@ -113,17 +148,22 @@ body{
 <body>
 
 <nav class="navbar">
-    <a href="zozomovie.github.io" class="logo">CINEFLIX</a>
+    <a href="index.html" class="logo">CINEFLIX</a>
 </nav>
 
 <main class="page">
-    <h1 class="movie-title" id="movieTitle">Select Movie Quality</h1>
-    <p class="subtitle">Choose your preferred download quality</p>
+    <h1 class="movie-title" id="movieTitle">Select Quality</h1>
+    <p class="subtitle" id="subTitle">Choose your preferred download quality</p>
+
+    <div id="episodesWrapper" style="display:none;">
+        <div class="episodes-label">Select Episode</div>
+        <div class="episodes-grid" id="episodesContainer"></div>
+    </div>
 
     <div class="quality-list" id="qualityContainer">
         <div class="loader-box">
             <div class="spinner"></div>
-            Loading available qualities...
+            Loading available options...
         </div>
     </div>
 </main>
@@ -135,45 +175,16 @@ let movieId = params.get("id") || sessionStorage.getItem("active_movie_id");
 if (movieId) {
     sessionStorage.setItem("active_movie_id", movieId);
     sessionStorage.setItem("last_active_page", "quality");
-    const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
-    sessionStorage.setItem("active_movie_slug", rawTitle);
 }
 
-/* Direct URL access enabled.
-   No sessionStorage authorization check here. */
-
-(function protectAndMaskQualityPage() {
-
-    if (!movieId) {
-        return;
-    }
-
-    const rawTitle =
-        params.get("movie") ||
-        params.get("title") ||
-        sessionStorage.getItem("active_movie_slug") ||
-        "download";
-
-    const movieSlug = rawTitle
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '');
-
+(function maskQualityPage() {
+    const rawTitle = params.get("movie") || params.get("title") || sessionStorage.getItem("active_movie_slug") || "download";
+    const movieSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    
     if (window.history.replaceState && movieSlug) {
-        const customUrl =
-            window.location.protocol +
-            "//" +
-            window.location.host +
-            '/download/' +
-            movieSlug;
-
-        window.history.replaceState(
-            { path: customUrl },
-            '',
-            customUrl
-        );
+        const customUrl = window.location.protocol + "//" + window.location.host + '/download/' + movieSlug;
+        window.history.replaceState({ path: customUrl }, '', customUrl);
     }
-
 })();
 
 function generateRandomString(length = 13) {
@@ -183,29 +194,34 @@ function generateRandomString(length = 13) {
     return res;
 }
 
-function navigateToServer(qIndex, title, qualityName) {
+function navigateToServer(qIndex, title, qualityName, epNo = null) {
     const random13 = generateRandomString(13);
-    
-    sessionStorage.setItem(`access_server_${movieId}_${qIndex}`, 'granted');
-    sessionStorage.setItem(`auth_server_${movieId}_${qIndex}`, 'true');
+
     sessionStorage.setItem("active_server_ref", random13);
     sessionStorage.setItem("active_q_index", qIndex);
     sessionStorage.setItem("active_movie_title", title);
     sessionStorage.setItem("active_quality_name", qualityName);
+    sessionStorage.setItem("active_ep_no", epNo !== null ? epNo : "");
     sessionStorage.setItem("last_active_page", "server");
 
-    window.location.href = `/server.html?ref=${random13}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
+    let serverUrl = `/server.html?ref=${random13}&id=${movieId}&q_index=${qIndex}&title=${encodeURIComponent(title)}&quality=${encodeURIComponent(qualityName)}`;
+    if (epNo !== null) serverUrl += `&ep=${epNo}`;
+    
+    window.location.href = serverUrl;
 }
 
 const SUPABASE_URL = "https://bbqaagbypawcpszjwzii.supabase.co";
 const SUPABASE_KEY = "sb_publishable_dWktR3La6JpSwD32tfSb-Q_a__jx0cO";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function loadQualities() {
+let globalTvData = null;
+let globalMovieTitle = "";
+
+async function loadContent() {
     const container = document.getElementById("qualityContainer");
 
     if (!movieId) {
-        container.innerHTML = `<div class="loader-box">Movie ID missing.</div>`;
+        container.innerHTML = `<div class="loader-box">Movie ID missing. Select a movie or series from Home.</div>`;
         return;
     }
 
@@ -216,23 +232,38 @@ async function loadQualities() {
             .eq("id", movieId)
             .single();
 
-        if (error || !data) throw new Error("Movie not found.");
+        if (error || !data) throw new Error("Content not found.");
 
-        const mTitle = data.title || "Download Movie";
-        document.getElementById("movieTitle").textContent = mTitle;
-        const qualities = data.qualities_data || [];
+        globalMovieTitle = data.title || "Download Content";
+        document.getElementById("movieTitle").textContent = globalMovieTitle;
 
+        const qData = data.qualities_data;
+
+        // CHECK IF TV SHOW (New Manager Structure)
+        if (qData && typeof qData === "object" && !Array.isArray(qData) && qData.__type === "tv_show_v1") {
+            globalTvData = qData;
+            document.getElementById("subTitle").textContent = "Step 1: Select Episode → Step 2: Choose Quality";
+            renderTvEpisodes();
+            return;
+        }
+
+        // MOVIES / SERIES (Standard Qualities Array)
+        document.getElementById("episodesWrapper").style.display = "none";
+        document.getElementById("subTitle").textContent = "Choose your preferred download quality";
+
+        const qualities = Array.isArray(qData) ? qData : [];
         if (qualities.length === 0) {
-            container.innerHTML = `<div class="loader-box">No qualities available for this movie.</div>`;
+            container.innerHTML = `<div class="loader-box">No qualities available for this content.</div>`;
             return;
         }
 
         container.innerHTML = qualities.map((q, idx) => {
-            const escapedTitle = mTitle.replace(/'/g, "\\'");
-            const escapedQuality = q.quality_name.replace(/'/g, "\\'");
+            const escapedTitle = globalMovieTitle.replace(/'/g, "\\'");
+            const qName = q.quality_name || `Quality ${idx + 1}`;
+            const escapedQuality = qName.replace(/'/g, "\\'");
             return `
                 <div class="quality-button" onclick="navigateToServer(${idx}, '${escapedTitle}', '${escapedQuality}')">
-                    <span class="quality-name">${q.quality_name}</span>
+                    <span class="quality-name">${qName}</span>
                     <span>➔</span>
                 </div>
             `;
@@ -243,8 +274,70 @@ async function loadQualities() {
     }
 }
 
-loadQualities();
-</script>
+// TV SHOW EPISODE GRID RENDERER
+function renderTvEpisodes() {
+    const wrapper = document.getElementById("episodesWrapper");
+    const container = document.getElementById("episodesContainer");
+    wrapper.style.display = "block";
 
+    const seasons = globalTvData?.seasons || [];
+    const season = seasons[0]; // Active season
+    const episodes = season?.episodes || [];
+
+    if (!episodes.length) {
+        document.getElementById("qualityContainer").innerHTML = `<div class="loader-box">No episodes found for this season.</div>`;
+        return;
+    }
+
+    container.innerHTML = episodes.map(ep => `
+        <div class="ep-card" id="ep_card_${ep.episode_number}" onclick="selectTvEpisode(${ep.episode_number})">
+            <div class="ep-no">Episode ${ep.episode_number}</div>
+            <div class="ep-name">${ep.name || `EP ${ep.episode_number}`}</div>
+        </div>
+    `).join("");
+
+    // Restore last selected episode or default to Episode 1
+    const savedEp = sessionStorage.getItem("active_ep_no");
+    const defaultEp = savedEp && episodes.some(e => e.episode_number == savedEp) ? parseInt(savedEp, 10) : episodes[0].episode_number;
+    selectTvEpisode(defaultEp);
+}
+
+function selectTvEpisode(epNo) {
+    document.querySelectorAll(".ep-card").forEach(c => c.classList.remove("active"));
+    const activeCard = document.getElementById(`ep_card_${epNo}`);
+    if (activeCard) activeCard.classList.add("active");
+
+    const container = document.getElementById("qualityContainer");
+    const seasons = globalTvData?.seasons || [];
+    const season = seasons[0];
+    const episode = season?.episodes?.find(e => e.episode_number === epNo);
+    const scrapedQualities = globalTvData?.scraped_qualities || [];
+
+    const assignedIndexes = episode?.quality_indexes || [];
+
+    if (!assignedIndexes.length) {
+        container.innerHTML = `<div class="loader-box">No qualities assigned to Episode ${epNo}.</div>`;
+        return;
+    }
+
+    container.innerHTML = assignedIndexes.map(qIdx => {
+        const item = scrapedQualities[qIdx];
+        if (!item) return "";
+        const qName = item.quality_name || `Quality #${qIdx + 1}`;
+        const displayTitle = `${globalMovieTitle} (EP ${epNo})`;
+        const escapedTitle = displayTitle.replace(/'/g, "\\'");
+        const escapedQuality = qName.replace(/'/g, "\\'");
+
+        return `
+            <div class="quality-button" onclick="navigateToServer(${qIdx}, '${escapedTitle}', '${escapedQuality}', ${epNo})">
+                <span class="quality-name">${qName}</span>
+                <span>➔</span>
+            </div>
+        `;
+    }).join("");
+}
+
+loadContent();
+</script>
 </body>
 </html>
