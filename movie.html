@@ -2692,16 +2692,54 @@ function normalizeClips(movie,tmdb){
         return savedClipList.slice(0,4);
     }
 
-    /* No Admin Movie Clip URL? Keep the old TMDB backdrop fallback.
-       This means existing/new movies still show a Movie Clip image
-       even when the Admin field is left empty. */
+    /* =========================================================
+       NO ADMIN CLIP URL → USE BACKDROP IMAGES
+       =========================================================
+       If Admin leaves Movie Clip Image URL empty, do NOT show a
+       blank Movie Clips section. First use any saved backdrop/gallery
+       images from the movie record, then TMDB's complete backdrop
+       gallery, and finally the main backdrop.
+    */
+
+    const savedBackdrops = [
+        movie.backdrops,
+        movie.backdrop_images,
+        movie.backdropImages,
+        movie.gallery,
+        movie.stills,
+        movie.images?.backdrops,
+        movie.backdrop_urls
+    ]
+    .flatMap(value => toImageList(value))
+    .map(item => {
+        if(typeof item === "string") return imageFrom(item);
+        return first(
+            imageFrom(item?.file_path),
+            imageFrom(item?.image),
+            imageFrom(item?.url),
+            imageFrom(item?.src),
+            imageFrom(item?.path),
+            ""
+        );
+    })
+    .filter(Boolean);
+
+    if(savedBackdrops.length){
+        return [...new Set(savedBackdrops)].slice(0,4).map(image => ({
+            image,
+            quote:""
+        }));
+    }
+
+    /* TMDB normally provides the full backdrop gallery because
+       fetchTMDB() requests credits, images and videos. */
     const tmdbBackdrops = toImageList(
         tmdb?.images?.backdrops || tmdb?.backdrops || []
     )
     .map(item => {
-        if(typeof item === "string") return item;
+        if(typeof item === "string") return tmdbImage(item,"original");
         return first(
-            imageFrom(item?.file_path),
+            tmdbImage(item?.file_path,"original"),
             imageFrom(item?.image),
             imageFrom(item?.url),
             imageFrom(item?.src),
@@ -2711,15 +2749,31 @@ function normalizeClips(movie,tmdb){
     .filter(Boolean);
 
     if(tmdbBackdrops.length){
-        return tmdbBackdrops.slice(0,4).map((image,i)=>({
+        return [...new Set(tmdbBackdrops)].slice(0,4).map(image => ({
             image,
             quote:""
         }));
     }
 
-    if(tmdb?.backdrop_path){
+    /* Last fallback: the movie's own saved backdrop or TMDB's
+       primary backdrop. This guarantees at least one clip image. */
+    const singleBackdrop = first(
+        imageFrom(movie.backdrop_url),
+        imageFrom(movie.backdrop),
+        imageFrom(movie.backdrop_image),
+        imageFrom(movie.hero_image),
+        tmdbImage(tmdb?.backdrop_path,"original"),
+        tmdbImage(first(
+            movie.tmdb_backdrop_path,
+            movie.tmdbBackdropPath,
+            movie.backdrop_path
+        ),"original"),
+        ""
+    );
+
+    if(singleBackdrop){
         return [{
-            image:tmdbImage(tmdb.backdrop_path,"original"),
+            image:singleBackdrop,
             quote:""
         }];
     }
