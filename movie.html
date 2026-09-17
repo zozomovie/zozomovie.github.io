@@ -647,7 +647,29 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     transition:transform .6s ease,filter .35s ease;
     filter:brightness(.9) saturate(.98);
 }
-.clip-slide:hover img{transform:scale(1.025);filter:brightness(.96) saturate(1.02)}
+
+/* Admin Movie Clip collage: exact 2×4 panel extraction.
+   The source contains 8 equal photos. Only panels 3–6 are shown. */
+.clip-slide img.movie-clip-panel{
+    width:200% !important;
+    height:400% !important;
+    max-width:none !important;
+    object-fit:fill !important;
+    object-position:initial !important;
+    position:absolute;
+    left:0;
+    top:0;
+    transform-origin:top left;
+}
+.clip-slide img.movie-clip-panel.panel3{transform:translate(0,-25%)}
+.clip-slide img.movie-clip-panel.panel4{transform:translate(-50%,-25%)}
+.clip-slide img.movie-clip-panel.panel5{transform:translate(0,-50%)}
+.clip-slide img.movie-clip-panel.panel6{transform:translate(-50%,-50%)}
+.clip-slide:hover img{filter:brightness(.96) saturate(1.02)}
+.clip-slide:hover img.movie-clip-panel.panel3{transform:translate(0,-25%)}
+.clip-slide:hover img.movie-clip-panel.panel4{transform:translate(-50%,-25%)}
+.clip-slide:hover img.movie-clip-panel.panel5{transform:translate(0,-50%)}
+.clip-slide:hover img.movie-clip-panel.panel6{transform:translate(-50%,-50%)}
 .clip-quote{
     position:absolute;
     z-index:2;
@@ -2650,7 +2672,10 @@ function normalizeClips(movie,tmdb){
     if(savedClipList.length){
         const source = savedClipList.find(x=>x.source_url)?.source_url || "";
         if(source){
-            const crops = ["left","left-center","right-center","right"];
+            /* Admin supplies one 2×4 collage. Use only images 3,4,5,6:
+               3 = row 2 left, 4 = row 2 right,
+               5 = row 3 left, 6 = row 3 right. */
+            const crops = ["panel3","panel4","panel5","panel6"];
             return crops.map((crop,i)=>({
                 image:source,
                 source_url:source,
@@ -2659,6 +2684,38 @@ function normalizeClips(movie,tmdb){
             }));
         }
         return savedClipList.slice(0,4);
+    }
+
+    /* No Admin Movie Clip URL? Keep the old TMDB backdrop fallback.
+       This means existing/new movies still show a Movie Clip image
+       even when the Admin field is left empty. */
+    const tmdbBackdrops = toImageList(
+        tmdb?.images?.backdrops || tmdb?.backdrops || []
+    )
+    .map(item => {
+        if(typeof item === "string") return item;
+        return first(
+            imageFrom(item?.file_path),
+            imageFrom(item?.image),
+            imageFrom(item?.url),
+            imageFrom(item?.src),
+            ""
+        );
+    })
+    .filter(Boolean);
+
+    if(tmdbBackdrops.length){
+        return tmdbBackdrops.slice(0,4).map((image,i)=>({
+            image,
+            quote:""
+        }));
+    }
+
+    if(tmdb?.backdrop_path){
+        return [{
+            image:tmdbImage(tmdb.backdrop_path,"original"),
+            quote:""
+        }];
     }
 
     return [];
@@ -3007,10 +3064,13 @@ function render(movie,tmdb,similar){
                     <div class="clips-wrap" id="clipsWrap">
                         <div class="clip-track" id="clipTrack">
                             ${clips.map((clip,i)=>{
+                                const panelCrop = ["panel3","panel4","panel5","panel6"].includes(clip.crop);
+                                const panelClass = panelCrop ? `movie-clip-panel ${clip.crop}` : "";
                                 const pos={left:"0% center","left-center":"33% center","right-center":"67% center",right:"100% center"}[clip.crop] || "50% center";
+                                const imgStyle = panelCrop ? "" : `style="object-position:${pos}"`;
                                 return `
                                 <article class="clip-slide" data-index="${i}">
-                                    <img src="${esc(clip.image)}" alt="${esc(title)} movie clip ${i+1}" loading="${i<2?"eager":"lazy"}" decoding="async" style="object-position:${pos}">
+                                    <img class="${panelClass}" src="${esc(clip.image)}" alt="${esc(title)} movie clip ${i+1}" loading="${i<2?"eager":"lazy"}" decoding="async" ${imgStyle}>
                                     ${clip.quote ? `<div class="clip-quote">${esc(clip.quote)}</div>` : ""}
                                 </article>`;
                             }).join("")}
