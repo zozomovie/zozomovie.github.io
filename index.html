@@ -3134,6 +3134,16 @@ body{
 }
 
 </style>
+<style id="cineflix-tv-show-section">
+/* TV SHOW SECTION — only this new section */
+.tv-show-row .movie-card-wrap{flex:0 0 170px;}
+@media(max-width:800px){
+    .tv-show-row .movie-card-wrap{flex:0 0 calc((100% - 13px)/2);}
+}
+@media(min-width:801px){
+    .tv-show-row .movie-card-wrap{flex:0 0 calc((100% - 39px)/4);}
+}
+</style>
 </head>
 
 <body>
@@ -3399,6 +3409,34 @@ body{
     </section>
 
 
+    <!-- TV SHOWS -->
+    <section class="section" id="tvshows">
+
+        <div class="section-header">
+            <h2 class="section-title">
+                TV Shows
+                <span>Latest TV shows</span>
+            </h2>
+            <a href="#tvshows" class="see-all">See all</a>
+        </div>
+
+        <div class="movie-row-wrapper tv-show-row-wrapper">
+
+            <button class="row-arrow row-prev" aria-label="Previous TV Show">
+                <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+
+            <div class="movie-row tv-show-row" id="tvShowRow"></div>
+
+            <button class="row-arrow row-next" aria-label="Next TV Show">
+                <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6 6"/></svg>
+            </button>
+
+        </div>
+
+    </section>
+
+
     <!-- BROWSE BY GENRE -->
     <section class="genre-browse" id="genres">
         <div class="genre-browse-head">
@@ -3546,13 +3584,14 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let movies = [];
 
 let series = [];
+let tvShows = [];
 
 
 /* =========================================================
    MOVIE CARD
 ========================================================= */
 
-function createMovieCard(movie){
+function createMovieCard(movie, rowId=""){
 
     const wrap = document.createElement("div");
 
@@ -3577,10 +3616,21 @@ function createMovieCard(movie){
         card.setAttribute("aria-label","Open " + movie.title);
     }
 
+    /* ONLY the real TV Shows row uses the TMDB landscape backdrop.
+       Every other Home section always uses the vertical TMDB poster.
+       We use rowId here so a category/value can never accidentally
+       make Movies, Series, Trending or New Releases use a backdrop. */
+    const isTvShow = rowId === "tvShowRow";
+    const cardImage = isTvShow
+        ? (movie.backdrop || "")
+        : (movie.poster || "");
+
+    wrap.classList.add(isTvShow ? "tv-show-card-wrap" : "vertical-poster-card-wrap");
+
     card.innerHTML = `
 
         <img
-            src="${movie.image}"
+            src="${cardImage}"
             alt="${movie.title}"
             loading="lazy"
         >
@@ -3692,7 +3742,7 @@ function loadRow(rowId,data){
     row.innerHTML = "";
 
     data.forEach(movie=>{
-        row.appendChild(createMovieCard(movie));
+        row.appendChild(createMovieCard(movie, rowId));
     });
 
     attachLikeEvents(row);
@@ -4631,7 +4681,7 @@ function showGenreResults(genre){
     genreResultsGrid.innerHTML="";
 
     if(matches.length){
-        matches.forEach(movie=>genreResultsGrid.appendChild(createMovieCard(movie)));
+        matches.forEach(movie=>genreResultsGrid.appendChild(createMovieCard(movie, "genreResultsGrid")));
         attachMovieCardNavigation(genreResultsGrid);
     }else{
         genreResultsGrid.innerHTML=`<div class="genre-empty" style="grid-column:1/-1">No ${escapeBannerText(q)} movies or series found.</div>`;
@@ -4736,6 +4786,7 @@ async function loadDatabaseMovies(){
     const newRow=document.getElementById("newRow");
     const moviesRow=document.getElementById("moviesRow");
     const seriesRow=document.getElementById("seriesRow");
+    const tvShowRow=document.getElementById("tvShowRow");
 
     // Never render the old demo movies. Show only the normal loading state
     // until the real Supabase data is available.
@@ -4743,6 +4794,7 @@ async function loadDatabaseMovies(){
     showSkeleton(newRow);
     showSkeleton(moviesRow);
     showSkeleton(seriesRow);
+    showSkeleton(tvShowRow);
 
     try{
         const {data,error}=await supabaseClient
@@ -4767,8 +4819,14 @@ async function loadDatabaseMovies(){
                 ? (typeof m.genres[0]==="string" ? m.genres[0] : (m.genres[0].name||"Movie"))
                 : (m.category||"Movie"),
             rating:Number(m.rating||0).toFixed(1),
-            image:m.poster_url || "",
-            backdrop:m.backdrop_url || m.backdrop_image || m.hero_image || m.backdrop || m.poster_url || "",
+            /* TV SHOW = LANDSCAPE TMDB BACKDROP ONLY.
+               MOVIES / WEB SERIES = EXISTING VERTICAL POSTER ONLY.
+               Never use a vertical poster as the TV landscape artwork. */
+            image:(String(m.category||"").trim().toLowerCase().includes("tv show")
+                ? (String(m.backdrop_url||m.backdrop_image||m.hero_image||m.backdrop||"").trim())
+                : (m.poster_url || "")),
+            poster:m.poster_url || "",
+            backdrop:m.backdrop_url || m.backdrop_image || m.hero_image || m.backdrop || "",
             category:m.category || "Movies",
             badge:String(m.badge ?? m.badge_text ?? "").trim(),
              badgeStyle:({
@@ -4785,18 +4843,26 @@ async function loadDatabaseMovies(){
 
         movies=mapped;
 
+        // TV SHOWS: separate category managed from Admin.
+        tvShows=mapped.filter(m=>{
+            const c=String(m.category||"").trim().toLowerCase();
+            return c==="tv show" || c==="tv shows" || c.includes("tv show");
+        });
+
         // SERIES SECTION: show ONLY items published as Series from Admin.
         // Also accept the older "Web Series" category for backward compatibility.
         // Movies, Bollywood, Hollywood, etc. must never enter this section.
         series=mapped.filter(m=>{
             const c=String(m.category||"").trim().toLowerCase();
-            return c==="series" || c==="web series" || c.includes("web series");
+            return (c==="series" || c==="web series" || c.includes("web series")) && !c.includes("tv show");
         });
 
         // Keep Series completely out of movie-only sections.
         const movieOnly=mapped.filter(m=>{
             const c=String(m.category||"").trim().toLowerCase();
-            return c!=="series" && c!=="web series" && !c.includes("web series");
+            const isSeries=(c==="series" || c==="web series" || c.includes("web series"));
+            const isTvShow=(c==="tv show" || c==="tv shows" || c.includes("tv show"));
+            return !isSeries && !isTvShow;
         });
         const trending=mapped.filter(m=>m.isTrending);
         const fresh=mapped.filter(m=>m.isNewRelease);
@@ -4903,11 +4969,13 @@ async function loadDatabaseMovies(){
 
         const movieItems=shuffleMovieSeriesForRefresh(movieOnly);
         const seriesItems=shuffleMovieSeriesForRefresh(series);
+        const tvShowItems=tvShows.slice().sort(newestFirst);
 
         trendingRow.innerHTML="";
         newRow.innerHTML="";
         moviesRow.innerHTML="";
         seriesRow.innerHTML="";
+        if(tvShowRow) tvShowRow.innerHTML="";
 
         if(trendingItems.length) {
             loadRow("trendingRow",trendingItems);
@@ -4926,6 +4994,11 @@ async function loadDatabaseMovies(){
         if(seriesItems.length) loadRow("seriesRow",seriesItems);
         else seriesRow.innerHTML="";
 
+        if(tvShowRow){
+            if(tvShowItems.length) loadRow("tvShowRow",tvShowItems);
+            else tvShowRow.innerHTML="";
+        }
+
         runUrlSearch();
 
         /* Real data is ready — reveal the actual Home / Telegram / Genres nav. */
@@ -4939,6 +5012,7 @@ async function loadDatabaseMovies(){
         newRow.innerHTML="";
         moviesRow.innerHTML="";
         seriesRow.innerHTML="";
+        if(tvShowRow) tvShowRow.innerHTML="";
 
         /* Stop the nav shimmer even if the request fails. */
         document.querySelector(".mobile-section-nav")?.classList.remove("is-loading");
@@ -5141,4 +5215,124 @@ window.addEventListener("DOMContentLoaded", () => {
 
 </script>
 </body>
+
+<style id="tv-show-landscape-cards-final">
+/* TV Shows only: landscape OTT cards — 2 mobile / 4 laptop-desktop. */
+.tv-show-row .movie-card{
+  aspect-ratio:16/9 !important;
+  height:auto !important;
+  border-radius:10px !important;
+  overflow:hidden !important;
+}
+.tv-show-row .movie-card > img{
+  width:100% !important;
+  height:100% !important;
+  aspect-ratio:16/9 !important;
+  object-fit:cover !important;
+  display:block !important;
+}
+.tv-show-row .movie-card-wrap{
+  min-width:0 !important;
+}
+@media(max-width:800px){
+  .tv-show-row{gap:8px !important;}
+  .tv-show-row .movie-card-wrap{
+    flex:0 0 calc((100% - 8px)/2) !important;
+    width:calc((100% - 8px)/2) !important;
+    min-width:calc((100% - 8px)/2) !important;
+    max-width:calc((100% - 8px)/2) !important;
+  }
+  .tv-show-row .movie-card{border-radius:8px !important;}
+}
+@media(min-width:801px){
+  .tv-show-row{gap:13px !important;}
+  .tv-show-row .movie-card-wrap{
+    flex:0 0 calc((100% - 39px)/4) !important;
+    width:calc((100% - 39px)/4) !important;
+    min-width:calc((100% - 39px)/4) !important;
+    max-width:calc((100% - 39px)/4) !important;
+  }
+}
+</style>
+<style id="tv-show-landscape-final-fix">
+/* TV SHOWS: TMDB backdrop landscape artwork only.
+   Movies/Web Series remain untouched and keep vertical posters. */
+.tv-show-row .movie-card{
+    aspect-ratio:16/9 !important;
+    height:auto !important;
+    overflow:hidden !important;
+}
+.tv-show-row .movie-card > img{
+    width:100% !important;
+    height:100% !important;
+    aspect-ratio:16/9 !important;
+    object-fit:cover !important;
+    object-position:center center !important;
+    display:block !important;
+}
+</style>
+
+
+
+<style id="strict-tv-only-backdrop-final">
+/* =========================================================
+   STRICT IMAGE RULE
+   TV SHOWS row = TMDB backdrop / landscape.
+   ALL OTHER HOME ROWS = TMDB poster / vertical.
+   ========================================================= */
+
+/* Non-TV rows: keep the original vertical poster card shape. */
+.movie-row:not(.tv-show-row) .vertical-poster-card-wrap,
+.movie-row:not(.tv-show-row) .vertical-poster-card-wrap .movie-card{
+    aspect-ratio:2/3 !important;
+    height:auto !important;
+    overflow:hidden !important;
+}
+
+.movie-row:not(.tv-show-row) .vertical-poster-card-wrap .movie-card > img{
+    width:100% !important;
+    height:100% !important;
+    aspect-ratio:2/3 !important;
+    object-fit:cover !important;
+    object-position:center center !important;
+    display:block !important;
+}
+
+/* Desktop/laptop: restore the normal vertical-card width. */
+@media(min-width:801px){
+    .movie-row:not(.tv-show-row) .vertical-poster-card-wrap{
+        flex:0 0 176px !important;
+        width:176px !important;
+        min-width:176px !important;
+        max-width:176px !important;
+    }
+}
+
+/* Mobile: keep the existing 3-card-per-screen layout for non-TV rows. */
+@media(max-width:800px){
+    .movie-row:not(.tv-show-row) .vertical-poster-card-wrap{
+        flex:0 0 calc((100% - 18px)/3) !important;
+        width:calc((100% - 18px)/3) !important;
+        min-width:calc((100% - 18px)/3) !important;
+        max-width:calc((100% - 18px)/3) !important;
+    }
+}
+
+/* TV Shows: landscape TMDB backdrop only. */
+.tv-show-row .tv-show-card-wrap .movie-card{
+    aspect-ratio:16/9 !important;
+    height:auto !important;
+    overflow:hidden !important;
+}
+
+.tv-show-row .tv-show-card-wrap .movie-card > img{
+    width:100% !important;
+    height:100% !important;
+    aspect-ratio:16/9 !important;
+    object-fit:cover !important;
+    object-position:center center !important;
+    display:block !important;
+}
+</style>
+
 </html>
