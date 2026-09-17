@@ -665,16 +665,16 @@ button,a{tap-highlight-color:transparent;-webkit-tap-highlight-color:transparent
     /* The admin collage may contain a small header above the 2×4 image grid.
        Use a little extra vertical scale so only the requested photo fills
        the frame; the neighbouring row cannot leak into the visible area. */
-    background-size:205% 410%;
+    background-size:200% 430%;
     background-color:#09131e;
     filter:brightness(.92) saturate(.98);
     transition:filter .35s ease;
 }
 /* Exact panels: 3=row2-left, 4=row2-right, 5=row3-left, 6=row3-right. */
-.movie-clip-panel.panel3{background-position:0 33.333%}
-.movie-clip-panel.panel4{background-position:100% 33.333%}
-.movie-clip-panel.panel5{background-position:0 66.667%}
-.movie-clip-panel.panel6{background-position:100% 66.667%}
+.movie-clip-panel.panel3{background-position:0 32.2%}
+.movie-clip-panel.panel4{background-position:100% 32.2%}
+.movie-clip-panel.panel5{background-position:0 58.9%}
+.movie-clip-panel.panel6{background-position:100% 58.9%}
 .clip-slide:hover img,.clip-slide:hover .movie-clip-panel{filter:brightness(.96) saturate(1.02)}
 .clip-quote{
     position:absolute;
@@ -2717,9 +2717,14 @@ function normalizeClips(movie,tmdb){
         }));
     }
 
-    if(tmdb?.backdrop_path){
+    /* Final fallback: use the same backdrop resolver as the main hero.
+       This keeps Movie Clips visible when the Admin Movie Clip URL is
+       empty and the TMDB gallery response is unavailable. It will use
+       the saved TMDB backdrop_path/backdrop data first. */
+    const fallbackBackdrop = getBackdrop(movie,tmdb);
+    if(fallbackBackdrop){
         return [{
-            image:tmdbImage(tmdb.backdrop_path,"original"),
+            image:fallbackBackdrop,
             quote:""
         }];
     }
