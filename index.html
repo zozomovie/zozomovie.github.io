@@ -4747,12 +4747,25 @@ async function loadHeroSliders(){
     const slider=document.getElementById("bannerSlider");
     if(!track||!slider)return;
     try{
-        const {data,error}=await supabaseClient
+        let data,error;
+        ({data,error}=await supabaseClient
             .from("hero_sliders")
             .select("id,movie_id,tmdb_id,media_type,tmdb_url,title,poster_url,backdrop_url,year,rating,category,badge,badge_type,release_date,badge_style,sort_order,created_at")
             .eq("is_active",true)
             .order("sort_order",{ascending:true})
-            .order("created_at",{ascending:true});
+            .order("created_at",{ascending:true}));
+
+        /* Backward-compatible read: if Upcoming columns are not yet in the
+           database/schema cache, load the original hero_sliders columns so
+           the Home hero still renders instead of disappearing completely. */
+        if(error && /badge_type|release_date|column .* does not exist|schema cache/i.test(String(error.message||""))){
+            ({data,error}=await supabaseClient
+                .from("hero_sliders")
+                .select("id,movie_id,tmdb_id,media_type,tmdb_url,title,poster_url,backdrop_url,year,rating,category,badge,badge_style,sort_order,created_at")
+                .eq("is_active",true)
+                .order("sort_order",{ascending:true})
+                .order("created_at",{ascending:true}));
+        }
         if(error)throw error;
         const items=(Array.isArray(data)?data:[]).map(row=>({
             id:row.id,
