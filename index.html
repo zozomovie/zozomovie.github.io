@@ -4358,7 +4358,7 @@ function renderBanners(items){
         card.innerHTML = `
             <img src="${escapeBannerText(movie.backdrop || movie.image)}" alt="${escapeBannerText(movie.title)}" loading="eager" decoding="async">
             <div class="banner-info">
-                ${movie.badge ? `<span class="banner-label" data-style="${escapeBannerText(movie.badgeType==="upcoming" ? "4" : (movie.badgeStyle || "1"))}">✦ ${escapeBannerText(movie.badgeType==="upcoming" ? "Upcoming" : movie.badge)}</span>` : ""}
+                ${movie.badge ? `<span class="banner-label" data-style="${escapeBannerText(movie.badgeStyle || "1")}">✦ ${escapeBannerText(movie.badgeType==="upcoming" ? "Upcoming" : movie.badge)}</span>` : ""}
                 <div class="banner-title">${escapeBannerText(movie.title)}</div>
                 <div class="banner-meta">
                     ${movie.badgeType === "upcoming" ? `
