@@ -2802,12 +2802,12 @@ function normalizeClips(movie,tmdb){
     return [];
 }
 /* =========================================================
-   REDIRECT TO QUALITY PAGE WITH SESSION ACCESS (UPDATED)
+   REDIRECT TO QUALITY PAGE WITH SESSION ACCESS & PRELOADING
 ========================================================= */
-function openQualityPage(mId, mTitle, tvEpisode=null) {
+async function openQualityPage(mId, mTitle, tvEpisode=null) {
     if (!mId) return;
 
-    // Both Session Storage keys stored for compatibility
+    // Standard session storage flags
     sessionStorage.setItem(`access_quality_${mId}`, 'granted');
     sessionStorage.setItem(`auth_movie_${mId}`, 'granted');
     if(tvEpisode!==null&&tvEpisode!==undefined) sessionStorage.setItem(`active_tv_episode_${mId}`,String(tvEpisode));
@@ -2818,9 +2818,26 @@ function openQualityPage(mId, mTitle, tvEpisode=null) {
         .replace(/(^-|-$)+/g, '');
 
     const ep=(tvEpisode!==null&&tvEpisode!==undefined&&String(tvEpisode)!=="")?`&episode=${encodeURIComponent(tvEpisode)}`:"";
-    window.location.href = `${WATCH_PAGE}?id=${mId}&movie=${encodeURIComponent(movieSlug)}${ep}`;
-}
+    const targetUrl = `${WATCH_PAGE}?id=${mId}&movie=${encodeURIComponent(movieSlug)}${ep}`;
 
+    // INSTANT PRELOADER: Pre-fetch qualities & servers data before redirect
+    try {
+        const { data } = await supabaseClient
+            .from("movies")
+            .select("title, qualities_data")
+            .eq("id", mId)
+            .single();
+
+        if (data && data.qualities_data) {
+            sessionStorage.setItem(`cached_qualities_${mId}`, JSON.stringify(data.qualities_data));
+            if (data.title) sessionStorage.setItem(`cached_title_${mId}`, data.title);
+        }
+    } catch(e) {
+        console.log("Preload silent fail, fallback to live fetch on qualityy page");
+    }
+
+    window.location.href = targetUrl;
+}
 
 /* =========================================================
    TV SHOW EPISODES
